@@ -18,8 +18,21 @@ from ibdm.nlu.llm_adapter import (
     ModelType,
     create_adapter,
 )
+from ibdm.nlu.prompts import (
+    Example,
+    PromptTemplate,
+    create_answer_parsing_template,
+    create_dialogue_act_template,
+    create_entity_extraction_template,
+    create_question_understanding_template,
+    create_reference_resolution_template,
+    create_semantic_parsing_template,
+    get_template,
+    list_templates,
+)
 
 __all__ = [
+    # LLM Adapter
     "LLMAdapter",
     "LLMConfig",
     "LLMResponse",
@@ -28,4 +41,15 @@ __all__ = [
     "LLMParsingError",
     "ModelType",
     "create_adapter",
+    # Prompt Templates
+    "Example",
+    "PromptTemplate",
+    "create_answer_parsing_template",
+    "create_dialogue_act_template",
+    "create_entity_extraction_template",
+    "create_question_understanding_template",
+    "create_reference_resolution_template",
+    "create_semantic_parsing_template",
+    "get_template",
+    "list_templates",
 ]
