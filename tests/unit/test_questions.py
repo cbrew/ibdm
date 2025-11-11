@@ -1,6 +1,5 @@
 """Unit tests for Question classes."""
 
-
 from ibdm.core import AltQuestion, Answer, WhQuestion, YNQuestion
 
 

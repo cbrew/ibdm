@@ -1,6 +1,5 @@
 """Unit tests for Plan class."""
 
-
 from ibdm.core import Plan, WhQuestion
 
 

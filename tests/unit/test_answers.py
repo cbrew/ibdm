@@ -1,6 +1,5 @@
 """Unit tests for Answer class."""
 
-
 from ibdm.core import Answer, WhQuestion
 
 

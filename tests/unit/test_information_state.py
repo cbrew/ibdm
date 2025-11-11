@@ -1,6 +1,5 @@
 """Unit tests for Information State classes."""
 
-
 from ibdm.core import (
     Answer,
     ControlIS,
