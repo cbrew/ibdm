@@ -454,6 +454,7 @@ echo "✓ All checks passed"
 - [ruff Documentation](https://docs.astral.sh/ruff/)
 - [pyright Documentation](https://github.com/microsoft/pyright)
 - [beads Documentation](https://github.com/steveyegge/beads)
+- [LiteLLM Documentation](https://docs.litellm.ai/)
 - [Conventional Commits](https://www.conventionalcommits.org/)
 
 ## Questions or Updates
