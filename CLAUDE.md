@@ -314,30 +314,31 @@ pytest
 **Rationale**: LiteLLM provides a consistent API across multiple providers, simplifies switching between models, and handles rate limiting and error handling.
 
 **Model Selection**:
-1. **Primary Models**: Google Gemini 2.5 series
-   - `gemini/gemini-2.5-pro` - For large-scale generation tasks, complex reasoning, and extended responses
-   - `gemini/gemini-2.5-flash` - For control flow, analytics, quick classification, and structured data tasks
-2. **Legacy/Alternative**: Gemini 1.5 series (if needed for compatibility)
-   - `gemini/gemini-1.5-pro`
-   - `gemini/gemini-1.5-flash`
+1. **Primary Models**: OpenAI GPT-4 series
+   - `gpt-4o` - For large-scale generation tasks, complex reasoning, and extended responses
+   - `gpt-4o-mini` - For control flow, analytics, quick classification, and structured data tasks
+2. **Alternative**: Google Gemini models (if needed, but note: may have IP restrictions in containerized environments)
+   - `gemini/gemini-2.5-pro`
+   - `gemini/gemini-2.5-flash`
 
 **Usage Guidelines**:
-- Use `gemini-2.5-pro` for:
+- Use `gpt-4o` for:
   - Content generation (essays, reports, creative writing)
   - Complex reasoning and problem-solving
   - Multi-step analysis
   - Summarization of long documents
-- Use `gemini-2.5-flash` for:
+- Use `gpt-4o-mini` for:
   - Classification and categorization
   - Control flow decisions
   - Analytics and metrics
   - Quick question answering
   - Structured data extraction
+  - Cost-sensitive applications
 
 **API Keys**:
 - API keys are provided via environment variables
-- `GEMINI_API_KEY` for Google/Gemini models (note: use GEMINI_API_KEY, not GOOGLE_API_KEY)
-- `OPENAI_API_KEY` for OpenAI models
+- `OPENAI_API_KEY` for OpenAI models (primary)
+- `GEMINI_API_KEY` for Google/Gemini models (alternative, may not work in container due to IP restrictions)
 - Keys are available in the runtime environment (container startup)
 - A `.env` file is available in the project root for local development
 - The `.env` file is gitignored and should never be committed
@@ -351,7 +352,6 @@ import os
 # Note: python-dotenv is optional; keys are already in the environment
 
 # Verify keys are available
-assert os.getenv("GEMINI_API_KEY"), "GEMINI_API_KEY not found in environment"
 assert os.getenv("OPENAI_API_KEY"), "OPENAI_API_KEY not found in environment"
 ```
 
@@ -364,12 +364,12 @@ from litellm import completion
 litellm.set_verbose = False  # Set to True for debugging
 
 # LiteLLM automatically uses these environment variables:
-# - GEMINI_API_KEY for gemini/* models
 # - OPENAI_API_KEY for gpt-* models
+# - GEMINI_API_KEY for gemini/* models (if available)
 
 # Example usage - Large-scale generation
 response = completion(
-    model="gemini/gemini-2.5-pro",
+    model="gpt-4o",
     messages=[{"role": "user", "content": "Write a detailed analysis..."}],
     temperature=0.7,
     max_tokens=8000
@@ -377,7 +377,7 @@ response = completion(
 
 # Example usage - Control and analytics
 response = completion(
-    model="gemini/gemini-2.5-flash",
+    model="gpt-4o-mini",
     messages=[{"role": "user", "content": "Classify this text..."}],
     temperature=0.3,
     max_tokens=500
@@ -386,9 +386,9 @@ response = completion(
 
 **Implementation Guidelines**:
 - Use LiteLLM's unified interface for all LLM calls
-- Select the appropriate Gemini model based on task type (see Usage Guidelines above)
-- Use `gemini-2.5-pro` as the default for most tasks
-- Use `gemini-2.5-flash` for quick, structured tasks to optimize cost and latency
+- Select the appropriate OpenAI model based on task type (see Usage Guidelines above)
+- Use `gpt-4o` as the default for most tasks
+- Use `gpt-4o-mini` for quick, structured tasks to optimize cost and latency
 - Use async operations where possible: `await acompletion(...)`
 - Configure timeouts and retries through LiteLLM
 - Monitor token usage and costs
