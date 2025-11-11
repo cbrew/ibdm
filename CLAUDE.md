@@ -2,6 +2,48 @@
 
 This document defines the development policies and workflows for AI agents working on the Issue-Based Dialogue Management (IBDM) project.
 
+## Environment
+
+### Container Environment
+
+This project runs in a containerized environment where:
+- Environment variables are set at container startup
+- API keys are pre-configured and available via environment variables
+- No manual key configuration is needed during development
+
+### Environment Variables
+
+The following environment variables are available:
+- `GEMINI_API_KEY` - Google/Gemini API key for LLM access
+- `OPENAI_API_KEY` - OpenAI API key for LLM access
+
+### .env File
+
+A `.env` file exists in the project root containing these API keys:
+```bash
+GEMINI_API_KEY=<key>
+OPENAI_API_KEY=<key>
+```
+
+**Important Notes**:
+- The `.env` file is automatically gitignored
+- Keys are already available in the environment; the `.env` file is for reference
+- Never commit API keys to version control
+- Python code can access keys directly via `os.getenv()` without python-dotenv
+
+### Verifying Environment
+
+```python
+import os
+
+# Verify API keys are available
+gemini_key = os.getenv("GEMINI_API_KEY")
+openai_key = os.getenv("OPENAI_API_KEY")
+
+assert gemini_key, "GEMINI_API_KEY not found"
+assert openai_key, "OPENAI_API_KEY not found"
+```
+
 ## Core Policies
 
 ### 1. Dependency Management: Use uv
@@ -282,9 +324,24 @@ pytest
 
 **API Keys**:
 - API keys are provided via environment variables
-- `GOOGLE_API_KEY` for Google/Gemini models
+- `GEMINI_API_KEY` for Google/Gemini models (note: use GEMINI_API_KEY, not GOOGLE_API_KEY)
 - `OPENAI_API_KEY` for OpenAI models
-- Keys are available in the runtime environment
+- Keys are available in the runtime environment (container startup)
+- A `.env` file is available in the project root for local development
+- The `.env` file is gitignored and should never be committed
+
+**Environment Setup**:
+```python
+import os
+
+# API keys are automatically available in the container environment
+# They can also be loaded from .env file for local development
+# Note: python-dotenv is optional; keys are already in the environment
+
+# Verify keys are available
+assert os.getenv("GEMINI_API_KEY"), "GEMINI_API_KEY not found in environment"
+assert os.getenv("OPENAI_API_KEY"), "OPENAI_API_KEY not found in environment"
+```
 
 **Configuration**:
 ```python
@@ -293,6 +350,10 @@ from litellm import completion
 
 # Set default provider
 litellm.set_verbose = False  # Set to True for debugging
+
+# LiteLLM automatically uses these environment variables:
+# - GEMINI_API_KEY for gemini/* models
+# - OPENAI_API_KEY for gpt-* models
 
 # Example usage
 response = completion(

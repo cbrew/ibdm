@@ -41,7 +41,7 @@ This plan enhances the IBDM system with sophisticated natural language understan
 - Provider-specific configuration (temperature, max_tokens, etc.)
 - Rate limiting and quota management via LiteLLM
 - Error handling with graceful fallback between providers
-- Use environment variables for API keys (GOOGLE_API_KEY, OPENAI_API_KEY)
+- Use environment variables for API keys (GEMINI_API_KEY, OPENAI_API_KEY)
 
 **Deliverables**:
 - `src/ibdm/nlu/llm_adapter.py` - LiteLLM wrapper for IBDM
@@ -468,7 +468,7 @@ This plan enhances the IBDM system with sophisticated natural language understan
   1. Google/Gemini (gemini-1.5-pro, gemini-1.5-flash) - First choice
   2. OpenAI (gpt-4o, gpt-4o-mini) - Second choice
   3. Local models via Ollama - Fallback
-- **API Keys**: Available via environment variables (GOOGLE_API_KEY, OPENAI_API_KEY)
+- **API Keys**: Available via environment variables (GEMINI_API_KEY, OPENAI_API_KEY)
 - **Prompt Engineering**: Jinja2, custom template system
 - **Parsing**: Pydantic, JSON Schema
 - **Caching**: Redis or in-memory LRU cache
