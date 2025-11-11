@@ -31,21 +31,22 @@ This plan enhances the IBDM system with sophisticated natural language understan
 **ID**: ibdm-64.1 (created)
 **Priority**: 0
 **Description**:
-- Create abstract interface for multiple LLM providers:
-  - OpenAI (GPT-4, GPT-3.5)
-  - Anthropic (Claude 3.5 Sonnet, Opus)
-  - Local models (Llama, Mistral via Ollama)
-  - Azure OpenAI
-- Support async operations for parallel processing
+- Create IBDM-specific wrapper around LiteLLM for unified LLM access
+- Support multiple providers through LiteLLM:
+  - Google/Gemini (gemini-1.5-pro, gemini-1.5-flash) - Primary
+  - OpenAI (gpt-4o, gpt-4o-mini) - Secondary
+  - Local models via Ollama - Fallback
+- Support async operations for parallel processing (litellm.acompletion)
 - Implement batching for efficiency
 - Provider-specific configuration (temperature, max_tokens, etc.)
-- Rate limiting and quota management
-- Error handling and retries
+- Rate limiting and quota management via LiteLLM
+- Error handling with graceful fallback between providers
+- Use environment variables for API keys (GOOGLE_API_KEY, OPENAI_API_KEY)
 
 **Deliverables**:
-- `src/ibdm/nlu/llm_adapter.py` - Abstract base class
-- `src/ibdm/nlu/providers/` - Provider implementations
+- `src/ibdm/nlu/llm_adapter.py` - LiteLLM wrapper for IBDM
 - Configuration schema for LLM settings
+- Provider fallback logic
 
 ---
 
@@ -462,7 +463,12 @@ This plan enhances the IBDM system with sophisticated natural language understan
 
 ## Technology Stack
 
-- **LLM Providers**: OpenAI API, Anthropic API, Ollama (local)
+- **LLM Interface**: LiteLLM (unified API for multiple providers)
+- **LLM Providers** (priority order):
+  1. Google/Gemini (gemini-1.5-pro, gemini-1.5-flash) - First choice
+  2. OpenAI (gpt-4o, gpt-4o-mini) - Second choice
+  3. Local models via Ollama - Fallback
+- **API Keys**: Available via environment variables (GOOGLE_API_KEY, OPENAI_API_KEY)
 - **Prompt Engineering**: Jinja2, custom template system
 - **Parsing**: Pydantic, JSON Schema
 - **Caching**: Redis or in-memory LRU cache

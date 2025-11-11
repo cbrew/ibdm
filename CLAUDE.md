@@ -265,6 +265,65 @@ pytest
 3. **Refactor**: Improve code quality
 4. **Commit**: Each step separately
 
+### 8. LLM Provider Configuration: Use LiteLLM
+
+**Policy**: All LLM integrations must use [LiteLLM](https://github.com/BerriAI/litellm) as the unified interface.
+
+**Rationale**: LiteLLM provides a consistent API across multiple providers, simplifies switching between models, and handles rate limiting and error handling.
+
+**Provider Priority**:
+1. **First Choice**: Google models (Gemini)
+   - `gemini/gemini-1.5-pro`
+   - `gemini/gemini-1.5-flash`
+2. **Second Choice**: OpenAI models
+   - `gpt-4o`
+   - `gpt-4o-mini`
+3. **Fallback**: Local models via Ollama (if needed)
+
+**API Keys**:
+- API keys are provided via environment variables
+- `GOOGLE_API_KEY` for Google/Gemini models
+- `OPENAI_API_KEY` for OpenAI models
+- Keys are available in the runtime environment
+
+**Configuration**:
+```python
+import litellm
+from litellm import completion
+
+# Set default provider
+litellm.set_verbose = False  # Set to True for debugging
+
+# Example usage
+response = completion(
+    model="gemini/gemini-1.5-pro",  # Google model (first choice)
+    messages=[{"role": "user", "content": "Hello"}],
+    temperature=0.7,
+    max_tokens=1000
+)
+
+# With fallback
+try:
+    response = completion(model="gemini/gemini-1.5-pro", ...)
+except Exception:
+    response = completion(model="gpt-4o-mini", ...)  # OpenAI fallback
+```
+
+**Implementation Guidelines**:
+- Use LiteLLM's unified interface for all LLM calls
+- Prefer Google models for cost-effectiveness and performance
+- Implement graceful fallback to OpenAI if Google models fail
+- Use async operations where possible: `await acompletion(...)`
+- Configure timeouts and retries through LiteLLM
+- Monitor token usage and costs
+
+**Benefits**:
+- Single interface for multiple providers
+- Easy model switching without code changes
+- Built-in retry logic and error handling
+- Cost tracking and monitoring
+- Support for streaming responses
+
 ## Workflow Integration
 
 ### Daily Work Session
