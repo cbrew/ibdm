@@ -16,7 +16,7 @@ Templates support:
 """
 
 from dataclasses import dataclass, field
-from typing import Any, List
+from typing import Any
 
 
 @dataclass
@@ -52,7 +52,7 @@ class Example:
         return "\n".join(parts)
 
 
-def _example_list_factory() -> List[Example]:
+def _example_list_factory() -> list[Example]:
     """Factory function for creating empty example lists."""
     return []
 
@@ -81,7 +81,7 @@ class PromptTemplate:
     system_prompt: str
     task_description: str
     output_format: str
-    examples: List[Example] = field(default_factory=_example_list_factory)
+    examples: list[Example] = field(default_factory=_example_list_factory)
     include_reasoning: bool = True
 
     def format(

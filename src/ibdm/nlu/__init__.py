@@ -5,9 +5,27 @@ This module provides LLM-based natural language understanding capabilities inclu
 - Prompt templates for NLU tasks
 - Semantic parsing
 - Dialogue act classification
+- Question understanding and analysis
+- Answer parsing and QUD matching
 - Entity extraction and reference resolution
 """
 
+from ibdm.nlu.answer_parser import (
+    AnswerAnalysis,
+    AnswerParser,
+    AnswerParserConfig,
+    AnswerType,
+)
+from ibdm.nlu.answer_parser import (
+    create_parser as create_answer_parser,
+)
+from ibdm.nlu.dialogue_act_classifier import (
+    DialogueActClassifier,
+    DialogueActClassifierConfig,
+    DialogueActResult,
+    DialogueActType,
+    create_classifier,
+)
 from ibdm.nlu.llm_adapter import (
     LLMAdapter,
     LLMAPIError,
@@ -29,6 +47,23 @@ from ibdm.nlu.prompts import (
     create_semantic_parsing_template,
     get_template,
     list_templates,
+)
+from ibdm.nlu.question_analyzer import (
+    QuestionAnalysis,
+    QuestionAnalyzer,
+    QuestionAnalyzerConfig,
+    QuestionType,
+    create_analyzer,
+)
+from ibdm.nlu.semantic_parser import (
+    SemanticArgument,
+    SemanticModifier,
+    SemanticParse,
+    SemanticParser,
+    SemanticParserConfig,
+)
+from ibdm.nlu.semantic_parser import (
+    create_parser as create_semantic_parser,
 )
 
 __all__ = [
@@ -52,4 +87,29 @@ __all__ = [
     "create_semantic_parsing_template",
     "get_template",
     "list_templates",
+    # Semantic Parser
+    "SemanticParser",
+    "SemanticParserConfig",
+    "SemanticParse",
+    "SemanticArgument",
+    "SemanticModifier",
+    "create_semantic_parser",
+    # Dialogue Act Classifier
+    "DialogueActClassifier",
+    "DialogueActClassifierConfig",
+    "DialogueActResult",
+    "DialogueActType",
+    "create_classifier",
+    # Question Analyzer
+    "QuestionAnalyzer",
+    "QuestionAnalyzerConfig",
+    "QuestionAnalysis",
+    "QuestionType",
+    "create_analyzer",
+    # Answer Parser
+    "AnswerParser",
+    "AnswerParserConfig",
+    "AnswerAnalysis",
+    "AnswerType",
+    "create_answer_parser",
 ]
