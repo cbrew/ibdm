@@ -314,31 +314,31 @@ pytest
 **Rationale**: LiteLLM provides a consistent API across multiple providers, simplifies switching between models, and handles rate limiting and error handling.
 
 **Model Selection**:
-1. **Primary Models**: OpenAI GPT-4 series
-   - `gpt-4o` - For large-scale generation tasks, complex reasoning, and extended responses
-   - `gpt-4o-mini` - For control flow, analytics, quick classification, and structured data tasks
-2. **Alternative**: Google Gemini models (if needed, but note: may have IP restrictions in containerized environments)
-   - `gemini/gemini-2.5-pro`
-   - `gemini/gemini-2.5-flash`
+1. **Primary Models**: Anthropic Claude 4.5 series
+   - `claude-sonnet-4-5-20250929` - For large-scale generation tasks, complex reasoning, and extended responses
+   - `claude-haiku-4-5-20251001` - For control flow, analytics, quick classification, and structured data tasks
+2. **No Fallback**: Do not use Google Gemini or OpenAI as fallbacks
 
 **Usage Guidelines**:
-- Use `gpt-4o` for:
+- Use `claude-sonnet-4-5-20250929` for:
   - Content generation (essays, reports, creative writing)
   - Complex reasoning and problem-solving
   - Multi-step analysis
   - Summarization of long documents
-- Use `gpt-4o-mini` for:
+  - Complex agents and coding tasks
+- Use `claude-haiku-4-5-20251001` for:
   - Classification and categorization
   - Control flow decisions
   - Analytics and metrics
   - Quick question answering
   - Structured data extraction
-  - Cost-sensitive applications
+  - Cost-sensitive applications (fastest model with near-frontier intelligence)
 
 **API Keys**:
 - API keys are provided via environment variables
-- `OPENAI_API_KEY` for OpenAI models (primary)
-- `GEMINI_API_KEY` for Google/Gemini models (alternative, may not work in container due to IP restrictions)
+- `IBDM_API_KEY` for Anthropic Claude models (primary)
+  - Must be passed explicitly as `api_key` parameter to LiteLLM calls
+  - This separate env var prevents billing conflicts with Claude Code's own Claude usage
 - Keys are available in the runtime environment (container startup)
 - A `.env` file is available in the project root for local development
 - The `.env` file is gitignored and should never be committed
@@ -352,33 +352,35 @@ import os
 # Note: python-dotenv is optional; keys are already in the environment
 
 # Verify keys are available
-assert os.getenv("OPENAI_API_KEY"), "OPENAI_API_KEY not found in environment"
+assert os.getenv("IBDM_API_KEY"), "IBDM_API_KEY not found in environment"
 ```
 
 **Configuration**:
 ```python
+import os
 import litellm
 from litellm import completion
 
 # Set default provider
 litellm.set_verbose = False  # Set to True for debugging
 
-# LiteLLM automatically uses these environment variables:
-# - OPENAI_API_KEY for gpt-* models
-# - GEMINI_API_KEY for gemini/* models (if available)
+# Get API key from environment
+api_key = os.getenv("IBDM_API_KEY")
 
 # Example usage - Large-scale generation
 response = completion(
-    model="gpt-4o",
+    model="claude-sonnet-4-5-20250929",
     messages=[{"role": "user", "content": "Write a detailed analysis..."}],
+    api_key=api_key,  # Explicitly pass API key
     temperature=0.7,
     max_tokens=8000
 )
 
 # Example usage - Control and analytics
 response = completion(
-    model="gpt-4o-mini",
+    model="claude-haiku-4-5-20251001",
     messages=[{"role": "user", "content": "Classify this text..."}],
+    api_key=api_key,  # Explicitly pass API key
     temperature=0.3,
     max_tokens=500
 )
@@ -386,12 +388,14 @@ response = completion(
 
 **Implementation Guidelines**:
 - Use LiteLLM's unified interface for all LLM calls
-- Select the appropriate OpenAI model based on task type (see Usage Guidelines above)
-- Use `gpt-4o` as the default for most tasks
-- Use `gpt-4o-mini` for quick, structured tasks to optimize cost and latency
-- Use async operations where possible: `await acompletion(...)`
+- **Always** pass `api_key=os.getenv("IBDM_API_KEY")` explicitly to avoid env var conflicts
+- Select the appropriate Claude model based on task type (see Usage Guidelines above)
+- Use `claude-sonnet-4-5-20250929` as the default for most tasks
+- Use `claude-haiku-4-5-20251001` for quick, structured tasks to optimize cost and latency
+- Use async operations where possible: `await acompletion(..., api_key=api_key)`
 - Configure timeouts and retries through LiteLLM
 - Monitor token usage and costs
+- Pricing: Sonnet 4.5 ($3/$15 per million tokens), Haiku 4.5 ($1/$5 per million tokens)
 
 **Benefits**:
 - Single interface for multiple providers

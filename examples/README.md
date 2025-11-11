@@ -6,47 +6,49 @@ This directory contains example scripts demonstrating LiteLLM usage with the IBD
 
 ### `simple_llm_demo.py`
 
-Demonstrates basic LiteLLM usage with provider fallback strategy:
-- **Primary**: Attempts to use Gemini 1.5 Pro (Google)
-- **Fallback**: Falls back to GPT-4o-mini (OpenAI) if Gemini fails
+Demonstrates LiteLLM usage with Anthropic Claude 4.5 models:
+- **Claude Sonnet 4.5** (`claude-sonnet-4-5-20250929`) - For large-scale generation, complex reasoning
+- **Claude Haiku 4.5** (`claude-haiku-4-5-20251001`) - For control flow, analytics, classification
 - Shows token usage statistics
-- Handles errors gracefully
+- Explicit API key passing to avoid billing conflicts
 
 **Usage:**
 ```bash
 python3 examples/simple_llm_demo.py
 ```
 
-**Note**: The Gemini API key in the environment may have restrictions. The script demonstrates automatic fallback to OpenAI, which is part of the IBDM LLM strategy.
+**Note**: Requires `IBDM_API_KEY` environment variable. No fallback providers are used.
 
 ## Configuration
 
-All scripts use environment variables for API keys:
-- `GEMINI_API_KEY` - Google/Gemini models
-- `OPENAI_API_KEY` - OpenAI models
+All scripts use the `IBDM_API_KEY` environment variable:
+- `IBDM_API_KEY` - Anthropic API key for Claude models
+  - Separate from Claude Code's own API usage
+  - Must be passed explicitly via `api_key` parameter
+  - Prevents billing conflicts
 
-These are automatically available in the container environment. See `CLAUDE.md` for details.
+This is automatically available in the container environment. See `CLAUDE.md` for details.
 
-## Provider Priority
+## Model Selection
 
-As documented in `CLAUDE.md`, the IBDM project uses this provider priority:
-1. **Google/Gemini** (gemini-1.5-pro, gemini-1.5-flash) - Cost-effective
-2. **OpenAI** (gpt-4o, gpt-4o-mini) - Reliable fallback
-3. **Local models** (via Ollama) - For development/testing
+As documented in `CLAUDE.md`, the IBDM project uses Claude 4.5 exclusively:
+1. **Claude Sonnet 4.5** - Content generation, complex reasoning, coding tasks ($3/$15 per million tokens)
+2. **Claude Haiku 4.5** - Classification, control flow, quick tasks ($1/$5 per million tokens)
+3. **No Fallbacks** - No automatic fallback to other providers
 
 ## LiteLLM Features Demonstrated
 
 - ✅ Unified API across multiple providers
-- ✅ Automatic API key detection from environment
-- ✅ Graceful fallback between providers
+- ✅ Explicit API key passing to avoid env var conflicts
+- ✅ Model selection based on task requirements
 - ✅ Token usage tracking
-- ✅ Error handling and retry logic
+- ✅ Temperature control for different use cases
 
 ## Adding New Examples
 
 When creating new examples:
 1. Follow the patterns in `simple_llm_demo.py`
-2. Always implement provider fallback
+2. Always pass `api_key=os.getenv("IBDM_API_KEY")` explicitly
 3. Verify API keys at startup
 4. Show token usage for cost tracking
-5. Handle errors gracefully
+5. Select appropriate model (Sonnet vs Haiku) based on task complexity

@@ -12,8 +12,7 @@ import sys
 def verify_environment():
     """Verify required environment variables are present."""
     required_vars = {
-        "GEMINI_API_KEY": "Google/Gemini API key for LLM access",
-        "OPENAI_API_KEY": "OpenAI API key for LLM access",
+        "IBDM_API_KEY": "Anthropic API key for Claude models (prevents billing conflicts)",
     }
 
     missing = []
@@ -50,9 +49,10 @@ def verify_environment():
         return False
     else:
         print("\n✓ All required environment variables are present!")
-        print("\nLiteLLM will automatically use these keys:")
-        print("  - GEMINI_API_KEY for gemini/* models")
-        print("  - OPENAI_API_KEY for gpt-* models")
+        print("\nLiteLLM will use IBDM_API_KEY for Claude models:")
+        print("  - claude-sonnet-4-5-20250929 (generation)")
+        print("  - claude-haiku-4-5-20251001 (control/analytics)")
+        print("\nNote: API key must be passed explicitly to avoid conflicts")
         return True
 
 
