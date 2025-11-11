@@ -2,6 +2,48 @@
 
 This document defines the development policies and workflows for AI agents working on the Issue-Based Dialogue Management (IBDM) project.
 
+## Environment
+
+### Container Environment
+
+This project runs in a containerized environment where:
+- Environment variables are set at container startup
+- API keys are pre-configured and available via environment variables
+- No manual key configuration is needed during development
+
+### Environment Variables
+
+The following environment variables are available:
+- `GEMINI_API_KEY` - Google/Gemini API key for LLM access
+- `OPENAI_API_KEY` - OpenAI API key for LLM access
+
+### .env File
+
+A `.env` file exists in the project root containing these API keys:
+```bash
+GEMINI_API_KEY=<key>
+OPENAI_API_KEY=<key>
+```
+
+**Important Notes**:
+- The `.env` file is automatically gitignored
+- Keys are already available in the environment; the `.env` file is for reference
+- Never commit API keys to version control
+- Python code can access keys directly via `os.getenv()` without python-dotenv
+
+### Verifying Environment
+
+```python
+import os
+
+# Verify API keys are available
+gemini_key = os.getenv("GEMINI_API_KEY")
+openai_key = os.getenv("OPENAI_API_KEY")
+
+assert gemini_key, "GEMINI_API_KEY not found"
+assert openai_key, "OPENAI_API_KEY not found"
+```
+
 ## Core Policies
 
 ### 1. Dependency Management: Use uv
@@ -265,6 +307,84 @@ pytest
 3. **Refactor**: Improve code quality
 4. **Commit**: Each step separately
 
+### 8. LLM Provider Configuration: Use LiteLLM
+
+**Policy**: All LLM integrations must use [LiteLLM](https://github.com/BerriAI/litellm) as the unified interface.
+
+**Rationale**: LiteLLM provides a consistent API across multiple providers, simplifies switching between models, and handles rate limiting and error handling.
+
+**Provider Priority**:
+1. **First Choice**: Google models (Gemini)
+   - `gemini/gemini-1.5-pro`
+   - `gemini/gemini-1.5-flash`
+2. **Second Choice**: OpenAI models
+   - `gpt-4o`
+   - `gpt-4o-mini`
+3. **Fallback**: Local models via Ollama (if needed)
+
+**API Keys**:
+- API keys are provided via environment variables
+- `GEMINI_API_KEY` for Google/Gemini models (note: use GEMINI_API_KEY, not GOOGLE_API_KEY)
+- `OPENAI_API_KEY` for OpenAI models
+- Keys are available in the runtime environment (container startup)
+- A `.env` file is available in the project root for local development
+- The `.env` file is gitignored and should never be committed
+
+**Environment Setup**:
+```python
+import os
+
+# API keys are automatically available in the container environment
+# They can also be loaded from .env file for local development
+# Note: python-dotenv is optional; keys are already in the environment
+
+# Verify keys are available
+assert os.getenv("GEMINI_API_KEY"), "GEMINI_API_KEY not found in environment"
+assert os.getenv("OPENAI_API_KEY"), "OPENAI_API_KEY not found in environment"
+```
+
+**Configuration**:
+```python
+import litellm
+from litellm import completion
+
+# Set default provider
+litellm.set_verbose = False  # Set to True for debugging
+
+# LiteLLM automatically uses these environment variables:
+# - GEMINI_API_KEY for gemini/* models
+# - OPENAI_API_KEY for gpt-* models
+
+# Example usage
+response = completion(
+    model="gemini/gemini-1.5-pro",  # Google model (first choice)
+    messages=[{"role": "user", "content": "Hello"}],
+    temperature=0.7,
+    max_tokens=1000
+)
+
+# With fallback
+try:
+    response = completion(model="gemini/gemini-1.5-pro", ...)
+except Exception:
+    response = completion(model="gpt-4o-mini", ...)  # OpenAI fallback
+```
+
+**Implementation Guidelines**:
+- Use LiteLLM's unified interface for all LLM calls
+- Prefer Google models for cost-effectiveness and performance
+- Implement graceful fallback to OpenAI if Google models fail
+- Use async operations where possible: `await acompletion(...)`
+- Configure timeouts and retries through LiteLLM
+- Monitor token usage and costs
+
+**Benefits**:
+- Single interface for multiple providers
+- Easy model switching without code changes
+- Built-in retry logic and error handling
+- Cost tracking and monitoring
+- Support for streaming responses
+
 ## Workflow Integration
 
 ### Daily Work Session
@@ -395,6 +515,7 @@ echo "✓ All checks passed"
 - [ruff Documentation](https://docs.astral.sh/ruff/)
 - [pyright Documentation](https://github.com/microsoft/pyright)
 - [beads Documentation](https://github.com/steveyegge/beads)
+- [LiteLLM Documentation](https://docs.litellm.ai/)
 - [Conventional Commits](https://www.conventionalcommits.org/)
 
 ## Questions or Updates
