@@ -4,9 +4,17 @@ This module provides the rule-based system for transforming information states
 through precondition-action pairs.
 """
 
+from ibdm.rules.generation_rules import create_generation_rules
+from ibdm.rules.integration_rules import create_integration_rules
+from ibdm.rules.interpretation_rules import create_interpretation_rules
+from ibdm.rules.selection_rules import create_selection_rules
 from ibdm.rules.update_rules import RuleSet, UpdateRule
 
 __all__ = [
     "UpdateRule",
     "RuleSet",
+    "create_interpretation_rules",
+    "create_integration_rules",
+    "create_selection_rules",
+    "create_generation_rules",
 ]
