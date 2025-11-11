@@ -27,11 +27,11 @@ start() {
 }
 
 # Complete a task
-done() {
+complete() {
   local task_id=$1
   local reason=${2:-"Implemented"}
   if [ -z "$task_id" ]; then
-    echo "Usage: done <task-id> [reason]"
+    echo "Usage: complete <task-id> [reason]"
     return 1
   fi
   bd close "$task_id" --reason "$reason"
@@ -100,21 +100,21 @@ summary() {
 help() {
   echo "IBDM Beads Helper Commands:"
   echo ""
-  echo "  ready              - Show tasks with no blockers"
-  echo "  phase <N>          - Show tasks for phase N"
-  echo "  start <id>         - Mark task as in_progress"
-  echo "  done <id> [reason] - Complete a task"
-  echo "  progress <N>       - Show progress for phase N"
-  echo "  discover <title>   - Create new task discovered during work"
-  echo "  current            - Show in_progress tasks"
-  echo "  urgent             - Show high priority tasks"
-  echo "  summary            - Project summary"
+  echo "  ready                 - Show tasks with no blockers"
+  echo "  phase <N>             - Show tasks for phase N"
+  echo "  start <id>            - Mark task as in_progress"
+  echo "  complete <id> [reason] - Complete a task"
+  echo "  progress <N>          - Show progress for phase N"
+  echo "  discover <title>      - Create new task discovered during work"
+  echo "  current               - Show in_progress tasks"
+  echo "  urgent                - Show high priority tasks"
+  echo "  summary               - Project summary"
   echo ""
   echo "Examples:"
   echo "  ready"
   echo "  phase 1"
   echo "  start ibdm-brm.1"
-  echo "  done ibdm-brm.1 'Implemented with tests'"
+  echo "  complete ibdm-brm.1 'Implemented with tests'"
   echo "  discover 'Fix typing issues in Question class' ibdm-brm.1 0"
 }
 
