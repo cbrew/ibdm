@@ -313,14 +313,26 @@ pytest
 
 **Rationale**: LiteLLM provides a consistent API across multiple providers, simplifies switching between models, and handles rate limiting and error handling.
 
-**Provider Priority**:
-1. **First Choice**: Google models (Gemini)
+**Model Selection**:
+1. **Primary Models**: Google Gemini 2.5 series
+   - `gemini/gemini-2.5-pro` - For large-scale generation tasks, complex reasoning, and extended responses
+   - `gemini/gemini-2.5-flash` - For control flow, analytics, quick classification, and structured data tasks
+2. **Legacy/Alternative**: Gemini 1.5 series (if needed for compatibility)
    - `gemini/gemini-1.5-pro`
    - `gemini/gemini-1.5-flash`
-2. **Second Choice**: OpenAI models
-   - `gpt-4o`
-   - `gpt-4o-mini`
-3. **Fallback**: Local models via Ollama (if needed)
+
+**Usage Guidelines**:
+- Use `gemini-2.5-pro` for:
+  - Content generation (essays, reports, creative writing)
+  - Complex reasoning and problem-solving
+  - Multi-step analysis
+  - Summarization of long documents
+- Use `gemini-2.5-flash` for:
+  - Classification and categorization
+  - Control flow decisions
+  - Analytics and metrics
+  - Quick question answering
+  - Structured data extraction
 
 **API Keys**:
 - API keys are provided via environment variables
@@ -355,25 +367,28 @@ litellm.set_verbose = False  # Set to True for debugging
 # - GEMINI_API_KEY for gemini/* models
 # - OPENAI_API_KEY for gpt-* models
 
-# Example usage
+# Example usage - Large-scale generation
 response = completion(
-    model="gemini/gemini-1.5-pro",  # Google model (first choice)
-    messages=[{"role": "user", "content": "Hello"}],
+    model="gemini/gemini-2.5-pro",
+    messages=[{"role": "user", "content": "Write a detailed analysis..."}],
     temperature=0.7,
-    max_tokens=1000
+    max_tokens=8000
 )
 
-# With fallback
-try:
-    response = completion(model="gemini/gemini-1.5-pro", ...)
-except Exception:
-    response = completion(model="gpt-4o-mini", ...)  # OpenAI fallback
+# Example usage - Control and analytics
+response = completion(
+    model="gemini/gemini-2.5-flash",
+    messages=[{"role": "user", "content": "Classify this text..."}],
+    temperature=0.3,
+    max_tokens=500
+)
 ```
 
 **Implementation Guidelines**:
 - Use LiteLLM's unified interface for all LLM calls
-- Prefer Google models for cost-effectiveness and performance
-- Implement graceful fallback to OpenAI if Google models fail
+- Select the appropriate Gemini model based on task type (see Usage Guidelines above)
+- Use `gemini-2.5-pro` as the default for most tasks
+- Use `gemini-2.5-flash` for quick, structured tasks to optimize cost and latency
 - Use async operations where possible: `await acompletion(...)`
 - Configure timeouts and retries through LiteLLM
 - Monitor token usage and costs
