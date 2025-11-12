@@ -65,18 +65,24 @@ class DialogueMoveEngine:
 
         return self.state, response_move
 
-    def interpret(self, utterance: str, speaker: str) -> list[DialogueMove]:
+    def interpret(
+        self, utterance: str, speaker: str, state: InformationState | None = None
+    ) -> list[DialogueMove]:
         """Apply interpretation rules to map utterance to dialogue moves.
 
         Args:
             utterance: The utterance to interpret
             speaker: ID of the speaker
+            state: Information state to use (defaults to self.state for backward compatibility)
 
         Returns:
             List of interpreted dialogue moves
         """
+        # Use passed state or fall back to self.state (for backward compatibility)
+        working_state = state if state is not None else self.state
+
         # Store utterance in a temporary state field for rules to access
-        temp_state = self.state.clone()
+        temp_state = working_state.clone()
         temp_state.private.beliefs["_temp_utterance"] = utterance
         temp_state.private.beliefs["_temp_speaker"] = speaker
 
@@ -85,12 +91,6 @@ class DialogueMoveEngine:
 
         # Extract moves from agenda (interpretation rules add them there)
         moves = new_state.private.agenda.copy()
-
-        # Clean up temporary fields
-        if "_temp_utterance" in self.state.private.beliefs:
-            del self.state.private.beliefs["_temp_utterance"]
-        if "_temp_speaker" in self.state.private.beliefs:
-            del self.state.private.beliefs["_temp_speaker"]
 
         # If no interpretation rules matched, return empty list
         return moves

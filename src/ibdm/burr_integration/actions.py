@@ -27,11 +27,8 @@ def interpret(state: State) -> tuple[dict[str, Any], State]:
     info_state: InformationState = state["information_state"]
     engine: DialogueMoveEngine = state["engine"]
 
-    # Sync engine state from Burr State (Phase 1: dual tracking)
-    engine.state = info_state
-
-    # Apply interpretation rules
-    moves = engine.interpret(utterance, speaker)
+    # Apply interpretation rules with explicit state (Phase 2: stateless methods)
+    moves = engine.interpret(utterance, speaker, info_state)
 
     # Update state with moves
     result = {"moves": moves, "move_count": len(moves)}
