@@ -17,6 +17,14 @@ def create_selection_rules() -> list[UpdateRule]:
         List of selection rules
     """
     return [
+        # Execute active Plans by converting findout subplans to ask moves
+        UpdateRule(
+            name="select_plan_driven_question",
+            preconditions=_has_active_plan_subplan,
+            effects=_execute_plan_subplan,
+            priority=15,
+            rule_type="selection",
+        ),
         # If there's already something on the agenda, don't add more
         # (this is checked in the engine, but we can have rules too)
         # Answer the top QUD if we have knowledge
@@ -55,6 +63,26 @@ def create_selection_rules() -> list[UpdateRule]:
 
 
 # Precondition functions
+
+
+def _has_active_plan_subplan(state: InformationState) -> bool:
+    """Check if there's an active plan with findout subplans to execute.
+
+    Only triggers when agenda is empty (don't interrupt ongoing actions).
+    """
+    # Don't trigger if there's already something on the agenda
+    if state.private.agenda:
+        return False
+
+    # Check if there's an active plan with active subplans
+    for plan in state.private.plan:
+        if plan.is_active() and plan.subplans:
+            # Look for first active findout subplan
+            for subplan in plan.subplans:
+                if subplan.is_active() and subplan.plan_type == "findout":
+                    return True
+
+    return False
 
 
 def _can_answer_qud(state: InformationState) -> bool:
@@ -120,6 +148,38 @@ def _should_ask_question(state: InformationState) -> bool:
 
 
 # Effect functions
+
+
+def _execute_plan_subplan(state: InformationState) -> InformationState:
+    """Execute the first active findout subplan by creating an ask move.
+
+    Takes the first active findout subplan, creates an ask DialogueMove
+    with the question from the subplan, adds it to the agenda, and marks
+    the subplan as completed.
+    """
+    new_state = state.clone()
+
+    # Find the first active plan with active findout subplans
+    for plan in new_state.private.plan:
+        if plan.is_active() and plan.subplans:
+            # Find first active findout subplan
+            for subplan in plan.subplans:
+                if subplan.is_active() and subplan.plan_type == "findout":
+                    # Create ask move with the question from the subplan
+                    move = DialogueMove(
+                        move_type="ask",
+                        content=subplan.content,
+                        speaker=new_state.agent_id,
+                    )
+                    new_state.private.agenda.append(move)
+
+                    # Mark subplan as completed (will be executed)
+                    subplan.complete()
+
+                    # Only execute one subplan at a time
+                    return new_state
+
+    return new_state
 
 
 def _add_answer_to_agenda(state: InformationState) -> InformationState:
