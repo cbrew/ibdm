@@ -1,6 +1,5 @@
 """Pytest configuration for IBDM tests."""
 
-import pytest
 
 
 def pytest_addoption(parser):

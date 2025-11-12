@@ -3,7 +3,6 @@
 Tests interpretation, integration, selection, and generation rules.
 """
 
-
 from ibdm.core import (
     AltQuestion,
     Answer,
