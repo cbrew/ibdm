@@ -461,7 +461,6 @@ class NLUDialogueEngine(DialogueMoveEngine):
                     move_type="assert",
                     content=utterance,
                     speaker=speaker,
-                    metadata={"dialogue_act": dialogue_act},
                 )
             )
 
@@ -472,21 +471,16 @@ class NLUDialogueEngine(DialogueMoveEngine):
                     move_type="command",
                     content=utterance,
                     speaker=speaker,
-                    metadata={"dialogue_act": dialogue_act},
                 )
             )
 
         # Acknowledgment
-        elif dialogue_act in [
-            DialogueActType.ACKNOWLEDGMENT.value,
-            DialogueActType.ACCEPTANCE.value,
-        ]:
+        elif dialogue_act == DialogueActType.ACKNOWLEDGMENT.value:
             moves.append(
                 DialogueMove(
                     move_type="acknowledge",
                     content=utterance,
                     speaker=speaker,
-                    metadata={"dialogue_act": dialogue_act},
                 )
             )
 
@@ -497,7 +491,6 @@ class NLUDialogueEngine(DialogueMoveEngine):
                     move_type="clarify",
                     content=utterance,
                     speaker=speaker,
-                    metadata={"dialogue_act": dialogue_act},
                 )
             )
 
@@ -508,29 +501,16 @@ class NLUDialogueEngine(DialogueMoveEngine):
                     move_type="greet",
                     content=utterance,
                     speaker=speaker,
-                    metadata={"dialogue_act": dialogue_act},
                 )
             )
 
-        # Farewell
-        elif dialogue_act == DialogueActType.FAREWELL.value:
-            moves.append(
-                DialogueMove(
-                    move_type="quit",
-                    content=utterance,
-                    speaker=speaker,
-                    metadata={"dialogue_act": dialogue_act},
-                )
-            )
-
-        # Default: create generic move
+        # Default: create generic move (includes OTHER and any unrecognized acts)
         else:
             moves.append(
                 DialogueMove(
                     move_type="inform",
                     content=utterance,
                     speaker=speaker,
-                    metadata={"dialogue_act": dialogue_act},
                 )
             )
 
