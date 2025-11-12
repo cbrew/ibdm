@@ -7,6 +7,8 @@ This module provides LLM-based natural language understanding capabilities inclu
 - Dialogue act classification
 - Question understanding and analysis
 - Answer parsing and QUD matching
+- Context-aware interpretation pipeline
+- Implicature detection and topic tracking
 - Entity extraction and reference resolution
 """
 
@@ -18,6 +20,14 @@ from ibdm.nlu.answer_parser import (
 )
 from ibdm.nlu.answer_parser import (
     create_parser as create_answer_parser,
+)
+from ibdm.nlu.context_interpreter import (
+    ContextInterpreter,
+    ContextInterpreterConfig,
+    ContextualInterpretation,
+    ImplicatureType,
+    TopicShiftType,
+    create_interpreter,
 )
 from ibdm.nlu.dialogue_act_classifier import (
     DialogueActClassifier,
@@ -112,4 +122,11 @@ __all__ = [
     "AnswerAnalysis",
     "AnswerType",
     "create_answer_parser",
+    # Context Interpreter
+    "ContextInterpreter",
+    "ContextInterpreterConfig",
+    "ContextualInterpretation",
+    "ImplicatureType",
+    "TopicShiftType",
+    "create_interpreter",
 ]
