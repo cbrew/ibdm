@@ -134,6 +134,9 @@ class ContextInterpreter:
         )
         self.llm = LLMAdapter(llm_config)
 
+        # Track token usage for cost optimization
+        self.last_tokens_used: int = 0
+
         # Initialize NLU components
         self.semantic_parser = (
             SemanticParser(SemanticParserConfig(llm_config=llm_config))
@@ -207,6 +210,9 @@ class ContextInterpreter:
 
         # Calculate overall confidence
         confidence = self._calculate_confidence(semantic_parse, dialogue_act, topic)
+
+        # Aggregate token usage from all components
+        self.last_tokens_used = self._get_total_tokens_used()
 
         interpretation = ContextualInterpretation(
             utterance=utterance,
@@ -538,6 +544,37 @@ class ContextInterpreter:
             scores.append(0.5)
 
         return sum(scores) / len(scores) if scores else 0.5
+
+    def _get_total_tokens_used(self) -> int:
+        """Get total tokens used by all NLU components in last interpretation.
+
+        Returns:
+            Total token count from all LLM calls
+        """
+        total = 0
+
+        # Get tokens from main LLM adapter
+        if self.llm.last_response:
+            total += self.llm.last_response.tokens_used
+
+        # Get tokens from component LLM adapters
+        if self.semantic_parser and hasattr(self.semantic_parser, "llm"):
+            if self.semantic_parser.llm.last_response:
+                total += self.semantic_parser.llm.last_response.tokens_used
+
+        if self.dialogue_act_classifier and hasattr(self.dialogue_act_classifier, "llm"):
+            if self.dialogue_act_classifier.llm.last_response:
+                total += self.dialogue_act_classifier.llm.last_response.tokens_used
+
+        if self.question_analyzer and hasattr(self.question_analyzer, "llm"):
+            if self.question_analyzer.llm.last_response:
+                total += self.question_analyzer.llm.last_response.tokens_used
+
+        if self.answer_parser and hasattr(self.answer_parser, "llm"):
+            if self.answer_parser.llm.last_response:
+                total += self.answer_parser.llm.last_response.tokens_used
+
+        return total
 
 
 def create_interpreter(

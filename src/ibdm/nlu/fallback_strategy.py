@@ -370,6 +370,7 @@ class HybridFallbackStrategy:
     def reset_session_stats(self):
         """Reset session-level statistics."""
         self.session_tokens = 0
+        self.stats = FallbackStats()  # Reset all stats to zero
         logger.info("Session statistics reset")
 
     def __str__(self) -> str:

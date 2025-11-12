@@ -101,6 +101,12 @@ class NLUDialogueEngine(DialogueMoveEngine):
         self.entity_tracker: EntityTracker | None = None
         self.reference_resolver: ReferenceResolver | None = None
         self.context_interpreter: ContextInterpreter | None = None
+        # Separate interpreters for different models (for hybrid fallback)
+        self.haiku_interpreter: ContextInterpreter | None = None
+        self.sonnet_interpreter: ContextInterpreter | None = None
+        # Track last interpretation stats for token/latency reporting
+        self.last_interpretation_tokens: int = 0
+        self.last_interpretation_latency: float = 0.0
 
         # Initialize hybrid fallback strategy
         self.fallback_strategy: HybridFallbackStrategy | None = None
@@ -150,6 +156,20 @@ class NLUDialogueEngine(DialogueMoveEngine):
             self.context_interpreter = ContextInterpreter(
                 ContextInterpreterConfig(llm_config=llm_config)
             )
+
+            # For hybrid fallback: create separate interpreters for Haiku and Sonnet
+            if self.config.enable_hybrid_fallback:
+                haiku_config = LLMConfig(model=ModelType.HAIKU, temperature=0.3, max_tokens=1000)
+                self.haiku_interpreter = ContextInterpreter(
+                    ContextInterpreterConfig(llm_config=haiku_config)
+                )
+
+                sonnet_config = LLMConfig(model=ModelType.SONNET, temperature=0.3, max_tokens=2000)
+                self.sonnet_interpreter = ContextInterpreter(
+                    ContextInterpreterConfig(llm_config=sonnet_config)
+                )
+
+                logger.info("Created Haiku and Sonnet interpreters for hybrid fallback")
 
             logger.info("NLU components initialized successfully")
 
@@ -237,11 +257,22 @@ class NLUDialogueEngine(DialogueMoveEngine):
         strategy = self.fallback_strategy.select_strategy(utterance, available)
         logger.debug(f"Selected strategy: {strategy.value}")
 
-        # Try the selected strategy
+        # Try the selected strategy with timing
+        import time
+
+        start_time = time.time()
+        self.last_interpretation_tokens = 0
+        self.last_interpretation_latency = 0.0
+
         moves, confidence = self._try_strategy(strategy, utterance, speaker)
 
-        # Record usage
-        self.fallback_strategy.record_usage(strategy, tokens=0, latency=0.0)
+        latency = time.time() - start_time
+        self.last_interpretation_latency = latency
+
+        # Record usage with actual token count and latency
+        self.fallback_strategy.record_usage(
+            strategy, tokens=self.last_interpretation_tokens, latency=latency
+        )
 
         # Check if we should cascade
         next_strategy = self.fallback_strategy.should_cascade(
@@ -250,7 +281,14 @@ class NLUDialogueEngine(DialogueMoveEngine):
 
         if next_strategy and next_strategy in available:
             logger.info(f"Cascading from {strategy.value} to {next_strategy.value}")
+
+            # Time the cascade attempt
+            cascade_start = time.time()
+            self.last_interpretation_tokens = 0
+
             cascade_moves, cascade_conf = self._try_strategy(next_strategy, utterance, speaker)
+
+            cascade_latency = time.time() - cascade_start
 
             # Use cascade results if better
             if len(cascade_moves) > len(moves) or cascade_conf > confidence:
@@ -258,8 +296,10 @@ class NLUDialogueEngine(DialogueMoveEngine):
                 confidence = cascade_conf
                 strategy = next_strategy
 
-            # Record cascade usage
-            self.fallback_strategy.record_usage(next_strategy, tokens=0, latency=0.0)
+            # Record cascade usage with actual token count and latency
+            self.fallback_strategy.record_usage(
+                next_strategy, tokens=self.last_interpretation_tokens, latency=cascade_latency
+            )
 
         if moves:
             logger.info(
@@ -291,11 +331,9 @@ class NLUDialogueEngine(DialogueMoveEngine):
             return moves, confidence
 
         elif strategy in [InterpretationStrategy.HAIKU, InterpretationStrategy.SONNET]:
-            # Use LLM-based interpretation
-            # TODO: Support switching models based on strategy (Haiku vs Sonnet)
-            # For now, use whatever model is configured
+            # Use LLM-based interpretation with model switching
             try:
-                moves = self._interpret_with_nlu(utterance, speaker)
+                moves = self._interpret_with_nlu(utterance, speaker, strategy)
                 # Get confidence from NLU results
                 # For now, use a heuristic: 0.8 if moves produced, 0.0 otherwise
                 confidence = 0.8 if moves else 0.0
@@ -306,24 +344,61 @@ class NLUDialogueEngine(DialogueMoveEngine):
 
         return [], 0.0
 
-    def _interpret_with_nlu(self, utterance: str, speaker: str) -> list[DialogueMove]:
+    def _get_interpreter_for_strategy(
+        self, strategy: InterpretationStrategy | None
+    ) -> ContextInterpreter | None:
+        """Get the appropriate context interpreter for the given strategy.
+
+        Args:
+            strategy: The interpretation strategy (HAIKU, SONNET, or None)
+
+        Returns:
+            The appropriate ContextInterpreter, or None if not available
+        """
+        if strategy == InterpretationStrategy.HAIKU:
+            interpreter = self.haiku_interpreter
+            if interpreter:
+                logger.debug("Using Haiku interpreter")
+                return interpreter
+            logger.warning("Haiku interpreter not available, falling back to default")
+
+        elif strategy == InterpretationStrategy.SONNET:
+            interpreter = self.sonnet_interpreter
+            if interpreter:
+                logger.debug("Using Sonnet interpreter")
+                return interpreter
+            logger.warning("Sonnet interpreter not available, falling back to default")
+
+        # Default to the main context interpreter
+        return self.context_interpreter
+
+    def _interpret_with_nlu(
+        self, utterance: str, speaker: str, strategy: InterpretationStrategy | None = None
+    ) -> list[DialogueMove]:
         """Interpret utterance using NLU components.
 
         Args:
             utterance: The utterance to interpret
             speaker: ID of the speaker
+            strategy: Optional strategy to use specific model (HAIKU or SONNET)
 
         Returns:
             List of interpreted dialogue moves
         """
         moves: list[DialogueMove] = []
 
-        # Use context interpreter for comprehensive analysis
-        if self.context_interpreter:
-            interpretation = self.context_interpreter.interpret(utterance, self.state)
+        # Select appropriate interpreter based on strategy
+        interpreter = self._get_interpreter_for_strategy(strategy)
 
-            # Extract entities and update tracker
-            if interpretation.entities:
+        # Use context interpreter for comprehensive analysis
+        if interpreter:
+            interpretation = interpreter.interpret(utterance, self.state)
+
+            # Track token usage from this interpretation
+            self.last_interpretation_tokens = interpreter.last_tokens_used
+
+            # Extract entities and update tracker (if available)
+            if hasattr(interpretation, "entities") and interpretation.entities:
                 logger.debug(f"Extracted {len(interpretation.entities)} entities")
 
             # Create moves based on dialogue act
