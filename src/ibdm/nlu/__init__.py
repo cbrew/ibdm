@@ -76,6 +76,14 @@ from ibdm.nlu.question_analyzer import (
     QuestionType,
     create_analyzer,
 )
+from ibdm.nlu.reference_resolver import (
+    Reference,
+    ReferenceResolution,
+    ReferenceResolver,
+    ReferenceResolverConfig,
+    ReferenceType,
+    create_resolver,
+)
 from ibdm.nlu.semantic_parser import (
     SemanticArgument,
     SemanticModifier,
@@ -150,4 +158,11 @@ __all__ = [
     "EntityType",
     "create_extractor",
     "create_tracker",
+    # Reference Resolution
+    "Reference",
+    "ReferenceResolution",
+    "ReferenceResolver",
+    "ReferenceResolverConfig",
+    "ReferenceType",
+    "create_resolver",
 ]
