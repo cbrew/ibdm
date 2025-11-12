@@ -17,6 +17,14 @@ def create_integration_rules() -> list[UpdateRule]:
         List of integration rules
     """
     return [
+        # Request integration - task accommodation (no QUD change needed, plan already created)
+        UpdateRule(
+            name="integrate_request",
+            preconditions=_is_request_move,
+            effects=_integrate_request,
+            priority=11,
+            rule_type="integration",
+        ),
         # Question integration - push to QUD
         UpdateRule(
             name="integrate_question",
@@ -63,6 +71,12 @@ def create_integration_rules() -> list[UpdateRule]:
 # Precondition functions
 
 
+def _is_request_move(state: InformationState) -> bool:
+    """Check if the temporary move is a 'request' move."""
+    move = state.private.beliefs.get("_temp_move")
+    return isinstance(move, DialogueMove) and move.move_type == "request"
+
+
 def _is_ask_move(state: InformationState) -> bool:
     """Check if the temporary move is an 'ask' move."""
     move = state.private.beliefs.get("_temp_move")
@@ -96,6 +110,27 @@ def _is_quit_move(state: InformationState) -> bool:
 # Effect functions
 
 
+def _integrate_request(state: InformationState) -> InformationState:
+    """Integrate a 'request' move by acknowledging task request.
+
+    Request moves (like "I need to draft an NDA") trigger task accommodation.
+    The interpretation rule already created the plan, so this just tracks the move.
+    """
+    new_state = state.clone()
+    move = new_state.private.beliefs.get("_temp_move")
+
+    if not isinstance(move, DialogueMove):
+        return new_state
+
+    # Add to last_moves for history
+    new_state.shared.last_moves.append(move)
+
+    # System should respond with first question from plan
+    new_state.control.next_speaker = new_state.agent_id
+
+    return new_state
+
+
 def _integrate_question(state: InformationState) -> InformationState:
     """Integrate an 'ask' move by pushing question to QUD.
 
@@ -103,6 +138,9 @@ def _integrate_question(state: InformationState) -> InformationState:
     """
     new_state = state.clone()
     move = new_state.private.beliefs.get("_temp_move")
+
+    if not isinstance(move, DialogueMove):
+        return new_state
 
     if isinstance(move.content, Question):
         # Push question to QUD stack
@@ -131,6 +169,9 @@ def _integrate_answer(state: InformationState) -> InformationState:
     """
     new_state = state.clone()
     move = new_state.private.beliefs.get("_temp_move")
+
+    if not isinstance(move, DialogueMove):
+        return new_state
 
     if isinstance(move.content, Answer):
         answer = move.content
@@ -169,6 +210,9 @@ def _integrate_assertion(state: InformationState) -> InformationState:
     new_state = state.clone()
     move = new_state.private.beliefs.get("_temp_move")
 
+    if not isinstance(move, DialogueMove):
+        return new_state
+
     # Add assertion to commitments
     if move.content:
         new_state.shared.commitments.add(str(move.content))
@@ -192,6 +236,9 @@ def _integrate_greet(state: InformationState) -> InformationState:
     """
     new_state = state.clone()
     move = new_state.private.beliefs.get("_temp_move")
+
+    if not isinstance(move, DialogueMove):
+        return new_state
 
     # Add to last_moves
     new_state.shared.last_moves.append(move)
@@ -223,6 +270,9 @@ def _integrate_quit(state: InformationState) -> InformationState:
     """
     new_state = state.clone()
     move = new_state.private.beliefs.get("_temp_move")
+
+    if not isinstance(move, DialogueMove):
+        return new_state
 
     # Add to last_moves
     new_state.shared.last_moves.append(move)

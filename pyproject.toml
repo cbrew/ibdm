@@ -47,7 +47,7 @@ storage = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-addopts = "-v --cov=ibdm --cov-report=term-missing"
+addopts = "-v"
 
 [tool.ruff]
 line-length = 100

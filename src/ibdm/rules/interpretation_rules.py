@@ -8,7 +8,15 @@ Based on Larsson (2002) Issue-based Dialogue Management.
 
 import re
 
-from ibdm.core import AltQuestion, Answer, DialogueMove, InformationState, WhQuestion, YNQuestion
+from ibdm.core import (
+    AltQuestion,
+    Answer,
+    DialogueMove,
+    InformationState,
+    Plan,
+    WhQuestion,
+    YNQuestion,
+)
 from ibdm.rules.update_rules import UpdateRule
 
 
@@ -19,6 +27,14 @@ def create_interpretation_rules() -> list[UpdateRule]:
         List of interpretation rules
     """
     return [
+        # Task accommodation - NDA generation (highest priority)
+        UpdateRule(
+            name="accommodate_nda_task",
+            preconditions=_is_nda_request,
+            effects=_create_nda_plan,
+            priority=12,
+            rule_type="interpretation",
+        ),
         # Greetings (highest priority)
         UpdateRule(
             name="interpret_greeting",
@@ -87,6 +103,23 @@ def create_interpretation_rules() -> list[UpdateRule]:
 
 
 # Precondition functions
+
+
+def _is_nda_request(state: InformationState) -> bool:
+    """Check if utterance is requesting NDA document generation."""
+    utterance = state.private.beliefs.get("_temp_utterance", "").lower()
+    # Look for patterns indicating NDA creation request
+    nda_patterns = [
+        "draft nda",
+        "draft an nda",
+        "create nda",
+        "generate nda",
+        "need an nda",
+        "nda document",
+        "nondisclosure agreement",
+        "non-disclosure agreement",
+    ]
+    return any(pattern in utterance for pattern in nda_patterns)
 
 
 def _is_greeting(state: InformationState) -> bool:
@@ -354,4 +387,78 @@ def _create_assertion_move(state: InformationState) -> InformationState:
         speaker=speaker,
     )
     new_state.private.agenda.append(move)
+    return new_state
+
+
+def _create_nda_plan(state: InformationState) -> InformationState:
+    """Create a hierarchical plan for NDA document generation.
+
+    This creates a findout plan with ordered subplans for each NDA requirement:
+    1. findout(parties) - WhQuestion
+    2. findout(nda_type) - AltQuestion["mutual", "one-way"]
+    3. findout(effective_date) - WhQuestion
+    4. findout(duration) - WhQuestion
+    5. findout(governing_law) - AltQuestion["California", "Delaware"]
+    6. confirm(generate_document) - YNQuestion
+    """
+    new_state = state.clone()
+
+    # Create subplans for each NDA requirement
+    subplans = [
+        Plan(
+            plan_type="findout",
+            content=WhQuestion(variable="parties", predicate="legal_entities"),
+            status="active",
+        ),
+        Plan(
+            plan_type="findout",
+            content=AltQuestion(alternatives=["mutual", "one-way"]),
+            status="active",
+        ),
+        Plan(
+            plan_type="findout",
+            content=WhQuestion(variable="effective_date", predicate="date"),
+            status="active",
+        ),
+        Plan(
+            plan_type="findout",
+            content=WhQuestion(variable="duration", predicate="time_period"),
+            status="active",
+        ),
+        Plan(
+            plan_type="findout",
+            content=AltQuestion(alternatives=["California", "Delaware"]),
+            status="active",
+        ),
+        Plan(
+            plan_type="findout",
+            content=YNQuestion(proposition="generate_document"),
+            status="active",
+        ),
+    ]
+
+    # Create the main NDA plan
+    nda_plan = Plan(
+        plan_type="findout",
+        content="nda_requirements",
+        status="active",
+        subplans=subplans,
+    )
+
+    # Store the plan in private.plan (it's a list)
+    new_state.private.plan.append(nda_plan)
+
+    # Initialize document type in beliefs
+    new_state.private.beliefs["document_type"] = "NDA"
+
+    # Create a request move representing the user's task request
+    speaker = new_state.private.beliefs.get("_temp_speaker", "user")
+    utterance = new_state.private.beliefs.get("_temp_utterance", "")
+    move = DialogueMove(
+        move_type="request",
+        content=utterance,
+        speaker=speaker,
+    )
+    new_state.private.agenda.append(move)
+
     return new_state
