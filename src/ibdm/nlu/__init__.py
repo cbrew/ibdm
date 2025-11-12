@@ -7,6 +7,8 @@ This module provides LLM-based natural language understanding capabilities inclu
 - Dialogue act classification
 - Question understanding and analysis
 - Answer parsing and QUD matching
+- Context-aware interpretation pipeline
+- Implicature detection and topic tracking
 - Entity extraction and reference resolution
 """
 
@@ -19,12 +21,31 @@ from ibdm.nlu.answer_parser import (
 from ibdm.nlu.answer_parser import (
     create_parser as create_answer_parser,
 )
+from ibdm.nlu.context_interpreter import (
+    ContextInterpreter,
+    ContextInterpreterConfig,
+    ContextualInterpretation,
+    ImplicatureType,
+    TopicShiftType,
+    create_interpreter,
+)
 from ibdm.nlu.dialogue_act_classifier import (
     DialogueActClassifier,
     DialogueActClassifierConfig,
     DialogueActResult,
     DialogueActType,
     create_classifier,
+)
+from ibdm.nlu.entity_extractor import (
+    Entity,
+    EntityExtractionResult,
+    EntityExtractor,
+    EntityExtractorConfig,
+    EntityTracker,
+    EntityTrackerConfig,
+    EntityType,
+    create_extractor,
+    create_tracker,
 )
 from ibdm.nlu.llm_adapter import (
     LLMAdapter,
@@ -54,6 +75,14 @@ from ibdm.nlu.question_analyzer import (
     QuestionAnalyzerConfig,
     QuestionType,
     create_analyzer,
+)
+from ibdm.nlu.reference_resolver import (
+    Reference,
+    ReferenceResolution,
+    ReferenceResolver,
+    ReferenceResolverConfig,
+    ReferenceType,
+    create_resolver,
 )
 from ibdm.nlu.semantic_parser import (
     SemanticArgument,
@@ -112,4 +141,28 @@ __all__ = [
     "AnswerAnalysis",
     "AnswerType",
     "create_answer_parser",
+    # Context Interpreter
+    "ContextInterpreter",
+    "ContextInterpreterConfig",
+    "ContextualInterpretation",
+    "ImplicatureType",
+    "TopicShiftType",
+    "create_interpreter",
+    # Entity Extraction and Tracking
+    "Entity",
+    "EntityExtractor",
+    "EntityExtractorConfig",
+    "EntityExtractionResult",
+    "EntityTracker",
+    "EntityTrackerConfig",
+    "EntityType",
+    "create_extractor",
+    "create_tracker",
+    # Reference Resolution
+    "Reference",
+    "ReferenceResolution",
+    "ReferenceResolver",
+    "ReferenceResolverConfig",
+    "ReferenceType",
+    "create_resolver",
 ]
