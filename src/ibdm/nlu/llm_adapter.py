@@ -131,6 +131,9 @@ class LLMAdapter:
                 "Please set the IBDM_API_KEY environment variable."
             )
 
+        # Track last response for token usage monitoring
+        self.last_response: LLMResponse | None = None
+
         logger.info(f"Initialized LLM adapter with model: {self.config.model.value}")
 
     def call(
@@ -183,13 +186,18 @@ class LLMAdapter:
                     f"(prompt: {usage.prompt_tokens}, completion: {usage.completion_tokens})"  # type: ignore[attr-defined]
                 )
 
-                return LLMResponse(
+                llm_response = LLMResponse(
                     content=cast(str, content or ""),
                     model=self.config.model.value,
                     tokens_used=usage.total_tokens,  # type: ignore[attr-defined]
                     prompt_tokens=usage.prompt_tokens,  # type: ignore[attr-defined]
                     completion_tokens=usage.completion_tokens,  # type: ignore[attr-defined]
                 )
+
+                # Store last response for token tracking
+                self.last_response = llm_response
+
+                return llm_response
 
             except Exception as e:
                 logger.warning(f"LLM call attempt {attempt + 1} failed: {e}")
@@ -258,13 +266,18 @@ class LLMAdapter:
                     f"(prompt: {usage.prompt_tokens}, completion: {usage.completion_tokens})"  # type: ignore[attr-defined]
                 )
 
-                return LLMResponse(
+                llm_response = LLMResponse(
                     content=cast(str, content or ""),
                     model=self.config.model.value,
                     tokens_used=usage.total_tokens,  # type: ignore[attr-defined]
                     prompt_tokens=usage.prompt_tokens,  # type: ignore[attr-defined]
                     completion_tokens=usage.completion_tokens,  # type: ignore[attr-defined]
                 )
+
+                # Store last response for token tracking
+                self.last_response = llm_response
+
+                return llm_response
 
             except Exception as e:
                 logger.warning(f"Async LLM call attempt {attempt + 1} failed: {e}")
