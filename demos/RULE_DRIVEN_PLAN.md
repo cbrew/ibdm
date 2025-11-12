@@ -1,14 +1,37 @@
-# Beads Tasks for Rule-Driven Demo Implementation
+# Rule-Driven Demo Implementation
 
-## Parent Task
+## Status: ✅ COMPLETED (2025-11-12)
+
+All planned tasks have been implemented and tested. The system now uses:
+- **LLM-based task classification** with semantic domain representations
+- **Plan-based dialogue control** via interpretation and selection rules
+- **Fully rule-driven flow** without manual question creation
+
+See commits:
+- cc5dff1: feat(nlu): add LLM-based task classifier with semantic domain representation
+- 5466d9c: refactor(rules): use flexible keyword matching for NDA detection
+- 94f9f1a: feat(rules): add request integration rule and fix type safety
+- d048086: fix(rules): create request move in NDA accommodation rule
+- 05299f6: refactor(demo): remove manual question creation, use rule-driven flow
+
+Documentation:
+- `docs/TASK_CLASSIFICATION.md` - Complete task classification documentation
+- `src/ibdm/nlu/task_classifier.py` - Implementation with examples
+- `src/ibdm/rules/interpretation_rules.py` - Rule integration
+
+---
+
+## Original Planning Document
+
+### Parent Task
 ibdm-dem.1.5: Implement main dialogue loop with NLUDialogueEngine [open]
 
-## New Subtasks to Create
+### Tasks Implemented
 
-### ibdm-dem.1.5.1: Create NDA task accommodation interpretation rule
+### ibdm-dem.1.5.1: Create NDA task accommodation interpretation rule ✅
 **Priority**: 0 (blocking other work)
 **Type**: task
-**Status**: open
+**Status**: ✅ COMPLETED
 **Parent**: ibdm-dem.1.5
 
 **Description**:
@@ -33,10 +56,10 @@ Create an interpretation rule that detects "draft NDA" requests and creates a hi
 
 ---
 
-### ibdm-dem.1.5.2: Create plan-based selection rule
+### ibdm-dem.1.5.2: Create plan-based selection rule ✅
 **Priority**: 0 (blocking other work)
 **Type**: task
-**Status**: open
+**Status**: ✅ COMPLETED
 **Parent**: ibdm-dem.1.5
 **Blocks**: ibdm-dem.1.5.3
 
@@ -58,10 +81,10 @@ Create selection rule that executes active Plans by converting findout subplans 
 
 ---
 
-### ibdm-dem.1.5.3: Remove manual question creation from demo
+### ibdm-dem.1.5.3: Remove manual question creation from demo ✅
 **Priority**: 1
 **Type**: task
-**Status**: open
+**Status**: ✅ COMPLETED
 **Parent**: ibdm-dem.1.5
 **Depends on**: ibdm-dem.1.5.1, ibdm-dem.1.5.2
 
@@ -86,10 +109,10 @@ Update demo to use rule-driven control flow instead of manually creating and int
 
 ---
 
-### ibdm-dem.1.5.4: Test full rule-driven NDA dialogue flow
+### ibdm-dem.1.5.4: Test full rule-driven NDA dialogue flow ✅
 **Priority**: 1
 **Type**: task
-**Status**: open
+**Status**: ✅ COMPLETED
 **Parent**: ibdm-dem.1.5
 **Depends on**: ibdm-dem.1.5.3
 

@@ -17,7 +17,19 @@ from ibdm.core import (
     WhQuestion,
     YNQuestion,
 )
+from ibdm.nlu.task_classifier import TaskType, create_task_classifier
 from ibdm.rules.update_rules import UpdateRule
+
+# Initialize task classifier (lazy loaded to avoid circular imports and startup costs)
+_task_classifier = None
+
+
+def _get_task_classifier():
+    """Get or create the task classifier singleton."""
+    global _task_classifier
+    if _task_classifier is None:
+        _task_classifier = create_task_classifier(use_fast_model=True)
+    return _task_classifier
 
 
 def create_interpretation_rules() -> list[UpdateRule]:
@@ -106,20 +118,49 @@ def create_interpretation_rules() -> list[UpdateRule]:
 
 
 def _is_nda_request(state: InformationState) -> bool:
-    """Check if utterance is requesting NDA document generation."""
-    utterance = state.private.beliefs.get("_temp_utterance", "").lower()
-    # Look for patterns indicating NDA creation request
-    nda_patterns = [
-        "draft nda",
-        "draft an nda",
-        "create nda",
-        "generate nda",
-        "need an nda",
-        "nda document",
-        "nondisclosure agreement",
-        "non-disclosure agreement",
+    """Check if utterance is requesting NDA document generation.
+
+    Uses LLM-based task classification to semantically understand user intent
+    and map it to the NDA drafting task. This handles variations in phrasing
+    like "I need an NDA", "help me create a confidentiality agreement", etc.
+
+    The task classifier provides:
+    - Semantic understanding of user intent
+    - Domain classification (legal_documents)
+    - Task type identification (draft_document)
+    - Parameter extraction (document_type: NDA)
+    """
+    utterance = state.private.beliefs.get("_temp_utterance", "")
+
+    if not utterance or len(utterance.strip()) == 0:
+        return False
+
+    # Check if we've already classified this utterance (cached in beliefs)
+    cached_task = state.private.beliefs.get("_cached_task_classification")
+    if cached_task:
+        result = cached_task
+    else:
+        # Use task classifier to semantically understand the intent
+        try:
+            classifier = _get_task_classifier()
+            result = classifier.classify(utterance)
+
+            # Cache the result for other rules to use
+            state.private.beliefs["_cached_task_classification"] = result
+        except Exception:
+            # On error (e.g., API failure), fall back to safe default
+            return False
+
+    # Check if this is a draft_document task with NDA parameter
+    is_draft_task = result.task_type == TaskType.DRAFT_DOCUMENT.value
+    is_legal_domain = result.domain == "legal_documents"
+    is_nda_document = result.parameters.get("document_type", "").upper() in [
+        "NDA",
+        "NON-DISCLOSURE",
     ]
-    return any(pattern in utterance for pattern in nda_patterns)
+    is_high_confidence = result.confidence >= 0.7
+
+    return is_draft_task and is_legal_domain and is_nda_document and is_high_confidence
 
 
 def _is_greeting(state: InformationState) -> bool:
