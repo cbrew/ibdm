@@ -106,20 +106,40 @@ def create_interpretation_rules() -> list[UpdateRule]:
 
 
 def _is_nda_request(state: InformationState) -> bool:
-    """Check if utterance is requesting NDA document generation."""
+    """Check if utterance is requesting NDA document generation.
+
+    Uses flexible keyword matching to detect variations of NDA requests.
+    This is intentionally lightweight (no LLM calls) for fast precondition checking.
+
+    Note: For full NLU integration, the NLUDialogueEngine provides context-aware
+    interpretation using DialogueActClassifier and plan_inference modules. This rule
+    complements that by providing domain-specific task accommodation logic.
+    """
     utterance = state.private.beliefs.get("_temp_utterance", "").lower()
-    # Look for patterns indicating NDA creation request
-    nda_patterns = [
-        "draft nda",
-        "draft an nda",
-        "create nda",
-        "generate nda",
-        "need an nda",
-        "nda document",
-        "nondisclosure agreement",
-        "non-disclosure agreement",
+
+    if not utterance or len(utterance.strip()) == 0:
+        return False
+
+    # Check for NDA-related terms
+    nda_terms = ["nda", "non-disclosure", "nondisclosure", "confidentiality agreement"]
+    has_nda_term = any(term in utterance for term in nda_terms)
+
+    # Check for action verbs indicating document creation
+    action_verbs = [
+        "draft",
+        "create",
+        "generate",
+        "prepare",
+        "write",
+        "make",
+        "need",
+        "want",
+        "help with",
     ]
-    return any(pattern in utterance for pattern in nda_patterns)
+    has_action = any(verb in utterance for verb in action_verbs)
+
+    # Must have both: NDA term + action verb
+    return has_nda_term and has_action
 
 
 def _is_greeting(state: InformationState) -> bool:
