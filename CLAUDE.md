@@ -14,13 +14,17 @@ This project runs in a containerized environment where:
 ### Environment Variables
 
 The following environment variables are available:
-- `GEMINI_API_KEY` - Google/Gemini API key for LLM access
-- `OPENAI_API_KEY` - OpenAI API key for LLM access
+- `IBDM_API_KEY` - Anthropic Claude API key (primary, used for all LLM operations)
+- `GEMINI_API_KEY` - Google/Gemini API key (available but not actively used)
+- `OPENAI_API_KEY` - OpenAI API key (available but not actively used)
+
+**Note**: This project primarily uses `IBDM_API_KEY` for Claude models. The other keys are available for compatibility but not recommended per Policy #9.
 
 ### .env File
 
 A `.env` file exists in the project root containing these API keys:
 ```bash
+IBDM_API_KEY=<key>
 GEMINI_API_KEY=<key>
 OPENAI_API_KEY=<key>
 ```
@@ -36,12 +40,14 @@ OPENAI_API_KEY=<key>
 ```python
 import os
 
-# Verify API keys are available
-gemini_key = os.getenv("GEMINI_API_KEY")
-openai_key = os.getenv("OPENAI_API_KEY")
+# Verify primary API key is available
+ibdm_api_key = os.getenv("IBDM_API_KEY")
 
-assert gemini_key, "GEMINI_API_KEY not found"
-assert openai_key, "OPENAI_API_KEY not found"
+assert ibdm_api_key, "IBDM_API_KEY not found"
+
+# Optional: Verify other keys if needed
+# gemini_key = os.getenv("GEMINI_API_KEY")
+# openai_key = os.getenv("OPENAI_API_KEY")
 ```
 
 ## Core Policies
@@ -54,16 +60,18 @@ assert openai_key, "OPENAI_API_KEY not found"
 
 **Commands**:
 ```bash
-# Install dependencies
-uv pip install -e ".[dev]"
+# Install dependencies from pyproject.toml
+uv pip install --system -e ".[dev]"
 
 # Add new dependency
-uv pip install <package>
-# Then update pyproject.toml
+uv pip install --system <package>
+# Then add to pyproject.toml dependencies
 
-# Sync dependencies
-uv pip sync requirements.txt
+# Reinstall to sync after pyproject.toml changes
+uv pip install --system -e ".[dev]"
 ```
+
+**Note**: Use `--system` flag when not in a virtual environment.
 
 ### 2. Formatting and Basic Type Checking: Use ruff
 
@@ -91,7 +99,10 @@ ruff format src/ tests/ && ruff check --fix src/ tests/
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+
+[tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]
+ignore = []
 ```
 
 ### 3. Heavy Type Checking: Use pyright
@@ -198,50 +209,46 @@ pytest
 
 **Policy**: All design decisions, bugs discovered, and future work must be tracked in beads.
 
+**Note**: The beads CLI (`bd`) may not be installed. Use the helper script `.claude/beads-helpers.sh` or read `.beads/issues.jsonl` directly.
+
 **When to Create Beads Issues**:
 
 1. **Before Starting Work**: Check beads for ready tasks
    ```bash
-   bd ready --json
-   # Or use helper:
    .claude/beads-helpers.sh ready
+   # Or: grep '"status":"open"' .beads/issues.jsonl
    ```
 
 2. **When Starting a Task**: Mark as in_progress
    ```bash
-   bd update ibdm-brm.1 --status in_progress
-   # Or use helper:
    .claude/beads-helpers.sh start ibdm-brm.1
+   # Or manually update .beads/issues.jsonl
    ```
 
-3. **Discovered Issues**: Create new tasks
+3. **Discovered Issues**: Document in task comments or commit messages
+   - Add detailed notes in commit messages
+   - Reference related task IDs
+   - Document decision rationale
+
+4. **Design Decisions**: Document in commit messages and code comments
    ```bash
-   bd create "Fix typing issue in Question.resolves_with" \
-     -t bug \
-     -p 0 \
-     -l "core,typing" \
-     --discovered-from ibdm-brm.1 \
-     --json
+   git commit -m "feat(core): use ABC for Question base class
+
+   Decision: Using ABC to enforce resolves_with implementation across
+   all Question subclasses. This provides compile-time safety.
+
+   Related to ibdm-brm.1"
    ```
 
-4. **Design Decisions**: Document in task comments
-   ```bash
-   bd comment ibdm-brm.1 "Decision: Using ABC for Question base class to enforce resolves_with implementation"
+5. **Future Work**: Document in TODO comments with task references
+   ```python
+   # TODO(ibdm-brm.3): Optimize Question matching for large QUD stacks
+   # Current O(n) scan is sufficient for <100 questions but may need
+   # indexing for larger applications.
    ```
 
-5. **Future Work**: Create tasks with lower priority
+6. **Completing Work**: Use helper script
    ```bash
-   bd create "Optimize Question matching for large QUD stacks" \
-     -t task \
-     -p 3 \
-     -l "performance,future" \
-     --json
-   ```
-
-6. **Completing Work**: Close with detailed reason
-   ```bash
-   bd close ibdm-brm.1 --reason "Implemented WhQuestion, YNQuestion, AltQuestion with full test coverage. All tests passing."
-   # Or use helper:
    .claude/beads-helpers.sh done ibdm-brm.1 "Implemented with full test coverage"
    ```
 
@@ -288,12 +295,10 @@ pytest
 1. **Plan**: Review beads task and break into subtasks if needed
    ```bash
    # Check task details
-   bd show ibdm-brm.1 --json
+   grep 'ibdm-brm.1' .beads/issues.jsonl | jq '.'
 
-   # If task is large, create subtasks
-   bd create "Implement WhQuestion class" -t task --parent ibdm-brm.1
-   bd create "Implement YNQuestion class" -t task --parent ibdm-brm.1
-   bd create "Implement AltQuestion class" -t task --parent ibdm-brm.1
+   # Document subtasks in commit messages or TODO comments
+   # Large tasks should be broken down into smaller, focused commits
    ```
 
 2. **Implement**: Write minimal code for one step
@@ -324,9 +329,10 @@ pytest
 
 6. **Repeat**: Next step (add methods, validation, etc.)
 
-7. **Update Beads**: Record progress
+7. **Update Progress**: Record in commit messages
    ```bash
-   bd comment ibdm-brm.1 "✓ WhQuestion class implemented and tested"
+   # Progress is tracked via commit messages and git history
+   git log --oneline --grep="ibdm-brm.1"
    ```
 
 **Red-Green-Refactor Pattern**:
@@ -478,14 +484,14 @@ git push -u origin <branch>
 # Check phase progress
 .claude/beads-helpers.sh progress 1
 
-# Review completed tasks
-bd list --status closed --json | jq -r '.[] | "\(.id): \(.title)"'
+# Review completed tasks via git log
+git log --oneline --since="1 week ago" --grep="feat\\|fix"
 
-# Identify blockers
-bd list --status blocked --json
+# Check current task status
+grep '"status":"open"' .beads/issues.jsonl | jq -r '"\(.id): \(.title)"'
 
-# Plan next week
-bd list -p 0 -p 1 --status open --json
+# Plan next priorities
+.claude/beads-helpers.sh ready
 ```
 
 ## Tool Configuration
@@ -498,8 +504,14 @@ Ensure these sections exist:
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+
+[tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]
 ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
 
 [tool.pyright]
 pythonVersion = "3.10"
