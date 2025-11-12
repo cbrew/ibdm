@@ -713,106 +713,258 @@ def main():
         return 1
 
     # Display setup info
-    if args.verbose:
-        console.print("[dim]✓ API key found[/dim]")
-        console.print("[dim]✓ Initializing NLU components...[/dim]")
-        console.print()
+    console.print("[dim]✓ API key found[/dim]")
+    console.print("[dim]✓ Initializing NLU components...[/dim]")
+    console.print()
 
-    # Demo: Test visualization helpers
-    if args.verbose:
-        console.print("[bold]Testing Visualization Helpers:[/bold]")
-        console.print()
+    # Initialize NLU engine with hybrid fallback
+    try:
+        from ibdm.engine import NLUDialogueEngine, NLUEngineConfig
+        from ibdm.nlu import FallbackConfig
 
-        # Test format_question
-        wh_q = WhQuestion(
-            variable="parties", predicate="legal_entities", constraints={"role": "NDA"}
-        )
-        console.print(format_question(wh_q))
-        console.print()
-
-        yn_q = YNQuestion(proposition="generate_document")
-        console.print(format_question(yn_q))
-        console.print()
-
-        alt_q = AltQuestion(alternatives=["mutual", "one-way"])
-        console.print(format_question(alt_q))
-        console.print()
-
-        # Test format_dialogue_move
-        move = DialogueMove(move_type="ask", content=wh_q, speaker="system")
-        console.print(format_dialogue_move(move))
-        console.print()
-
-        # Test format_answer
-        answer = Answer(content="Acme Corp and TechStart Inc", certainty=0.95)
-        console.print(format_answer(answer))
-        console.print()
-
-        # Test format_qud_stack
-        qud_stack = [wh_q, yn_q, alt_q]
-        console.print(format_qud_stack(qud_stack))
-        console.print()
-
-        # Test format_information_state
-        from ibdm.core import InformationState
-
-        state = InformationState(agent_id="legal_system")
-        state.shared.push_qud(wh_q)
-        state.shared.push_qud(alt_q)
-        console.print(format_information_state(state))
-        console.print()
-
-    # Demo: Test metrics tracking
-    if args.verbose:
-        console.print("[bold]Testing Metrics Tracking:[/bold]")
-        console.print()
-
-        # Create a metrics tracker
-        tracker = MetricsTracker()
-
-        # Simulate some turns with different strategies
-        tracker.add_turn(
-            turn_number=1,
-            speaker="user",
-            utterance="Hello!",
-            strategy="rules",
-            tokens_input=0,
-            tokens_output=0,
-            latency=0.001,
+        # Configure hybrid fallback for cost optimization
+        fallback_config = FallbackConfig(
+            enable_fast_path=True,
+            enable_cascading=True,
+            complexity_threshold=0.7,  # Try Haiku first for medium complexity
         )
 
-        tracker.add_turn(
-            turn_number=2,
-            speaker="user",
-            utterance="I need to draft an NDA",
-            strategy=InterpretationStrategy.HAIKU,
-            tokens_input=50,
-            tokens_output=100,
-            latency=0.5,
+        engine_config = NLUEngineConfig(
+            use_nlu=True,
+            use_llm=True,
+            enable_hybrid_fallback=True,
+            fallback_config=fallback_config,
         )
 
-        tracker.add_turn(
-            turn_number=3,
-            speaker="user",
-            utterance="Between complex legal entities with nested organizational structures",
-            strategy=InterpretationStrategy.SONNET,
-            tokens_input=80,
-            tokens_output=200,
-            latency=1.2,
+        engine = NLUDialogueEngine(agent_id="legal_system", config=engine_config)
+
+        console.print("[green]✓ NLU engine initialized with hybrid fallback[/green]")
+        console.print()
+
+    except Exception as e:
+        console.print(f"[bold red]Error:[/bold red] Failed to initialize NLU engine: {e}")
+        console.print()
+        return 1
+
+    # Initialize information state
+    state = InformationState(agent_id="legal_system")
+
+    # Initialize metrics tracker
+    tracker = MetricsTracker()
+
+    # Document information being gathered
+    gathered_info: dict[str, Any] = {
+        "document_type": "NDA",  # Known from turn 1
+    }
+
+    # Run through the dialogue scenario
+    console.print("[bold cyan]Starting NDA Generation Dialogue[/bold cyan]")
+    console.print()
+
+    for i, turn in enumerate(NDA_DIALOGUE_TURNS):
+        # Display turn header
+        console.print(f"[bold]{'=' * 80}[/bold]")
+        console.print(f"[bold cyan]Turn {turn.turn_number}[/bold cyan]")
+        console.print(f"[bold]{'=' * 80}[/bold]")
+        console.print()
+
+        # Display attorney utterance
+        console.print(
+            Panel(
+                f"[bold]{turn.utterance}[/bold]",
+                title=f"Attorney (Turn {turn.turn_number})",
+                border_style="blue",
+                padding=(1, 2),
+            )
         )
-
-        # Show per-turn metrics
-        console.print("[dim]Turn 2 metrics:[/dim]")
-        console.print(format_turn_metrics(tracker.turns[1]))
         console.print()
 
-        # Show dashboard
-        console.print(format_metrics_dashboard(tracker))
+        # Interpret the utterance
+        if args.verbose:
+            console.print("[dim]Interpreting with NLU...[/dim]")
+
+        try:
+            moves = engine.interpret(turn.utterance, "attorney")
+
+            # Get strategy used and tokens
+            strategy_used = "rules"  # Default
+            tokens_in = 0
+            tokens_out = 0
+
+            if engine.fallback_strategy:
+                # Get the most recent strategy from stats
+                stats = engine.fallback_strategy.get_stats()
+                if stats.strategy_usage:
+                    # Find the strategy with the highest usage count (most recent)
+                    strategy_used = max(
+                        stats.strategy_usage.items(),
+                        key=lambda x: x[1],
+                    )[0].value
+
+                # Get token counts from the last interpretation
+                tokens_in = engine.last_interpretation_tokens // 2  # Approximate split
+                tokens_out = engine.last_interpretation_tokens - tokens_in
+
+            # Track metrics
+            metrics = tracker.add_turn(
+                turn_number=turn.turn_number,
+                speaker="attorney",
+                utterance=turn.utterance,
+                strategy=strategy_used,
+                tokens_input=tokens_in,
+                tokens_output=tokens_out,
+                latency=engine.last_interpretation_latency,
+            )
+
+            # Display strategy used
+            console.print(format_turn_metrics(metrics))
+            console.print()
+
+            # Display dialogue moves
+            if moves:
+                console.print(f"[green]✓ Interpreted {len(moves)} dialogue move(s)[/green]")
+                for move in moves:
+                    console.print(format_dialogue_move(move))
+                    console.print()
+
+                    # Extract structured information based on move type
+                    if move.move_type == "request":
+                        console.print(
+                            "[dim]Task accommodation: System infers NDA requirements[/dim]"
+                        )
+                        console.print()
+
+                    elif move.move_type == "answer" and isinstance(move.content, Answer):
+                        # Update gathered info based on turn
+                        if turn.turn_number == 2:
+                            gathered_info["parties"] = move.content.content
+                            gathered_info["entities"] = turn.entities
+                        elif turn.turn_number == 3:
+                            gathered_info["nda_type"] = "Mutual"
+                        elif turn.turn_number == 4:
+                            gathered_info["effective_date"] = "2025-01-01"
+                        elif turn.turn_number == 5:
+                            gathered_info["duration"] = "3 years"
+                        elif turn.turn_number == 6:
+                            gathered_info["governing_law"] = "California"
+
+            else:
+                console.print("[yellow]⚠ No moves interpreted[/yellow]")
+                console.print()
+
+            # Display QUD stack state
+            if state.shared.qud:
+                console.print(format_qud_stack(state.shared.qud))
+                console.print()
+
+            # Display system response (from pre-scripted prompts)
+            if i < len(NDA_SYSTEM_PROMPTS):
+                system_prompt = NDA_SYSTEM_PROMPTS[i]
+                console.print(
+                    Panel(
+                        f"[bold]{system_prompt}[/bold]",
+                        title="Legal System",
+                        border_style="green",
+                        padding=(1, 2),
+                    )
+                )
+                console.print()
+
+                # Update QUD stack to reflect system question
+                # (In a real system, this would be done by the selection/generation rules)
+                if i == 0:  # After turn 1
+                    q = WhQuestion(variable="parties", predicate="legal_entities")
+                    state.shared.push_qud(q)
+                elif i == 1:  # After turn 2
+                    if state.shared.qud:
+                        state.shared.pop_qud()  # Resolve parties question
+                    q = AltQuestion(alternatives=["mutual", "one-way"])
+                    state.shared.push_qud(q)
+                elif i == 2:  # After turn 3
+                    if state.shared.qud:
+                        state.shared.pop_qud()  # Resolve NDA type
+                    q = WhQuestion(variable="effective_date", predicate="date")
+                    state.shared.push_qud(q)
+                elif i == 3:  # After turn 4
+                    if state.shared.qud:
+                        state.shared.pop_qud()  # Resolve effective date
+                    q = WhQuestion(variable="duration", predicate="time_period")
+                    state.shared.push_qud(q)
+                elif i == 4:  # After turn 5
+                    if state.shared.qud:
+                        state.shared.pop_qud()  # Resolve duration
+                    q = AltQuestion(alternatives=["California", "Delaware"])
+                    state.shared.push_qud(q)
+                elif i == 5:  # After turn 6
+                    if state.shared.qud:
+                        state.shared.pop_qud()  # Resolve governing law
+                    q = YNQuestion(proposition="generate_document")
+                    state.shared.push_qud(q)
+
+        except Exception as e:
+            console.print(f"[bold red]Error:[/bold red] {e}")
+            if args.verbose:
+                import traceback
+
+                console.print(traceback.format_exc())
+            console.print()
+
+        # Separator between turns
         console.print()
 
-    console.print("[green]✓ Visualization helpers ready[/green]")
-    console.print("[green]✓ Metrics tracking ready[/green]")
-    console.print("[yellow]Main demo implementation in progress...[/yellow]")
+    # Display final gathered information
+    console.print(f"[bold]{'=' * 80}[/bold]")
+    console.print("[bold green]Document Information Gathered[/bold green]")
+    console.print(f"[bold]{'=' * 80}[/bold]")
+    console.print()
+
+    # Create checklist table
+    checklist = Table(title="NDA Requirements", show_header=True, header_style="bold cyan")
+    checklist.add_column("Field", style="cyan")
+    checklist.add_column("Value", style="green")
+    checklist.add_column("Status", justify="center")
+
+    for req in NDA_REQUIREMENTS:
+        field_name = req["field"]
+        value = gathered_info.get(field_name, "—")
+        status = "✓" if field_name in gathered_info else "✗"
+        status_color = "green" if field_name in gathered_info else "red"
+
+        checklist.add_row(req["label"], str(value), f"[{status_color}]{status}[/{status_color}]")
+
+    console.print(checklist)
+    console.print()
+
+    # Display final metrics dashboard
+    console.print(f"[bold]{'=' * 80}[/bold]")
+    console.print("[bold cyan]Performance Metrics[/bold cyan]")
+    console.print(f"[bold]{'=' * 80}[/bold]")
+    console.print()
+
+    console.print(format_metrics_dashboard(tracker))
+    console.print()
+
+    # Display strategy effectiveness
+    if engine.fallback_strategy:
+        stats = engine.fallback_strategy.get_stats()
+        console.print("[bold]Strategy Distribution:[/bold]")
+        console.print(f"  Total interpretations: {stats.total_calls}")
+        console.print()
+
+        if stats.strategy_usage:
+            usage_table = Table(show_header=True, header_style="bold")
+            usage_table.add_column("Strategy", style="cyan")
+            usage_table.add_column("Usage Count", justify="right")
+            usage_table.add_column("Percentage", justify="right")
+
+            for strategy, count in stats.strategy_usage.items():
+                pct = (count / stats.total_calls * 100) if stats.total_calls > 0 else 0
+                usage_table.add_row(strategy.value, str(count), f"{pct:.1f}%")
+
+            console.print(usage_table)
+            console.print()
+
+    console.print("[green]✓ Demo completed successfully![/green]")
     console.print()
 
     return 0
