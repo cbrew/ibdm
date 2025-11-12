@@ -454,8 +454,8 @@ class NLUDialogueEngine(DialogueMoveEngine):
             if answer_move:
                 moves.append(answer_move)
 
-        # Assertion/Statement
-        elif dialogue_act in [DialogueActType.ASSERTION.value, DialogueActType.STATEMENT.value]:
+        # Assertion
+        elif dialogue_act == DialogueActType.ASSERTION.value:
             moves.append(
                 DialogueMove(
                     move_type="assert",
@@ -465,11 +465,11 @@ class NLUDialogueEngine(DialogueMoveEngine):
                 )
             )
 
-        # Request
-        elif dialogue_act == DialogueActType.REQUEST.value:
+        # Command
+        elif dialogue_act == DialogueActType.COMMAND.value:
             moves.append(
                 DialogueMove(
-                    move_type="request",
+                    move_type="command",
                     content=utterance,
                     speaker=speaker,
                     metadata={"dialogue_act": dialogue_act},
