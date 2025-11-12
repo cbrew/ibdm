@@ -9,6 +9,7 @@ from typing import Any
 from burr.core import ApplicationBuilder, State, default, expr
 
 from ibdm.burr_integration.actions import generate, idle, initialize, integrate, interpret, select
+from ibdm.core import InformationState
 from ibdm.rules import RuleSet
 
 
@@ -213,13 +214,16 @@ class DialogueStateMachine:
         """
         return self.app.state
 
-    def get_information_state(self) -> Any:
+    def get_information_state(self) -> InformationState | None:
         """Get the current information state from Burr State.
 
         Returns:
-            Current InformationState from Burr State
+            Current InformationState reconstructed from Burr State dict
         """
-        return self.app.state.get("information_state")
+        info_state_dict = self.app.state.get("information_state")
+        if info_state_dict is None:
+            return None
+        return InformationState.from_dict(info_state_dict)
 
     def reset(self) -> None:
         """Reset the state machine to initial state."""
@@ -227,7 +231,8 @@ class DialogueStateMachine:
         engine = self.app.state.get("engine")
         if engine is not None:
             initial_state = engine.create_initial_state()
-            self.app._state = self.app.state.update(information_state=initial_state)
+            initial_state_dict = initial_state.to_dict()
+            self.app._state = self.app.state.update(information_state=initial_state_dict)
 
     def visualize(self, output_path: str = "dialogue_flow.png") -> None:
         """Visualize the state machine graph.

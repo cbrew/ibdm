@@ -24,15 +24,21 @@ def interpret(state: State) -> tuple[dict[str, Any], State]:
     """
     utterance: str = state["utterance"]
     speaker: str = state["speaker"]
-    info_state: InformationState = state["information_state"]
+    info_state_dict: dict = state["information_state"]
     engine: DialogueMoveEngine = state["engine"]
+
+    # Convert dict to InformationState object
+    info_state = InformationState.from_dict(info_state_dict)
 
     # Apply interpretation rules with explicit state (Phase 2: stateless methods)
     moves = engine.interpret(utterance, speaker, info_state)
 
-    # Update state with moves
-    result = {"moves": moves, "move_count": len(moves)}
-    return result, state.update(moves=moves)
+    # Convert moves to dicts for storage
+    moves_dicts = [m.to_dict() for m in moves]
+
+    # Update state with moves as dicts
+    result = {"moves": moves_dicts, "move_count": len(moves)}
+    return result, state.update(moves=moves_dicts)
 
 
 @action(reads=["moves", "information_state", "engine"], writes=["information_state", "integrated"])
@@ -45,18 +51,25 @@ def integrate(state: State) -> tuple[dict[str, Any], State]:
     Returns:
         Tuple of (result dict, updated state with updated information_state)
     """
-    moves: list[DialogueMove] = state["moves"]
-    info_state: InformationState = state["information_state"]
+    moves_dicts: list[dict] = state["moves"]
+    info_state_dict: dict = state["information_state"]
     engine: DialogueMoveEngine = state["engine"]
+
+    # Convert from dicts to objects
+    moves = [DialogueMove.from_dict(m) for m in moves_dicts]
+    info_state = InformationState.from_dict(info_state_dict)
 
     # Apply each move to update state (Phase 2: functional style)
     updated_info_state = info_state
     for move in moves:
         updated_info_state = engine.integrate(move, updated_info_state)
 
+    # Convert back to dict for storage
+    updated_info_state_dict = updated_info_state.to_dict()
+
     # Mark as integrated
     result = {"integrated": True, "move_count": len(moves)}
-    return result, state.update(information_state=updated_info_state, integrated=True)
+    return result, state.update(information_state=updated_info_state_dict, integrated=True)
 
 
 @action(
@@ -72,8 +85,11 @@ def select(state: State) -> tuple[dict[str, Any], State]:
     Returns:
         Tuple of (result dict, updated state)
     """
-    info_state: InformationState = state["information_state"]
+    info_state_dict: dict = state["information_state"]
     engine: DialogueMoveEngine = state["engine"]
+
+    # Convert from dict to object
+    info_state = InformationState.from_dict(info_state_dict)
 
     # Check if it's our turn
     if info_state.control.next_speaker != engine.agent_id:
@@ -83,13 +99,17 @@ def select(state: State) -> tuple[dict[str, Any], State]:
     # Select action using selection rules (Phase 2: pure function)
     response_move, updated_info_state = engine.select_action(info_state)
 
+    # Convert back to dicts for storage
+    updated_info_state_dict = updated_info_state.to_dict()
+    response_move_dict = response_move.to_dict() if response_move else None
+
     has_response = response_move is not None
-    result = {"has_response": has_response, "response_move": response_move}
+    result = {"has_response": has_response, "response_move": response_move_dict}
 
     return result, state.update(
-        information_state=updated_info_state,
+        information_state=updated_info_state_dict,
         has_response=has_response,
-        response_move=response_move,
+        response_move=response_move_dict,
     )
 
 
@@ -106,13 +126,17 @@ def generate(state: State) -> tuple[dict[str, Any], State]:
     Returns:
         Tuple of (result dict, updated state with updated information_state)
     """
-    response_move: DialogueMove | None = state["response_move"]
-    info_state: InformationState = state["information_state"]
+    response_move_dict: dict | None = state["response_move"]
+    info_state_dict: dict = state["information_state"]
     engine: DialogueMoveEngine = state["engine"]
 
-    if response_move is None:
+    if response_move_dict is None:
         result = {"utterance_text": ""}
         return result, state.update(utterance_text="")
+
+    # Convert from dicts to objects
+    response_move = DialogueMove.from_dict(response_move_dict)
+    info_state = InformationState.from_dict(info_state_dict)
 
     # Generate utterance using generation rules (Phase 2: pure function)
     utterance_text = engine.generate(response_move, info_state)
@@ -121,8 +145,13 @@ def generate(state: State) -> tuple[dict[str, Any], State]:
     response_move.content = utterance_text
     updated_info_state = engine.integrate(response_move, info_state)
 
+    # Convert back to dict for storage
+    updated_info_state_dict = updated_info_state.to_dict()
+
     result = {"utterance_text": utterance_text}
-    return result, state.update(information_state=updated_info_state, utterance_text=utterance_text)
+    return result, state.update(
+        information_state=updated_info_state_dict, utterance_text=utterance_text
+    )
 
 
 @action(reads=[], writes=["information_state", "engine", "ready"])
@@ -141,8 +170,9 @@ def initialize(state: State) -> tuple[dict[str, Any], State]:
     engine_class = state.get("engine_class", DialogueMoveEngine)
     engine_config = state.get("engine_config", None)
 
-    # Create initial InformationState in Burr State
+    # Create initial InformationState and convert to dict for Burr State
     information_state = InformationState(agent_id=agent_id)
+    information_state_dict = information_state.to_dict()
 
     # Create engine with appropriate class
     if engine_config is not None:
@@ -153,7 +183,7 @@ def initialize(state: State) -> tuple[dict[str, Any], State]:
         engine = engine_class(agent_id=agent_id, rules=rules)
 
     result = {"ready": True, "agent_id": agent_id}
-    return result, state.update(engine=engine, information_state=information_state, ready=True)
+    return result, state.update(engine=engine, information_state=information_state_dict, ready=True)
 
 
 @action(reads=[], writes=["utterance", "speaker"])
