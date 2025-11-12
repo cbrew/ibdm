@@ -270,8 +270,8 @@ class XMLParser(ResponseParser):
 
         return None
 
-    def _xml_to_dict(self, element: ET.Element) -> dict[str, Any]:
-        """Convert XML element tree to dictionary."""
+    def _xml_to_dict(self, element: ET.Element) -> dict[str, Any] | str:
+        """Convert XML element tree to dictionary or string for text-only elements."""
         result: dict[str, Any] = {}
 
         # Add attributes

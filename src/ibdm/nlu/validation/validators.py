@@ -12,6 +12,7 @@ from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, ValidationError
+from pydantic_core import ErrorDetails
 
 
 class ValidationSeverity(Enum):
@@ -209,7 +210,7 @@ class PydanticValidator(Validator):
                 )
             return result
 
-    def _generate_suggestion(self, error: dict[str, Any]) -> str:
+    def _generate_suggestion(self, error: ErrorDetails) -> str:
         """Generate helpful suggestion from Pydantic error."""
         error_type = error["type"]
 

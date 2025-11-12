@@ -321,7 +321,11 @@ class AdaptiveRetry(RetryStrategy):
         if "range_errors" in error_types:
             feedback_parts.append("**Value Range Errors:**")
             for issue in validation_result.errors:
-                if "range" in issue.code or "above" in issue.message or "below" in issue.message:
+                if (
+                    (issue.code and "range" in issue.code)
+                    or "above" in issue.message
+                    or "below" in issue.message
+                ):
                     feedback_parts.append(f"- {issue.suggestion or issue.message}")
             feedback_parts.append("")
 
@@ -431,10 +435,12 @@ def retry_with_feedback(
     Returns:
         Tuple of (final ParseResult, final ValidationResult, RetryContext)
     """
-    strategy = strategy or ExponentialBackoff()
+    if strategy is None:
+        strategy = ExponentialBackoff()
 
-    # Initialize context
-    context = RetryContext(max_attempts=strategy.max_attempts, original_prompt=prompt)
+    # Initialize context - get max_attempts from strategy if it has it, otherwise default
+    max_attempts = getattr(strategy, "max_attempts", 3)
+    context = RetryContext(max_attempts=max_attempts, original_prompt=prompt)
 
     # First attempt
     response = llm_call(prompt)
