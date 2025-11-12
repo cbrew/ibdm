@@ -44,8 +44,9 @@ class TestBurrActions:
         app.step()
 
         # Set next_speaker to someone else
-        engine = app.state["engine"]
-        engine.state.control.next_speaker = "user"
+        info_state = app.state["information_state"]
+        info_state.control.next_speaker = "user"
+        app._state = app.state.update(information_state=info_state)
 
         # Run select
         state = app.state

@@ -223,10 +223,11 @@ class DialogueStateMachine:
 
     def reset(self) -> None:
         """Reset the state machine to initial state."""
-        # Reset the engine if it exists
+        # Reset the information state in Burr State
         engine = self.app.state.get("engine")
         if engine is not None:
-            engine.reset()
+            initial_state = engine.create_initial_state()
+            self.app._state = self.app.state.update(information_state=initial_state)
 
     def visualize(self, output_path: str = "dialogue_flow.png") -> None:
         """Visualize the state machine graph.

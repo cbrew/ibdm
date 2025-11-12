@@ -23,16 +23,17 @@ class DialogueMoveEngine:
     def __init__(self, agent_id: str, rules: RuleSet | None = None) -> None:
         """Initialize the dialogue move engine.
 
+        The engine is now stateless - all methods accept InformationState as a parameter.
+
         Args:
             agent_id: Unique identifier for this agent
             rules: Rule set for dialogue processing (creates empty if None)
         """
         self.agent_id = agent_id
         self.rules = rules if rules is not None else RuleSet()
-        self.state = InformationState(agent_id=agent_id)
 
     def process_input(
-        self, utterance: str, speaker: str
+        self, utterance: str, speaker: str, state: InformationState
     ) -> tuple[InformationState, DialogueMove | None]:
         """Process user input through the complete IBDM loop.
 
@@ -41,49 +42,47 @@ class DialogueMoveEngine:
         Args:
             utterance: The input utterance to process
             speaker: ID of the speaker who produced the utterance
+            state: Current information state
 
         Returns:
             Tuple of (updated state, response move or None)
         """
         # 1. Interpretation: utterance → dialogue moves
-        moves = self.interpret(utterance, speaker)
+        moves = self.interpret(utterance, speaker, state)
 
         # 2. Integration: apply moves to update state
+        current_state = state
         for move in moves:
-            self.state = self.integrate(move)
+            current_state = self.integrate(move, current_state)
 
         # 3. Selection: choose next action if it's our turn
         response_move = None
-        if self.state.control.next_speaker == self.agent_id:
-            # select_action updates self.state when called without state parameter
-            response_move, self.state = self.select_action()
+        if current_state.control.next_speaker == self.agent_id:
+            response_move, current_state = self.select_action(current_state)
 
             # 4. Generation: produce utterance and integrate our move
             if response_move:
-                utterance_text = self.generate(response_move)
+                utterance_text = self.generate(response_move, current_state)
                 response_move.content = utterance_text
-                self.state = self.integrate(response_move)
+                current_state = self.integrate(response_move, current_state)
 
-        return self.state, response_move
+        return current_state, response_move
 
     def interpret(
-        self, utterance: str, speaker: str, state: InformationState | None = None
+        self, utterance: str, speaker: str, state: InformationState
     ) -> list[DialogueMove]:
         """Apply interpretation rules to map utterance to dialogue moves.
 
         Args:
             utterance: The utterance to interpret
             speaker: ID of the speaker
-            state: Information state to use (defaults to self.state for backward compatibility)
+            state: Information state to use for rule application
 
         Returns:
             List of interpreted dialogue moves
         """
-        # Use passed state or fall back to self.state (for backward compatibility)
-        working_state = state if state is not None else self.state
-
         # Store utterance in a temporary state field for rules to access
-        temp_state = working_state.clone()
+        temp_state = state.clone()
         temp_state.private.beliefs["_temp_utterance"] = utterance
         temp_state.private.beliefs["_temp_speaker"] = speaker
 
@@ -96,23 +95,20 @@ class DialogueMoveEngine:
         # If no interpretation rules matched, return empty list
         return moves
 
-    def integrate(
-        self, move: DialogueMove, state: InformationState | None = None
-    ) -> InformationState:
+    def integrate(self, move: DialogueMove, state: InformationState) -> InformationState:
         """Apply integration rules to update state based on a move.
+
+        This is a pure function - it returns a new state without modifying the input.
 
         Args:
             move: The dialogue move to integrate
-            state: Information state to use (defaults to self.state for backward compatibility)
+            state: Current information state
 
         Returns:
             Updated information state
         """
-        # Use passed state or fall back to self.state (for backward compatibility)
-        working_state = state if state is not None else self.state
-
         # Store the move temporarily for rules to access
-        temp_state = working_state.clone()
+        temp_state = state.clone()
         temp_state.private.beliefs["_temp_move"] = move
 
         # Apply integration rules
@@ -125,66 +121,50 @@ class DialogueMoveEngine:
         return new_state
 
     def select_action(
-        self, state: InformationState | None = None
+        self, state: InformationState
     ) -> tuple[DialogueMove | None, InformationState]:
         """Apply selection rules to choose next system action.
 
+        This is a pure function - it returns a new state without modifying the input.
+
         Args:
-            state: Information state to use (defaults to self.state for backward compatibility)
+            state: Current information state
 
         Returns:
             Tuple of (selected move or None, updated state with item removed from agenda)
         """
-        # Use passed state or fall back to self.state (for backward compatibility)
-        working_state = state if state is not None else self.state
-
         # First check if there's something on the agenda
-        if working_state.private.agenda:
+        if state.private.agenda:
             # Clone state and pop from agenda
-            new_state = working_state.clone()
+            new_state = state.clone()
             move = new_state.private.agenda.pop(0)
-            # Update self.state for backward compatibility
-            if state is None:
-                self.state = new_state
             return move, new_state
 
         # Otherwise, apply selection rules to determine what to do
         # Selection rules should add moves to the agenda
-        new_state, _ = self.rules.apply_first_matching("selection", working_state)
+        new_state, _ = self.rules.apply_first_matching("selection", state)
 
         # Check agenda again after selection rules
         if new_state.private.agenda:
             # Clone and pop from agenda
             final_state = new_state.clone()
             move = final_state.private.agenda.pop(0)
-            # Update self.state for backward compatibility
-            if state is None:
-                self.state = final_state
             return move, final_state
-
-        # Update self.state for backward compatibility even if no move selected
-        if state is None and new_state != self.state:
-            self.state = new_state
 
         return None, new_state
 
-    def generate(
-        self, move: DialogueMove, state: InformationState | None = None
-    ) -> str:
+    def generate(self, move: DialogueMove, state: InformationState) -> str:
         """Apply generation rules to produce utterance from move.
 
         Args:
             move: The dialogue move to generate utterance for
-            state: Information state to use (defaults to self.state for backward compatibility)
+            state: Current information state (used for context in generation rules)
 
         Returns:
             Generated utterance text
         """
-        # Use passed state or fall back to self.state (for backward compatibility)
-        working_state = state if state is not None else self.state
-
         # Store the move temporarily for rules to access
-        temp_state = working_state.clone()
+        temp_state = state.clone()
         temp_state.private.beliefs["_temp_generate_move"] = move
 
         # Apply generation rules
@@ -219,30 +199,14 @@ class DialogueMoveEngine:
         else:
             return str(move.content)
 
-    def reset(self) -> None:
-        """Reset the engine to initial state."""
-        self.state = InformationState(agent_id=self.agent_id)
-
-    def get_state(self) -> InformationState:
-        """Get the current information state.
+    def create_initial_state(self) -> InformationState:
+        """Create a new initial InformationState for this agent.
 
         Returns:
-            Current information state
+            New initial information state
         """
-        return self.state
-
-    def set_state(self, state: InformationState) -> None:
-        """Set the information state.
-
-        Args:
-            state: New information state
-        """
-        self.state = state
+        return InformationState(agent_id=self.agent_id)
 
     def __str__(self) -> str:
         """Return string representation."""
-        return (
-            f"DialogueMoveEngine(agent={self.agent_id}, "
-            f"rules={self.rules.rule_count()}, "
-            f"qud={len(self.state.shared.qud)})"
-        )
+        return f"DialogueMoveEngine(agent={self.agent_id}, rules={self.rules.rule_count()})"
