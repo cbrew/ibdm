@@ -10,6 +10,7 @@ This module provides LLM-based natural language understanding capabilities inclu
 - Context-aware interpretation pipeline
 - Implicature detection and topic tracking
 - Entity extraction and reference resolution
+- Hybrid rule/LLM fallback strategies
 """
 
 from ibdm.nlu.answer_parser import (
@@ -46,6 +47,15 @@ from ibdm.nlu.entity_extractor import (
     EntityType,
     create_extractor,
     create_tracker,
+)
+from ibdm.nlu.fallback_strategy import (
+    ComplexityAnalyzer,
+    FallbackConfig,
+    FallbackStats,
+    FastPathMatcher,
+    HybridFallbackStrategy,
+    InterpretationStrategy,
+    UtteranceComplexity,
 )
 from ibdm.nlu.llm_adapter import (
     LLMAdapter,
@@ -165,4 +175,12 @@ __all__ = [
     "ReferenceResolverConfig",
     "ReferenceType",
     "create_resolver",
+    # Hybrid Fallback Strategy
+    "HybridFallbackStrategy",
+    "FallbackConfig",
+    "FallbackStats",
+    "InterpretationStrategy",
+    "FastPathMatcher",
+    "ComplexityAnalyzer",
+    "UtteranceComplexity",
 ]
