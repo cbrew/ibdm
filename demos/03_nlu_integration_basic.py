@@ -720,11 +720,29 @@ def main():
     console.print("[dim]Validating configuration...[/dim]")
 
     try:
+        from ibdm.burr_integration import DialogueStateMachine
         from ibdm.engine import NLUDialogueEngine, NLUEngineConfig
         from ibdm.nlu import ModelType
+        from ibdm.rules import (
+            RuleSet,
+            create_generation_rules,
+            create_integration_rules,
+            create_selection_rules,
+        )
 
         # Check that we can import required components
         console.print("[dim]  ✓ All modules available[/dim]")
+
+        # Create rule set with IBDM rules for proper QUD management
+        rules = RuleSet()
+        for rule in create_integration_rules():
+            rules.add_rule(rule)
+        for rule in create_selection_rules():
+            rules.add_rule(rule)
+        for rule in create_generation_rules():
+            rules.add_rule(rule)
+
+        console.print(f"[dim]  ✓ Loaded {rules.rule_count()} IBDM rules[/dim]")
 
         # Simple, explicit configuration - just use Haiku for NLU
         engine_config = NLUEngineConfig(
@@ -738,13 +756,20 @@ def main():
         console.print()
         console.print("[cyan]Configuration:[/cyan]")
         console.print(f"  • Model: {ModelType.HAIKU.value}")
+        console.print(f"  • Rules: {rules.rule_count()} IBDM rules loaded")
         console.print(f"  • API Key: IBDM_API_KEY ({'✓ set' if check_api_key() else '✗ missing'})")
         console.print()
 
-        # Initialize engine with validated config
-        engine = NLUDialogueEngine(agent_id="legal_system", config=engine_config)
+        # Initialize Burr state machine with NLU engine
+        state_machine = DialogueStateMachine(
+            agent_id="legal_system",
+            rules=rules,
+            engine_class=NLUDialogueEngine,
+            engine_config=engine_config,
+        )
+        state_machine.initialize()
 
-        console.print("[green]✓ Dialogue engine initialized successfully[/green]")
+        console.print("[green]✓ Burr state machine initialized with NLU engine[/green]")
         console.print()
 
     except ImportError as e:
@@ -757,8 +782,8 @@ def main():
         console.print()
         return 1
 
-    # Initialize information state
-    state = InformationState(agent_id="legal_system")
+    # Note: Burr state machine runs the full IBDM loop with integration rules
+    # managing QUD automatically. We use state_machine.get_information_state() to access it.
 
     # Initialize metrics tracker
     tracker = MetricsTracker()
@@ -790,23 +815,29 @@ def main():
         )
         console.print()
 
-        # Interpret the utterance
+        # Process utterance through Burr state machine (runs full IBDM loop)
         if args.verbose:
-            console.print("[dim]Interpreting utterance...[/dim]")
+            console.print("[dim]Processing utterance through IBDM loop...[/dim]")
 
         try:
-            # Time the interpretation
+            # Time the full IBDM loop (interpret → integrate → select → generate)
             import time
 
             start_time = time.time()
-            moves = engine.interpret(turn.utterance, "attorney")
+            # Run full IBDM loop: interpret → integrate → select → generate
+            state_machine.process_utterance(turn.utterance, "attorney")
             latency = time.time() - start_time
+
+            # Get moves from Burr state (written by interpret action)
+            burr_state = state_machine.get_state()
+            moves = burr_state.get("moves", [])
 
             # Get token counts from engine if available
             tokens_in = 0
             tokens_out = 0
-            if hasattr(engine, "last_interpretation_tokens"):
-                total_tokens = engine.last_interpretation_tokens
+            info_state = state_machine.get_information_state()
+            if info_state and hasattr(info_state, "_last_interpretation_tokens"):
+                total_tokens = info_state._last_interpretation_tokens
                 tokens_in = total_tokens // 2  # Approximate input/output split
                 tokens_out = total_tokens - tokens_in
 
@@ -857,12 +888,15 @@ def main():
                 console.print("[yellow]⚠ No moves interpreted[/yellow]")
                 console.print()
 
-            # Display QUD stack state
-            if state.shared.qud:
-                console.print(format_qud_stack(state.shared.qud))
+            # Display QUD stack state (managed automatically by integration rules)
+            current_state = state_machine.get_information_state()
+            if current_state and current_state.shared.qud:
+                console.print(format_qud_stack(current_state.shared.qud))
                 console.print()
 
             # Display system response (from pre-scripted prompts)
+            # In a real system, selection/generation rules would create these
+            # For the demo, we create system questions that push to QUD via integration
             if i < len(NDA_SYSTEM_PROMPTS):
                 system_prompt = NDA_SYSTEM_PROMPTS[i]
                 console.print(
@@ -875,36 +909,34 @@ def main():
                 )
                 console.print()
 
-                # Update QUD stack to reflect system question
-                # (In a real system, this would be done by the selection/generation rules)
+                # Create system's question as a dialogue move and integrate it
+                # This will push to QUD via the integration rules
+                system_question = None
                 if i == 0:  # After turn 1
-                    q = WhQuestion(variable="parties", predicate="legal_entities")
-                    state.shared.push_qud(q)
+                    system_question = WhQuestion(variable="parties", predicate="legal_entities")
                 elif i == 1:  # After turn 2
-                    if state.shared.qud:
-                        state.shared.pop_qud()  # Resolve parties question
-                    q = AltQuestion(alternatives=["mutual", "one-way"])
-                    state.shared.push_qud(q)
+                    system_question = AltQuestion(alternatives=["mutual", "one-way"])
                 elif i == 2:  # After turn 3
-                    if state.shared.qud:
-                        state.shared.pop_qud()  # Resolve NDA type
-                    q = WhQuestion(variable="effective_date", predicate="date")
-                    state.shared.push_qud(q)
+                    system_question = WhQuestion(variable="effective_date", predicate="date")
                 elif i == 3:  # After turn 4
-                    if state.shared.qud:
-                        state.shared.pop_qud()  # Resolve effective date
-                    q = WhQuestion(variable="duration", predicate="time_period")
-                    state.shared.push_qud(q)
+                    system_question = WhQuestion(variable="duration", predicate="time_period")
                 elif i == 4:  # After turn 5
-                    if state.shared.qud:
-                        state.shared.pop_qud()  # Resolve duration
-                    q = AltQuestion(alternatives=["California", "Delaware"])
-                    state.shared.push_qud(q)
+                    system_question = AltQuestion(alternatives=["California", "Delaware"])
                 elif i == 5:  # After turn 6
-                    if state.shared.qud:
-                        state.shared.pop_qud()  # Resolve governing law
-                    q = YNQuestion(proposition="generate_document")
-                    state.shared.push_qud(q)
+                    system_question = YNQuestion(proposition="generate_document")
+
+                # Create ask move with the question and integrate it via the engine
+                # Integration rules will automatically manage QUD
+                if system_question:
+                    ask_move = DialogueMove(
+                        move_type="ask",
+                        content=system_question,
+                        speaker="legal_system",
+                    )
+                    # Get engine from Burr state and integrate the move
+                    engine = burr_state.get("engine")
+                    if engine:
+                        engine.state = engine.integrate(ask_move)
 
         except Exception as e:
             console.print(f"[bold red]Error:[/bold red] {e}")

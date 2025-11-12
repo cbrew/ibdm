@@ -15,6 +15,8 @@ from ibdm.rules import RuleSet
 def create_dialogue_application(
     agent_id: str = "system",
     rules: RuleSet | None = None,
+    engine_class: type | None = None,
+    engine_config: Any | None = None,
     app_id: str | None = None,
     storage_dir: str | None = None,
 ) -> Any:
@@ -30,12 +32,21 @@ def create_dialogue_application(
     Args:
         agent_id: ID of the dialogue agent
         rules: Optional rule set for dialogue processing
+        engine_class: Optional engine class (e.g., NLUDialogueEngine)
+        engine_config: Optional configuration for the engine
         app_id: Optional application ID for tracking
         storage_dir: Optional directory for state persistence
 
     Returns:
         Burr Application instance
     """
+    # Prepare initial state
+    initial_state = {"agent_id": agent_id, "rules": rules}
+    if engine_class is not None:
+        initial_state["engine_class"] = engine_class
+    if engine_config is not None:
+        initial_state["engine_config"] = engine_config
+
     # Build the application
     builder = (
         ApplicationBuilder()
@@ -65,7 +76,7 @@ def create_dialogue_application(
             ("generate", "idle", default),
         )
         .with_entrypoint("initialize")
-        .with_state(agent_id=agent_id, rules=rules)
+        .with_state(**initial_state)
     )
 
     # Add tracking if app_id is provided
@@ -98,6 +109,8 @@ class DialogueStateMachine:
         self,
         agent_id: str = "system",
         rules: RuleSet | None = None,
+        engine_class: type | None = None,
+        engine_config: Any | None = None,
         app_id: str | None = None,
         storage_dir: str | None = None,
     ):
@@ -106,11 +119,18 @@ class DialogueStateMachine:
         Args:
             agent_id: ID of the dialogue agent
             rules: Optional rule set for dialogue processing
+            engine_class: Optional engine class (e.g., NLUDialogueEngine)
+            engine_config: Optional configuration for the engine
             app_id: Optional application ID for tracking
             storage_dir: Optional directory for state persistence
         """
         self.app = create_dialogue_application(
-            agent_id=agent_id, rules=rules, app_id=app_id, storage_dir=storage_dir
+            agent_id=agent_id,
+            rules=rules,
+            engine_class=engine_class,
+            engine_config=engine_config,
+            app_id=app_id,
+            storage_dir=storage_dir,
         )
         self._initialized = False
 

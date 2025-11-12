@@ -115,7 +115,7 @@ def initialize(state: State) -> tuple[dict[str, Any], State]:
     """Initialize the dialogue engine.
 
     Args:
-        state: Current Burr state (may contain agent_id and rules)
+        state: Current Burr state (may contain agent_id, rules, and engine_class)
 
     Returns:
         Tuple of (result dict, updated state with engine)
@@ -123,9 +123,16 @@ def initialize(state: State) -> tuple[dict[str, Any], State]:
     # Get initialization parameters from state if available
     agent_id = state.get("agent_id", "system")
     rules = state.get("rules", None)
+    engine_class = state.get("engine_class", DialogueMoveEngine)
+    engine_config = state.get("engine_config", None)
 
-    # Create engine
-    engine = DialogueMoveEngine(agent_id=agent_id, rules=rules)
+    # Create engine with appropriate class
+    if engine_config is not None:
+        # For NLUDialogueEngine or other engines that need config
+        engine = engine_class(agent_id=agent_id, rules=rules, config=engine_config)
+    else:
+        # For basic DialogueMoveEngine
+        engine = engine_class(agent_id=agent_id, rules=rules)
 
     result = {"ready": True, "agent_id": agent_id}
     return result, state.update(engine=engine, ready=True)
