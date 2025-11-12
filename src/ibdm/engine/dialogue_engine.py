@@ -95,17 +95,23 @@ class DialogueMoveEngine:
         # If no interpretation rules matched, return empty list
         return moves
 
-    def integrate(self, move: DialogueMove) -> InformationState:
+    def integrate(
+        self, move: DialogueMove, state: InformationState | None = None
+    ) -> InformationState:
         """Apply integration rules to update state based on a move.
 
         Args:
             move: The dialogue move to integrate
+            state: Information state to use (defaults to self.state for backward compatibility)
 
         Returns:
             Updated information state
         """
+        # Use passed state or fall back to self.state (for backward compatibility)
+        working_state = state if state is not None else self.state
+
         # Store the move temporarily for rules to access
-        temp_state = self.state.clone()
+        temp_state = working_state.clone()
         temp_state.private.beliefs["_temp_move"] = move
 
         # Apply integration rules

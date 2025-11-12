@@ -49,15 +49,10 @@ def integrate(state: State) -> tuple[dict[str, Any], State]:
     info_state: InformationState = state["information_state"]
     engine: DialogueMoveEngine = state["engine"]
 
-    # Sync engine state from Burr State (Phase 1: dual tracking)
-    engine.state = info_state
-
-    # Apply each move to update state
+    # Apply each move to update state (Phase 2: functional style)
+    updated_info_state = info_state
     for move in moves:
-        engine.state = engine.integrate(move)
-
-    # Sync updated state back to Burr State
-    updated_info_state = engine.state
+        updated_info_state = engine.integrate(move, updated_info_state)
 
     # Mark as integrated
     result = {"integrated": True, "move_count": len(moves)}
