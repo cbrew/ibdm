@@ -397,8 +397,8 @@ class NLUDialogueEngine(DialogueMoveEngine):
             # Track token usage from this interpretation
             self.last_interpretation_tokens = interpreter.last_tokens_used
 
-            # Extract entities and update tracker
-            if interpretation.entities:
+            # Extract entities and update tracker (if available)
+            if hasattr(interpretation, "entities") and interpretation.entities:
                 logger.debug(f"Extracted {len(interpretation.entities)} entities")
 
             # Create moves based on dialogue act
