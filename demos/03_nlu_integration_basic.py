@@ -35,6 +35,7 @@ import argparse
 import os
 import sys
 from dataclasses import dataclass, field
+from typing import Any
 
 from rich.console import Console
 from rich.panel import Panel
@@ -282,6 +283,166 @@ def format_metrics_dashboard(tracker: MetricsTracker) -> Panel:
             table.add_row(f"  {strategy}", f"${cost:.6f} ({tokens} tokens)")
 
     return Panel(table, border_style="cyan", padding=(1, 2))
+
+
+# =============================================================================
+# Dialogue Scenarios
+# =============================================================================
+
+
+@dataclass
+class DialogueTurn:
+    """A single turn in a pre-scripted dialogue."""
+
+    turn_number: int
+    speaker: str  # "attorney" or "system"
+    utterance: str
+    expected_strategy: InterpretationStrategy | str
+    expected_dialogue_act: str
+    expected_tokens_input: int = 0
+    expected_tokens_output: int = 0
+    expected_latency: float = 0.0
+    entities: list[dict[str, Any]] = field(default_factory=list)
+    notes: str = ""
+
+
+# NDA Generation Dialogue Scenario
+# Based on SCENARIO_PLAN_NDA.md
+NDA_DIALOGUE_TURNS = [
+    DialogueTurn(
+        turn_number=1,
+        speaker="attorney",
+        utterance="I need to draft an NDA",
+        expected_strategy="rules",
+        expected_dialogue_act="request",
+        expected_tokens_input=0,
+        expected_tokens_output=0,
+        expected_latency=0.01,
+        entities=[],
+        notes="Task accommodation: system infers NDA document requirements",
+    ),
+    DialogueTurn(
+        turn_number=2,
+        speaker="attorney",
+        utterance="Between Acme Corporation as disclosing party and TechStart Incorporated",
+        expected_strategy=InterpretationStrategy.HAIKU,
+        expected_dialogue_act="answer",
+        expected_tokens_input=60,
+        expected_tokens_output=120,
+        expected_latency=0.5,
+        entities=[
+            {
+                "text": "Acme Corporation",
+                "type": "ORG",
+                "role": "disclosing_party",
+            },
+            {
+                "text": "TechStart Incorporated",
+                "type": "ORG",
+                "role": "receiving_party",
+            },
+        ],
+        notes="Entity extraction for legal parties with roles",
+    ),
+    DialogueTurn(
+        turn_number=3,
+        speaker="attorney",
+        utterance="Mutual NDA",
+        expected_strategy="rules",
+        expected_dialogue_act="answer",
+        expected_tokens_input=0,
+        expected_tokens_output=0,
+        expected_latency=0.01,
+        entities=[],
+        notes="Pattern matching: keyword 'mutual' selects alternative",
+    ),
+    DialogueTurn(
+        turn_number=4,
+        speaker="attorney",
+        utterance="January 1st, 2025",
+        expected_strategy=InterpretationStrategy.HAIKU,
+        expected_dialogue_act="answer",
+        expected_tokens_input=50,
+        expected_tokens_output=100,
+        expected_latency=0.4,
+        entities=[
+            {
+                "text": "January 1st, 2025",
+                "type": "DATE",
+                "normalized": "2025-01-01",
+            },
+        ],
+        notes="Temporal entity extraction and normalization",
+    ),
+    DialogueTurn(
+        turn_number=5,
+        speaker="attorney",
+        utterance="Three years",
+        expected_strategy=InterpretationStrategy.HAIKU,
+        expected_dialogue_act="answer",
+        expected_tokens_input=45,
+        expected_tokens_output=90,
+        expected_latency=0.4,
+        entities=[
+            {
+                "text": "Three years",
+                "type": "DURATION",
+                "normalized": {"value": 3, "unit": "years"},
+            },
+        ],
+        notes="Duration parsing from natural language",
+    ),
+    DialogueTurn(
+        turn_number=6,
+        speaker="attorney",
+        utterance="California law",
+        expected_strategy="rules",
+        expected_dialogue_act="answer",
+        expected_tokens_input=0,
+        expected_tokens_output=0,
+        expected_latency=0.01,
+        entities=[
+            {
+                "text": "California",
+                "type": "LOCATION",
+                "context": "governing_law",
+            },
+        ],
+        notes="Jurisdiction selection from common legal jurisdictions",
+    ),
+    DialogueTurn(
+        turn_number=7,
+        speaker="attorney",
+        utterance="Yes, generate it",
+        expected_strategy="rules",
+        expected_dialogue_act="answer",
+        expected_tokens_input=0,
+        expected_tokens_output=0,
+        expected_latency=0.01,
+        entities=[],
+        notes="Affirmative response to Y/N question",
+    ),
+]
+
+# System prompts for each turn (what system says to elicit the attorney response)
+NDA_SYSTEM_PROMPTS = [
+    "I'll help you draft an NDA. What are the names of the parties entering into this agreement?",
+    "Should this be a mutual NDA or one-way?",
+    "What should the effective date be?",
+    "What should the confidentiality period be?",
+    "Which state law should govern this agreement - California or Delaware?",
+    "I have all the information needed. Should I generate the NDA now?",
+]
+
+# Document requirements checklist
+NDA_REQUIREMENTS = [
+    {"field": "document_type", "label": "Document Type", "required": True},
+    {"field": "parties", "label": "Parties", "required": True},
+    {"field": "nda_type", "label": "NDA Type", "required": True},
+    {"field": "effective_date", "label": "Effective Date", "required": True},
+    {"field": "duration", "label": "Duration", "required": True},
+    {"field": "governing_law", "label": "Governing Law", "required": True},
+]
 
 
 # =============================================================================
