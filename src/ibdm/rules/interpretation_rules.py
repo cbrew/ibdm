@@ -451,11 +451,13 @@ def _create_nda_plan(state: InformationState) -> InformationState:
     # Initialize document type in beliefs
     new_state.private.beliefs["document_type"] = "NDA"
 
-    # Create an acknowledgment move
+    # Create a request move representing the user's task request
+    speaker = new_state.private.beliefs.get("_temp_speaker", "user")
+    utterance = new_state.private.beliefs.get("_temp_utterance", "")
     move = DialogueMove(
-        move_type="assert",
-        content="I'll help you draft an NDA. Let me gather the necessary information.",
-        speaker=new_state.agent_id,
+        move_type="request",
+        content=utterance,
+        speaker=speaker,
     )
     new_state.private.agenda.append(move)
 
