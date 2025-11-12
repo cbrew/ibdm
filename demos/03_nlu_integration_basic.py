@@ -34,9 +34,11 @@ Run: python demos/03_nlu_integration_basic.py
 import argparse
 import os
 import sys
+from dataclasses import dataclass, field
 
 from rich.console import Console
 from rich.panel import Panel
+from rich.table import Table
 from rich.tree import Tree
 
 # IBDM Core imports
@@ -51,8 +53,235 @@ from ibdm.core import (
 )
 
 # IBDM Engine imports
-
 # NLU imports
+from ibdm.nlu import InterpretationStrategy
+
+# =============================================================================
+# Metrics Tracking
+# =============================================================================
+
+
+@dataclass
+class TurnMetrics:
+    """Metrics for a single dialogue turn."""
+
+    turn_number: int
+    speaker: str
+    utterance: str
+    strategy_used: InterpretationStrategy | str
+    tokens_input: int = 0
+    tokens_output: int = 0
+    cost: float = 0.0
+    latency: float = 0.0
+
+    @property
+    def total_tokens(self) -> int:
+        """Total tokens used in this turn."""
+        return self.tokens_input + self.tokens_output
+
+    def calculate_cost(self) -> None:
+        """Calculate cost based on model and tokens used."""
+        # Pricing per million tokens (Claude models via LiteLLM)
+        if isinstance(self.strategy_used, InterpretationStrategy):
+            strategy_str = self.strategy_used.value
+        else:
+            strategy_str = str(self.strategy_used).lower()
+
+        if "sonnet" in strategy_str:
+            # Claude Sonnet 4.5: $3 input / $15 output per million
+            input_cost = (self.tokens_input / 1_000_000) * 3.0
+            output_cost = (self.tokens_output / 1_000_000) * 15.0
+            self.cost = input_cost + output_cost
+        elif "haiku" in strategy_str:
+            # Claude Haiku 4.5: $1 input / $5 output per million
+            input_cost = (self.tokens_input / 1_000_000) * 1.0
+            output_cost = (self.tokens_output / 1_000_000) * 5.0
+            self.cost = input_cost + output_cost
+        else:
+            # Rules/patterns: free
+            self.cost = 0.0
+
+
+@dataclass
+class MetricsTracker:
+    """Tracks metrics across dialogue turns."""
+
+    turns: list[TurnMetrics] = field(default_factory=list)
+
+    def add_turn(
+        self,
+        turn_number: int,
+        speaker: str,
+        utterance: str,
+        strategy: InterpretationStrategy | str,
+        tokens_input: int = 0,
+        tokens_output: int = 0,
+        latency: float = 0.0,
+    ) -> TurnMetrics:
+        """Add a new turn's metrics.
+
+        Args:
+            turn_number: Turn number
+            speaker: Speaker ID
+            utterance: The utterance text
+            strategy: Strategy used for interpretation
+            tokens_input: Input tokens used
+            tokens_output: Output tokens used
+            latency: Processing latency in seconds
+
+        Returns:
+            The created TurnMetrics object
+        """
+        metrics = TurnMetrics(
+            turn_number=turn_number,
+            speaker=speaker,
+            utterance=utterance,
+            strategy_used=strategy,
+            tokens_input=tokens_input,
+            tokens_output=tokens_output,
+            latency=latency,
+        )
+        metrics.calculate_cost()
+        self.turns.append(metrics)
+        return metrics
+
+    @property
+    def total_tokens(self) -> int:
+        """Total tokens across all turns."""
+        return sum(t.total_tokens for t in self.turns)
+
+    @property
+    def total_cost(self) -> float:
+        """Total cost across all turns."""
+        return sum(t.cost for t in self.turns)
+
+    @property
+    def total_latency(self) -> float:
+        """Total latency across all turns."""
+        return sum(t.latency for t in self.turns)
+
+    @property
+    def avg_latency(self) -> float:
+        """Average latency per turn."""
+        return self.total_latency / len(self.turns) if self.turns else 0.0
+
+    def strategy_distribution(self) -> dict[str, int]:
+        """Get distribution of strategies used."""
+        distribution: dict[str, int] = {}
+        for turn in self.turns:
+            if isinstance(turn.strategy_used, InterpretationStrategy):
+                strategy = turn.strategy_used.value
+            else:
+                strategy = str(turn.strategy_used).lower()
+
+            distribution[strategy] = distribution.get(strategy, 0) + 1
+        return distribution
+
+
+def format_turn_metrics(metrics: TurnMetrics) -> Table:
+    """Format per-turn metrics as a rich Table.
+
+    Args:
+        metrics: The turn metrics to format
+
+    Returns:
+        A styled Table showing turn metrics
+    """
+    table = Table(show_header=False, box=None, padding=(0, 1))
+    table.add_column("Label", style="dim")
+    table.add_column("Value")
+
+    # Strategy color coding
+    if isinstance(metrics.strategy_used, InterpretationStrategy):
+        strategy_str = metrics.strategy_used.value
+    else:
+        strategy_str = str(metrics.strategy_used).lower()
+
+    if "rules" in strategy_str or "pattern" in strategy_str:
+        strategy_color = "green"
+        strategy_badge = "🟢"
+    elif "haiku" in strategy_str:
+        strategy_color = "yellow"
+        strategy_badge = "🟡"
+    elif "sonnet" in strategy_str:
+        strategy_color = "red"
+        strategy_badge = "🔴"
+    else:
+        strategy_color = "white"
+        strategy_badge = "⚪"
+
+    table.add_row(
+        "Strategy:", f"{strategy_badge} [{strategy_color}]{strategy_str}[/{strategy_color}]"
+    )
+    table.add_row(
+        "Tokens:",
+        f"{metrics.total_tokens} ({metrics.tokens_input} in / {metrics.tokens_output} out)",
+    )
+    table.add_row("Cost:", f"${metrics.cost:.6f}")
+    table.add_row("Latency:", f"{metrics.latency:.3f}s")
+
+    return table
+
+
+def format_metrics_dashboard(tracker: MetricsTracker) -> Panel:
+    """Format complete metrics dashboard.
+
+    Args:
+        tracker: The MetricsTracker with accumulated metrics
+
+    Returns:
+        A Panel containing the metrics dashboard
+    """
+    # Create main table
+    table = Table(title="Metrics Dashboard", show_header=True, header_style="bold cyan")
+    table.add_column("Metric", style="cyan")
+    table.add_column("Value", justify="right")
+
+    # Overall stats
+    table.add_section()
+    table.add_row("Total Turns", str(len(tracker.turns)))
+    table.add_row("Total Tokens", f"{tracker.total_tokens:,}")
+    table.add_row("Total Cost", f"${tracker.total_cost:.6f}")
+    table.add_row("Avg Latency", f"{tracker.avg_latency:.3f}s")
+    table.add_row("Total Latency", f"{tracker.total_latency:.3f}s")
+
+    # Strategy distribution
+    distribution = tracker.strategy_distribution()
+    if distribution:
+        table.add_section()
+        table.add_row("[bold]Strategy Distribution[/bold]", "")
+        for strategy, count in sorted(distribution.items()):
+            percentage = (count / len(tracker.turns)) * 100
+            if "rules" in strategy or "pattern" in strategy:
+                badge = "🟢"
+            elif "haiku" in strategy:
+                badge = "🟡"
+            elif "sonnet" in strategy:
+                badge = "🔴"
+            else:
+                badge = "⚪"
+            table.add_row(f"  {badge} {strategy}", f"{count} ({percentage:.1f}%)")
+
+    # Cost breakdown
+    costs_by_strategy: dict[str, float] = {}
+    tokens_by_strategy: dict[str, int] = {}
+    for turn in tracker.turns:
+        if isinstance(turn.strategy_used, InterpretationStrategy):
+            strategy = turn.strategy_used.value
+        else:
+            strategy = str(turn.strategy_used).lower()
+
+        costs_by_strategy[strategy] = costs_by_strategy.get(strategy, 0.0) + turn.cost
+        tokens_by_strategy[strategy] = tokens_by_strategy.get(strategy, 0) + turn.total_tokens
+
+    if costs_by_strategy:
+        table.add_section()
+        table.add_row("[bold]Cost by Strategy[/bold]", "")
+        for strategy, cost in sorted(costs_by_strategy.items(), key=lambda x: x[1], reverse=True):
+            tokens = tokens_by_strategy.get(strategy, 0)
+            table.add_row(f"  {strategy}", f"${cost:.6f} ({tokens} tokens)")
+
+    return Panel(table, border_style="cyan", padding=(1, 2))
 
 
 # =============================================================================
@@ -372,7 +601,56 @@ def main():
         console.print(format_information_state(state))
         console.print()
 
+    # Demo: Test metrics tracking
+    if args.verbose:
+        console.print("[bold]Testing Metrics Tracking:[/bold]")
+        console.print()
+
+        # Create a metrics tracker
+        tracker = MetricsTracker()
+
+        # Simulate some turns with different strategies
+        tracker.add_turn(
+            turn_number=1,
+            speaker="user",
+            utterance="Hello!",
+            strategy="rules",
+            tokens_input=0,
+            tokens_output=0,
+            latency=0.001,
+        )
+
+        tracker.add_turn(
+            turn_number=2,
+            speaker="user",
+            utterance="I need to draft an NDA",
+            strategy=InterpretationStrategy.HAIKU,
+            tokens_input=50,
+            tokens_output=100,
+            latency=0.5,
+        )
+
+        tracker.add_turn(
+            turn_number=3,
+            speaker="user",
+            utterance="Between complex legal entities with nested organizational structures",
+            strategy=InterpretationStrategy.SONNET,
+            tokens_input=80,
+            tokens_output=200,
+            latency=1.2,
+        )
+
+        # Show per-turn metrics
+        console.print("[dim]Turn 2 metrics:[/dim]")
+        console.print(format_turn_metrics(tracker.turns[1]))
+        console.print()
+
+        # Show dashboard
+        console.print(format_metrics_dashboard(tracker))
+        console.print()
+
     console.print("[green]✓ Visualization helpers ready[/green]")
+    console.print("[green]✓ Metrics tracking ready[/green]")
     console.print("[yellow]Main demo implementation in progress...[/yellow]")
     console.print()
 
