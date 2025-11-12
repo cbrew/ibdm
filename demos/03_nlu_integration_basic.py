@@ -721,23 +721,24 @@ def main():
 
     try:
         from ibdm.engine import NLUDialogueEngine, NLUEngineConfig
+        from ibdm.nlu import ModelType
 
         # Check that we can import required components
         console.print("[dim]  ✓ All modules available[/dim]")
 
-        # Create explicit, simple configuration
-        # For this demo: use rules-based interpretation only (no LLM calls)
-        # This makes the demo fast, free, and predictable
+        # Simple, explicit configuration - just use Haiku for NLU
         engine_config = NLUEngineConfig(
-            use_nlu=False,  # Use rule-based interpretation only
-            use_llm=False,  # No LLM calls
-            enable_hybrid_fallback=False,  # No fallback needed
+            use_nlu=True,  # Enable NLU interpretation
+            use_llm=True,  # Enable LLM calls
+            llm_model=ModelType.HAIKU,  # Use Haiku model
+            enable_hybrid_fallback=False,  # No fallback - just use what we configured
         )
 
         console.print("[dim]  ✓ Configuration validated[/dim]")
         console.print()
-        console.print("[yellow]Note: Using rule-based interpretation (no LLM calls)[/yellow]")
-        console.print("[dim]      To enable LLM-based NLU, set use_llm=True in config[/dim]")
+        console.print("[cyan]Configuration:[/cyan]")
+        console.print(f"  • Model: {ModelType.HAIKU.value}")
+        console.print(f"  • API Key: IBDM_API_KEY ({'✓ set' if check_api_key() else '✗ missing'})")
         console.print()
 
         # Initialize engine with validated config
@@ -801,15 +802,22 @@ def main():
             moves = engine.interpret(turn.utterance, "attorney")
             latency = time.time() - start_time
 
-            # Track metrics with known configuration
-            # For this demo: rules-based interpretation (no tokens used)
+            # Get token counts from engine if available
+            tokens_in = 0
+            tokens_out = 0
+            if hasattr(engine, "last_interpretation_tokens"):
+                total_tokens = engine.last_interpretation_tokens
+                tokens_in = total_tokens // 2  # Approximate input/output split
+                tokens_out = total_tokens - tokens_in
+
+            # Track metrics
             metrics = tracker.add_turn(
                 turn_number=turn.turn_number,
                 speaker="attorney",
                 utterance=turn.utterance,
-                strategy="rules",  # Using rule-based interpretation
-                tokens_input=0,  # No LLM tokens used
-                tokens_output=0,  # No LLM tokens used
+                strategy="haiku",  # We configured Haiku model
+                tokens_input=tokens_in,
+                tokens_output=tokens_out,
                 latency=latency,
             )
 
@@ -942,9 +950,7 @@ def main():
     console.print()
 
     console.print("[green]✓ Demo completed successfully![/green]")
-    console.print(
-        f"[dim]   All {len(tracker.turns)} turns processed using rule-based interpretation[/dim]"
-    )
+    console.print(f"[dim]Processed {len(tracker.turns)} turns using {ModelType.HAIKU.value}[/dim]")
     console.print()
 
     return 0
