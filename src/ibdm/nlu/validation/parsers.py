@@ -361,7 +361,7 @@ class StructuredTextParser(ResponseParser):
         return result
 
 
-class AutoParser:
+class AutoParser(ResponseParser):
     """
     Automatic parser that tries multiple formats.
 
@@ -375,6 +375,10 @@ class AutoParser:
             XMLParser(),
             StructuredTextParser(),
         ]
+
+    def can_parse(self, content: str) -> bool:
+        """Check if any parser can handle the content."""
+        return any(parser.can_parse(content) for parser in self.parsers)
 
     def parse(self, content: str, prefer_format: ParseFormat | None = None) -> ParseResult:
         """

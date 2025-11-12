@@ -9,7 +9,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from dataclasses import field as dataclass_field
 from enum import Enum
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel, ValidationError
 from pydantic_core import ErrorDetails
@@ -270,9 +270,12 @@ class SchemaValidator(Validator):
             )
             return result
 
+        # Type narrow for pyright
+        data_dict = cast(dict[str, Any], data)
+
         # Check required fields
         for field in self.required_fields:
-            if field not in data:
+            if field not in data_dict:
                 result.add_error(
                     message=f"Missing required field: {field}",
                     field=field,
@@ -282,7 +285,7 @@ class SchemaValidator(Validator):
 
         # Check unknown fields
         known_fields = self.required_fields | self.optional_fields
-        for field in data:
+        for field in data_dict.keys():
             if known_fields and field not in known_fields:
                 result.add_warning(
                     message=f"Unknown field: {field}",
@@ -293,13 +296,13 @@ class SchemaValidator(Validator):
 
         # Check field types
         for field, expected_type in self.field_types.items():
-            if field in data and data[field] is not None:
-                if not isinstance(data[field], expected_type):
+            if field in data_dict and data_dict[field] is not None:
+                if not isinstance(data_dict[field], expected_type):
                     result.add_error(
                         message=(
                             f"Wrong type for {field}: "
                             f"expected {expected_type.__name__}, "
-                            f"got {type(data[field]).__name__}"
+                            f"got {type(data_dict[field]).__name__}"
                         ),
                         field=field,
                         code="type_error",
@@ -343,12 +346,15 @@ class RangeValidator(Validator):
             result.add_error(message="Cannot validate range on non-dict data", code="type_error")
             return result
 
+        # Type narrow for pyright
+        data_dict = cast(dict[str, Any], data)
+
         # Check field exists
-        if self.field not in data:
+        if self.field not in data_dict:
             # Field doesn't exist - not an error for this validator
             return result
 
-        value = data[self.field]
+        value = data_dict[self.field]
 
         # Check value is numeric
         if not isinstance(value, (int, float)):
@@ -457,10 +463,13 @@ class EnumValidator(Validator):
             result.add_error(message="Cannot validate enum on non-dict data", code="type_error")
             return result
 
-        if self.field not in data:
+        # Type narrow for pyright
+        data_dict = cast(dict[str, Any], data)
+
+        if self.field not in data_dict:
             return result
 
-        value = data[self.field]
+        value = data_dict[self.field]
         if value not in self.allowed_values:
             result.add_error(
                 message=f"{self.field} value '{value}' not in allowed values",

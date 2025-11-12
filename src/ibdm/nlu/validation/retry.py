@@ -354,7 +354,7 @@ class AdaptiveRetry(RetryStrategy):
 
     def _categorize_errors(self, validation_result: ValidationResult) -> set[str]:
         """Categorize errors into patterns."""
-        categories = set()
+        categories: set[str] = set()
 
         for issue in validation_result.errors:
             if "missing" in issue.message.lower() or issue.code == "missing_field":
@@ -392,7 +392,9 @@ class CustomRetry(RetryStrategy):
         """
         self.should_retry_fn = should_retry_fn
         self.feedback_fn = feedback_fn
-        self.delay_fn = delay_fn or (lambda ctx: 1.0)
+        self.delay_fn: Callable[[RetryContext], float] = delay_fn or (
+            lambda ctx: 1.0
+        )  # Explicit type for lambda
 
     def should_retry(
         self,
