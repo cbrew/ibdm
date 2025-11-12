@@ -55,7 +55,8 @@ class DialogueMoveEngine:
         # 3. Selection: choose next action if it's our turn
         response_move = None
         if self.state.control.next_speaker == self.agent_id:
-            response_move = self.select_action()
+            # select_action updates self.state when called without state parameter
+            response_move, self.state = self.select_action()
 
             # 4. Generation: produce utterance and integrate our move
             if response_move:
@@ -123,29 +124,49 @@ class DialogueMoveEngine:
 
         return new_state
 
-    def select_action(self) -> DialogueMove | None:
+    def select_action(
+        self, state: InformationState | None = None
+    ) -> tuple[DialogueMove | None, InformationState]:
         """Apply selection rules to choose next system action.
 
+        Args:
+            state: Information state to use (defaults to self.state for backward compatibility)
+
         Returns:
-            Selected dialogue move, or None if no action is chosen
+            Tuple of (selected move or None, updated state with item removed from agenda)
         """
+        # Use passed state or fall back to self.state (for backward compatibility)
+        working_state = state if state is not None else self.state
+
         # First check if there's something on the agenda
-        if self.state.private.agenda:
-            return self.state.private.agenda.pop(0)
+        if working_state.private.agenda:
+            # Clone state and pop from agenda
+            new_state = working_state.clone()
+            move = new_state.private.agenda.pop(0)
+            # Update self.state for backward compatibility
+            if state is None:
+                self.state = new_state
+            return move, new_state
 
         # Otherwise, apply selection rules to determine what to do
         # Selection rules should add moves to the agenda
-        new_state, _ = self.rules.apply_first_matching("selection", self.state)
-
-        # Update state if selection rules modified it
-        if new_state != self.state:
-            self.state = new_state
+        new_state, _ = self.rules.apply_first_matching("selection", working_state)
 
         # Check agenda again after selection rules
-        if self.state.private.agenda:
-            return self.state.private.agenda.pop(0)
+        if new_state.private.agenda:
+            # Clone and pop from agenda
+            final_state = new_state.clone()
+            move = final_state.private.agenda.pop(0)
+            # Update self.state for backward compatibility
+            if state is None:
+                self.state = final_state
+            return move, final_state
 
-        return None
+        # Update self.state for backward compatibility even if no move selected
+        if state is None and new_state != self.state:
+            self.state = new_state
+
+        return None, new_state
 
     def generate(self, move: DialogueMove) -> str:
         """Apply generation rules to produce utterance from move.

@@ -75,19 +75,13 @@ def select(state: State) -> tuple[dict[str, Any], State]:
     info_state: InformationState = state["information_state"]
     engine: DialogueMoveEngine = state["engine"]
 
-    # Sync engine state from Burr State (Phase 1: dual tracking)
-    engine.state = info_state
-
     # Check if it's our turn
-    if engine.state.control.next_speaker != engine.agent_id:
+    if info_state.control.next_speaker != engine.agent_id:
         result = {"has_response": False, "response_move": None}
         return result, state.update(has_response=False, response_move=None)
 
-    # Select action using selection rules
-    response_move = engine.select_action()
-
-    # Sync updated state back to Burr State (select_action may modify agenda)
-    updated_info_state = engine.state
+    # Select action using selection rules (Phase 2: pure function)
+    response_move, updated_info_state = engine.select_action(info_state)
 
     has_response = response_move is not None
     result = {"has_response": has_response, "response_move": response_move}
