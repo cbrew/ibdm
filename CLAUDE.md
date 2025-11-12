@@ -251,7 +251,35 @@ pytest
 - Allows context recovery after interruptions
 - Facilitates collaboration between agents/developers
 
-### 7. Work Step by Step
+### 7. Own All Code Quality Issues
+
+**Policy**: Take responsibility for all code quality issues in files you touch, regardless of when they were introduced.
+
+**Guidelines**:
+- **Never** dismiss errors as "pre-existing issues"
+- If you modify a file, you own fixing any issues in that file
+- Run full type checking and linting on all modified files
+- Fix issues incrementally, don't let them accumulate
+- If an issue is truly out of scope, create a beads task for it
+
+**Rationale**: Dismissing issues as "pre-existing" leads to technical debt accumulation and erodes code quality over time. Every change is an opportunity to improve the codebase.
+
+**Examples**:
+
+❌ **Bad**:
+```
+"The type errors are mostly pre-existing issues. Let me just commit my changes."
+```
+
+✅ **Good**:
+```
+"I see type errors in the file I modified. Let me fix them:
+1. Fix the immediate issues in my changes
+2. Fix other issues in the same function
+3. If there are many issues, create a beads task for systematic cleanup"
+```
+
+### 8. Work Step by Step
 
 **Policy**: Break work into small, verifiable steps with frequent validation.
 
@@ -307,7 +335,7 @@ pytest
 3. **Refactor**: Improve code quality
 4. **Commit**: Each step separately
 
-### 8. LLM Provider Configuration: Use LiteLLM
+### 9. LLM Provider Configuration: Use LiteLLM
 
 **Policy**: All LLM integrations must use [LiteLLM](https://github.com/BerriAI/litellm) as the unified interface.
 
