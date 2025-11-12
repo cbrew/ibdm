@@ -36,6 +36,17 @@ from ibdm.nlu.dialogue_act_classifier import (
     DialogueActType,
     create_classifier,
 )
+from ibdm.nlu.entity_extractor import (
+    Entity,
+    EntityExtractionResult,
+    EntityExtractor,
+    EntityExtractorConfig,
+    EntityTracker,
+    EntityTrackerConfig,
+    EntityType,
+    create_extractor,
+    create_tracker,
+)
 from ibdm.nlu.llm_adapter import (
     LLMAdapter,
     LLMAPIError,
@@ -129,4 +140,14 @@ __all__ = [
     "ImplicatureType",
     "TopicShiftType",
     "create_interpreter",
+    # Entity Extraction and Tracking
+    "Entity",
+    "EntityExtractor",
+    "EntityExtractorConfig",
+    "EntityExtractionResult",
+    "EntityTracker",
+    "EntityTrackerConfig",
+    "EntityType",
+    "create_extractor",
+    "create_tracker",
 ]
