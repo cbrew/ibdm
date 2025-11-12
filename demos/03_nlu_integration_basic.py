@@ -825,7 +825,7 @@ def main():
 
             start_time = time.time()
             # Run full IBDM loop: interpret → integrate → select → generate
-            state_machine.process_utterance(turn.utterance, "attorney")
+            response_data = state_machine.process_utterance(turn.utterance, "attorney")
             latency = time.time() - start_time
 
             # Get moves from Burr state (written by interpret action)
@@ -894,49 +894,21 @@ def main():
                 console.print(format_qud_stack(current_state.shared.qud))
                 console.print()
 
-            # Display system response (from pre-scripted prompts)
-            # In a real system, selection/generation rules would create these
-            # For the demo, we create system questions that push to QUD via integration
-            if i < len(NDA_SYSTEM_PROMPTS):
-                system_prompt = NDA_SYSTEM_PROMPTS[i]
-                console.print(
-                    Panel(
-                        f"[bold]{system_prompt}[/bold]",
-                        title="Legal System",
-                        border_style="green",
-                        padding=(1, 2),
+            # Display system response (generated via selection and generation rules)
+            # The selection rules choose next action based on Plans and QUD
+            # The generation rules convert dialogue moves to natural language
+            if response_data.get("has_response"):
+                system_response = response_data.get("utterance_text", "")
+                if system_response:
+                    console.print(
+                        Panel(
+                            f"[bold]{system_response}[/bold]",
+                            title="Legal System",
+                            border_style="green",
+                            padding=(1, 2),
+                        )
                     )
-                )
-                console.print()
-
-                # Create system's question as a dialogue move and integrate it
-                # This will push to QUD via the integration rules
-                system_question = None
-                if i == 0:  # After turn 1
-                    system_question = WhQuestion(variable="parties", predicate="legal_entities")
-                elif i == 1:  # After turn 2
-                    system_question = AltQuestion(alternatives=["mutual", "one-way"])
-                elif i == 2:  # After turn 3
-                    system_question = WhQuestion(variable="effective_date", predicate="date")
-                elif i == 3:  # After turn 4
-                    system_question = WhQuestion(variable="duration", predicate="time_period")
-                elif i == 4:  # After turn 5
-                    system_question = AltQuestion(alternatives=["California", "Delaware"])
-                elif i == 5:  # After turn 6
-                    system_question = YNQuestion(proposition="generate_document")
-
-                # Create ask move with the question and integrate it via the engine
-                # Integration rules will automatically manage QUD
-                if system_question:
-                    ask_move = DialogueMove(
-                        move_type="ask",
-                        content=system_question,
-                        speaker="legal_system",
-                    )
-                    # Get engine from Burr state and integrate the move
-                    engine = burr_state.get("engine")
-                    if engine:
-                        engine.state = engine.integrate(ask_move)
+                    console.print()
 
         except Exception as e:
             console.print(f"[bold red]Error:[/bold red] {e}")
