@@ -19,6 +19,9 @@ from ibdm.nlu import (
     DialogueActType,
     EntityTracker,
     EntityTrackerConfig,
+    FallbackConfig,
+    HybridFallbackStrategy,
+    InterpretationStrategy,
     LLMConfig,
     ModelType,
     QuestionAnalyzer,
@@ -42,6 +45,8 @@ class NLUEngineConfig:
         llm_model: Which LLM model to use (Sonnet or Haiku)
         confidence_threshold: Minimum confidence for NLU results
         fallback_to_rules: Fall back to rule-based interpretation if NLU fails
+        enable_hybrid_fallback: Use hybrid fallback strategy for smart model selection
+        fallback_config: Configuration for hybrid fallback strategy (if None, uses defaults)
     """
 
     use_nlu: bool = True
@@ -49,6 +54,8 @@ class NLUEngineConfig:
     llm_model: ModelType = ModelType.HAIKU  # Use Haiku for fast classification
     confidence_threshold: float = 0.5
     fallback_to_rules: bool = True
+    enable_hybrid_fallback: bool = True
+    fallback_config: FallbackConfig | None = None
 
 
 class NLUDialogueEngine(DialogueMoveEngine):
@@ -94,6 +101,13 @@ class NLUDialogueEngine(DialogueMoveEngine):
         self.entity_tracker: EntityTracker | None = None
         self.reference_resolver: ReferenceResolver | None = None
         self.context_interpreter: ContextInterpreter | None = None
+
+        # Initialize hybrid fallback strategy
+        self.fallback_strategy: HybridFallbackStrategy | None = None
+        if self.config.enable_hybrid_fallback:
+            fallback_config = self.config.fallback_config or FallbackConfig()
+            self.fallback_strategy = HybridFallbackStrategy(fallback_config)
+            logger.info("Hybrid fallback strategy enabled")
 
         if self.config.use_nlu:
             self._initialize_nlu_components()
@@ -149,10 +163,12 @@ class NLUDialogueEngine(DialogueMoveEngine):
 
         This overrides the base interpret() to add NLU-based interpretation.
         If NLU is enabled and configured, it will:
-        1. Use context-aware interpretation to understand the utterance
-        2. Classify the dialogue act
-        3. Extract entities and resolve references
-        4. Create appropriate DialogueMove objects
+        1. Use hybrid fallback strategy to select interpretation approach
+        2. Use context-aware interpretation to understand the utterance
+        3. Classify the dialogue act
+        4. Extract entities and resolve references
+        5. Create appropriate DialogueMove objects
+        6. Optionally cascade to more powerful strategies if needed
 
         If NLU fails or is disabled, falls back to rule-based interpretation.
 
@@ -163,7 +179,11 @@ class NLUDialogueEngine(DialogueMoveEngine):
         Returns:
             List of interpreted dialogue moves
         """
-        # Try NLU-based interpretation first if enabled
+        # Use hybrid fallback strategy if enabled
+        if self.fallback_strategy:
+            return self._interpret_with_hybrid_fallback(utterance, speaker)
+
+        # Legacy path: Try NLU-based interpretation first if enabled
         if self.config.use_nlu and self.config.use_llm and self.context_interpreter:
             try:
                 moves = self._interpret_with_nlu(utterance, speaker)
@@ -182,6 +202,109 @@ class NLUDialogueEngine(DialogueMoveEngine):
         # Fall back to rule-based interpretation
         logger.debug("Using rule-based interpretation")
         return super().interpret(utterance, speaker)
+
+    def _interpret_with_hybrid_fallback(self, utterance: str, speaker: str) -> list[DialogueMove]:
+        """Interpret utterance using hybrid fallback strategy.
+
+        This method uses the HybridFallbackStrategy to intelligently select
+        which interpretation approach to use based on:
+        - Fast-path pattern matching
+        - Utterance complexity
+        - Cost and latency budgets
+        - Cascading fallback
+
+        Args:
+            utterance: The utterance to interpret
+            speaker: ID of the speaker
+
+        Returns:
+            List of interpreted dialogue moves
+        """
+        if not self.fallback_strategy:
+            logger.warning("Hybrid fallback called but strategy not initialized")
+            return super().interpret(utterance, speaker)
+
+        # Determine available strategies
+        available = []
+        if self.rules and self.rules.rule_count() > 0:
+            available.append(InterpretationStrategy.RULES)
+        if self.config.use_llm and self.context_interpreter:
+            available.append(InterpretationStrategy.HAIKU)
+            # Sonnet available if we want to use it (could add a config flag)
+            available.append(InterpretationStrategy.SONNET)
+
+        # Select initial strategy
+        strategy = self.fallback_strategy.select_strategy(utterance, available)
+        logger.debug(f"Selected strategy: {strategy.value}")
+
+        # Try the selected strategy
+        moves, confidence = self._try_strategy(strategy, utterance, speaker)
+
+        # Record usage
+        self.fallback_strategy.record_usage(strategy, tokens=0, latency=0.0)
+
+        # Check if we should cascade
+        next_strategy = self.fallback_strategy.should_cascade(
+            strategy, success=len(moves) > 0, confidence=confidence
+        )
+
+        if next_strategy and next_strategy in available:
+            logger.info(f"Cascading from {strategy.value} to {next_strategy.value}")
+            cascade_moves, cascade_conf = self._try_strategy(next_strategy, utterance, speaker)
+
+            # Use cascade results if better
+            if len(cascade_moves) > len(moves) or cascade_conf > confidence:
+                moves = cascade_moves
+                confidence = cascade_conf
+                strategy = next_strategy
+
+            # Record cascade usage
+            self.fallback_strategy.record_usage(next_strategy, tokens=0, latency=0.0)
+
+        if moves:
+            logger.info(
+                f"{strategy.value} interpreted {len(moves)} move(s) (confidence: {confidence:.2f})"
+            )
+        else:
+            logger.debug(f"{strategy.value} produced no moves")
+
+        return moves
+
+    def _try_strategy(
+        self, strategy: InterpretationStrategy, utterance: str, speaker: str
+    ) -> tuple[list[DialogueMove], float]:
+        """Try a specific interpretation strategy.
+
+        Args:
+            strategy: The strategy to try
+            utterance: The utterance to interpret
+            speaker: Speaker ID
+
+        Returns:
+            Tuple of (moves, confidence)
+        """
+        if strategy == InterpretationStrategy.RULES:
+            # Use rule-based interpretation
+            moves = super().interpret(utterance, speaker)
+            # Rules don't have confidence, use 1.0 if successful
+            confidence = 1.0 if moves else 0.0
+            return moves, confidence
+
+        elif strategy in [InterpretationStrategy.HAIKU, InterpretationStrategy.SONNET]:
+            # Use LLM-based interpretation
+            # TODO: Support switching models based on strategy (Haiku vs Sonnet)
+            # For now, use whatever model is configured
+            try:
+                moves = self._interpret_with_nlu(utterance, speaker)
+                # Get confidence from NLU results
+                # For now, use a heuristic: 0.8 if moves produced, 0.0 otherwise
+                confidence = 0.8 if moves else 0.0
+                return moves, confidence
+            except Exception as e:
+                logger.warning(f"NLU interpretation failed: {e}")
+                return [], 0.0
+
+        return [], 0.0
 
     def _interpret_with_nlu(self, utterance: str, speaker: str) -> list[DialogueMove]:
         """Interpret utterance using NLU components.
@@ -466,6 +589,21 @@ class NLUDialogueEngine(DialogueMoveEngine):
             metadata={"intended_as_answer": True},
         )
 
+    def get_fallback_stats(self):
+        """Get fallback strategy statistics.
+
+        Returns:
+            FallbackStats object, or None if hybrid fallback disabled
+        """
+        if self.fallback_strategy:
+            return self.fallback_strategy.get_stats()
+        return None
+
+    def reset_fallback_session(self):
+        """Reset session-level fallback statistics."""
+        if self.fallback_strategy:
+            self.fallback_strategy.reset_session_stats()
+
     def reset(self) -> None:
         """Reset the engine and NLU components."""
         super().reset()
@@ -480,15 +618,30 @@ class NLUDialogueEngine(DialogueMoveEngine):
                 ReferenceResolverConfig(use_llm=self.config.use_llm),
             )
 
+        # Reset fallback session stats
+        if self.fallback_strategy:
+            self.fallback_strategy.reset_session_stats()
+
     def __str__(self) -> str:
         """Return string representation."""
-        return (
+        base = (
             f"NLUDialogueEngine(agent={self.agent_id}, "
             f"nlu_enabled={self.config.use_nlu}, "
             f"llm_enabled={self.config.use_llm}, "
             f"rules={self.rules.rule_count()}, "
-            f"qud={len(self.state.shared.qud)})"
+            f"qud={len(self.state.shared.qud)}"
         )
+
+        if self.fallback_strategy:
+            stats = self.fallback_strategy.get_stats()
+            base += (
+                f", fallback[total={stats.total_utterances}, "
+                f"rules={stats.rules_count}, "
+                f"haiku={stats.haiku_count}, "
+                f"fast_path={stats.fast_path_hits}]"
+            )
+
+        return base + ")"
 
 
 def create_nlu_engine(
