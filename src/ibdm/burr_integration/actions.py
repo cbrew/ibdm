@@ -114,18 +114,12 @@ def generate(state: State) -> tuple[dict[str, Any], State]:
         result = {"utterance_text": ""}
         return result, state.update(utterance_text="")
 
-    # Sync engine state from Burr State (Phase 1: dual tracking)
-    engine.state = info_state
-
-    # Generate utterance using generation rules
-    utterance_text = engine.generate(response_move)
+    # Generate utterance using generation rules (Phase 2: pure function)
+    utterance_text = engine.generate(response_move, info_state)
 
     # Update move content and integrate our own move
     response_move.content = utterance_text
-    engine.state = engine.integrate(response_move)
-
-    # Sync updated state back to Burr State
-    updated_info_state = engine.state
+    updated_info_state = engine.integrate(response_move, info_state)
 
     result = {"utterance_text": utterance_text}
     return result, state.update(information_state=updated_info_state, utterance_text=utterance_text)

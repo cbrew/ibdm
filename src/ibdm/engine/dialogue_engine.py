@@ -168,17 +168,23 @@ class DialogueMoveEngine:
 
         return None, new_state
 
-    def generate(self, move: DialogueMove) -> str:
+    def generate(
+        self, move: DialogueMove, state: InformationState | None = None
+    ) -> str:
         """Apply generation rules to produce utterance from move.
 
         Args:
             move: The dialogue move to generate utterance for
+            state: Information state to use (defaults to self.state for backward compatibility)
 
         Returns:
             Generated utterance text
         """
+        # Use passed state or fall back to self.state (for backward compatibility)
+        working_state = state if state is not None else self.state
+
         # Store the move temporarily for rules to access
-        temp_state = self.state.clone()
+        temp_state = working_state.clone()
         temp_state.private.beliefs["_temp_generate_move"] = move
 
         # Apply generation rules
@@ -186,12 +192,6 @@ class DialogueMoveEngine:
 
         # Extract generated text from beliefs (generation rules put it there)
         generated_text = new_state.private.beliefs.get("_temp_generated_text", "")
-
-        # Clean up temporary fields
-        if "_temp_generate_move" in self.state.private.beliefs:
-            del self.state.private.beliefs["_temp_generate_move"]
-        if "_temp_generated_text" in self.state.private.beliefs:
-            del self.state.private.beliefs["_temp_generated_text"]
 
         # If no text was generated, use a default based on move type
         if not generated_text:
