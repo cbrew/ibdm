@@ -714,35 +714,46 @@ def main():
 
     # Display setup info
     console.print("[dim]✓ API key found[/dim]")
-    console.print("[dim]✓ Initializing NLU components...[/dim]")
     console.print()
 
-    # Initialize NLU engine with hybrid fallback
+    # Validate configuration before initializing
+    console.print("[dim]Validating configuration...[/dim]")
+
     try:
         from ibdm.engine import NLUDialogueEngine, NLUEngineConfig
-        from ibdm.nlu import FallbackConfig
+        from ibdm.nlu import ModelType
 
-        # Configure hybrid fallback for cost optimization
-        fallback_config = FallbackConfig(
-            enable_fast_path=True,
-            enable_cascading=True,
-            complexity_threshold=0.7,  # Try Haiku first for medium complexity
-        )
+        # Check that we can import required components
+        console.print("[dim]  ✓ All modules available[/dim]")
 
+        # Simple, explicit configuration - just use Haiku for NLU
         engine_config = NLUEngineConfig(
-            use_nlu=True,
-            use_llm=True,
-            enable_hybrid_fallback=True,
-            fallback_config=fallback_config,
+            use_nlu=True,  # Enable NLU interpretation
+            use_llm=True,  # Enable LLM calls
+            llm_model=ModelType.HAIKU,  # Use Haiku model
+            enable_hybrid_fallback=False,  # No fallback - just use what we configured
         )
 
-        engine = NLUDialogueEngine(agent_id="legal_system", config=engine_config)
-
-        console.print("[green]✓ NLU engine initialized with hybrid fallback[/green]")
+        console.print("[dim]  ✓ Configuration validated[/dim]")
+        console.print()
+        console.print("[cyan]Configuration:[/cyan]")
+        console.print(f"  • Model: {ModelType.HAIKU.value}")
+        console.print(f"  • API Key: IBDM_API_KEY ({'✓ set' if check_api_key() else '✗ missing'})")
         console.print()
 
+        # Initialize engine with validated config
+        engine = NLUDialogueEngine(agent_id="legal_system", config=engine_config)
+
+        console.print("[green]✓ Dialogue engine initialized successfully[/green]")
+        console.print()
+
+    except ImportError as e:
+        console.print(f"[bold red]Import Error:[/bold red] {e}")
+        console.print("Required modules are not available.")
+        console.print()
+        return 1
     except Exception as e:
-        console.print(f"[bold red]Error:[/bold red] Failed to initialize NLU engine: {e}")
+        console.print(f"[bold red]Configuration Error:[/bold red] {e}")
         console.print()
         return 1
 
@@ -781,39 +792,33 @@ def main():
 
         # Interpret the utterance
         if args.verbose:
-            console.print("[dim]Interpreting with NLU...[/dim]")
+            console.print("[dim]Interpreting utterance...[/dim]")
 
         try:
-            moves = engine.interpret(turn.utterance, "attorney")
+            # Time the interpretation
+            import time
 
-            # Get strategy used and tokens
-            strategy_used = "rules"  # Default
+            start_time = time.time()
+            moves = engine.interpret(turn.utterance, "attorney")
+            latency = time.time() - start_time
+
+            # Get token counts from engine if available
             tokens_in = 0
             tokens_out = 0
-
-            if engine.fallback_strategy:
-                # Get the most recent strategy from stats
-                stats = engine.fallback_strategy.get_stats()
-                if stats.strategy_usage:
-                    # Find the strategy with the highest usage count (most recent)
-                    strategy_used = max(
-                        stats.strategy_usage.items(),
-                        key=lambda x: x[1],
-                    )[0].value
-
-                # Get token counts from the last interpretation
-                tokens_in = engine.last_interpretation_tokens // 2  # Approximate split
-                tokens_out = engine.last_interpretation_tokens - tokens_in
+            if hasattr(engine, "last_interpretation_tokens"):
+                total_tokens = engine.last_interpretation_tokens
+                tokens_in = total_tokens // 2  # Approximate input/output split
+                tokens_out = total_tokens - tokens_in
 
             # Track metrics
             metrics = tracker.add_turn(
                 turn_number=turn.turn_number,
                 speaker="attorney",
                 utterance=turn.utterance,
-                strategy=strategy_used,
+                strategy="haiku",  # We configured Haiku model
                 tokens_input=tokens_in,
                 tokens_output=tokens_out,
-                latency=engine.last_interpretation_latency,
+                latency=latency,
             )
 
             # Display strategy used
@@ -944,27 +949,8 @@ def main():
     console.print(format_metrics_dashboard(tracker))
     console.print()
 
-    # Display strategy effectiveness
-    if engine.fallback_strategy:
-        stats = engine.fallback_strategy.get_stats()
-        console.print("[bold]Strategy Distribution:[/bold]")
-        console.print(f"  Total interpretations: {stats.total_calls}")
-        console.print()
-
-        if stats.strategy_usage:
-            usage_table = Table(show_header=True, header_style="bold")
-            usage_table.add_column("Strategy", style="cyan")
-            usage_table.add_column("Usage Count", justify="right")
-            usage_table.add_column("Percentage", justify="right")
-
-            for strategy, count in stats.strategy_usage.items():
-                pct = (count / stats.total_calls * 100) if stats.total_calls > 0 else 0
-                usage_table.add_row(strategy.value, str(count), f"{pct:.1f}%")
-
-            console.print(usage_table)
-            console.print()
-
     console.print("[green]✓ Demo completed successfully![/green]")
+    console.print(f"[dim]Processed {len(tracker.turns)} turns using {ModelType.HAIKU.value}[/dim]")
     console.print()
 
     return 0
