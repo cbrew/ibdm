@@ -2,6 +2,52 @@
 
 This module provides LLM-based task classification to identify user intents
 and map them to semantic task representations within specific domains.
+
+Architecture:
+    1. Domain Model: Semantic representation of dialogue domains
+       - name: Domain identifier (e.g., "legal_documents")
+       - supported_tasks: List of TaskType enums
+       - task_signatures: Semantic signatures (e.g., "draft(doc_type, parties)")
+
+    2. TaskClassifier: LLM-powered intent classifier
+       - Uses Claude Haiku for fast classification (default)
+       - Maps utterances → (task_type, domain, parameters, confidence)
+       - Handles natural language variations robustly
+
+    3. Integration with Rules: Rule preconditions use task classification
+       - No keyword matching - pure semantic understanding
+       - Confidence thresholding for reliability
+       - Cached in state.private.beliefs to avoid redundant LLM calls
+
+Example:
+    Basic usage:
+        >>> from ibdm.nlu.task_classifier import create_task_classifier
+        >>> classifier = create_task_classifier()
+        >>> result = classifier.classify("I need to draft an NDA")
+        >>> print(result.task_type, result.parameters)
+        'draft_document' {'document_type': 'NDA'}
+
+    With custom domains:
+        >>> from ibdm.nlu.task_classifier import Domain, TaskType
+        >>> restaurant_domain = Domain(
+        ...     name="restaurant_booking",
+        ...     description="Restaurant reservation management",
+        ...     supported_tasks=[TaskType.BOOK_SERVICE],
+        ...     task_signatures={TaskType.BOOK_SERVICE: "book(restaurant, time, size)"}
+        ... )
+        >>> classifier = create_task_classifier(domains=[restaurant_domain])
+
+    Integration with rules:
+        >>> def _is_nda_request(state):
+        ...     result = classifier.classify(state.private.beliefs["_temp_utterance"])
+        ...     return (result.task_type == "draft_document"
+        ...             and result.domain == "legal_documents"
+        ...             and result.confidence >= 0.7)
+
+See Also:
+    - docs/TASK_CLASSIFICATION.md: Complete documentation
+    - demos/RULE_DRIVEN_PLAN.md: Rule-driven dialogue architecture
+    - src/ibdm/rules/interpretation_rules.py: Rule integration examples
 """
 
 import logging
