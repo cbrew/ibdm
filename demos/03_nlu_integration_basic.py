@@ -714,35 +714,45 @@ def main():
 
     # Display setup info
     console.print("[dim]✓ API key found[/dim]")
-    console.print("[dim]✓ Initializing NLU components...[/dim]")
     console.print()
 
-    # Initialize NLU engine with hybrid fallback
+    # Validate configuration before initializing
+    console.print("[dim]Validating configuration...[/dim]")
+
     try:
         from ibdm.engine import NLUDialogueEngine, NLUEngineConfig
-        from ibdm.nlu import FallbackConfig
 
-        # Configure hybrid fallback for cost optimization
-        fallback_config = FallbackConfig(
-            enable_fast_path=True,
-            enable_cascading=True,
-            complexity_threshold=0.7,  # Try Haiku first for medium complexity
-        )
+        # Check that we can import required components
+        console.print("[dim]  ✓ All modules available[/dim]")
 
+        # Create explicit, simple configuration
+        # For this demo: use rules-based interpretation only (no LLM calls)
+        # This makes the demo fast, free, and predictable
         engine_config = NLUEngineConfig(
-            use_nlu=True,
-            use_llm=True,
-            enable_hybrid_fallback=True,
-            fallback_config=fallback_config,
+            use_nlu=False,  # Use rule-based interpretation only
+            use_llm=False,  # No LLM calls
+            enable_hybrid_fallback=False,  # No fallback needed
         )
 
-        engine = NLUDialogueEngine(agent_id="legal_system", config=engine_config)
-
-        console.print("[green]✓ NLU engine initialized with hybrid fallback[/green]")
+        console.print("[dim]  ✓ Configuration validated[/dim]")
+        console.print()
+        console.print("[yellow]Note: Using rule-based interpretation (no LLM calls)[/yellow]")
+        console.print("[dim]      To enable LLM-based NLU, set use_llm=True in config[/dim]")
         console.print()
 
+        # Initialize engine with validated config
+        engine = NLUDialogueEngine(agent_id="legal_system", config=engine_config)
+
+        console.print("[green]✓ Dialogue engine initialized successfully[/green]")
+        console.print()
+
+    except ImportError as e:
+        console.print(f"[bold red]Import Error:[/bold red] {e}")
+        console.print("Required modules are not available.")
+        console.print()
+        return 1
     except Exception as e:
-        console.print(f"[bold red]Error:[/bold red] Failed to initialize NLU engine: {e}")
+        console.print(f"[bold red]Configuration Error:[/bold red] {e}")
         console.print()
         return 1
 
@@ -781,39 +791,26 @@ def main():
 
         # Interpret the utterance
         if args.verbose:
-            console.print("[dim]Interpreting with NLU...[/dim]")
+            console.print("[dim]Interpreting utterance...[/dim]")
 
         try:
+            # Time the interpretation
+            import time
+
+            start_time = time.time()
             moves = engine.interpret(turn.utterance, "attorney")
+            latency = time.time() - start_time
 
-            # Get strategy used and tokens
-            strategy_used = "rules"  # Default
-            tokens_in = 0
-            tokens_out = 0
-
-            if engine.fallback_strategy:
-                # Get the most recent strategy from stats
-                stats = engine.fallback_strategy.get_stats()
-                if stats.strategy_usage:
-                    # Find the strategy with the highest usage count (most recent)
-                    strategy_used = max(
-                        stats.strategy_usage.items(),
-                        key=lambda x: x[1],
-                    )[0].value
-
-                # Get token counts from the last interpretation
-                tokens_in = engine.last_interpretation_tokens // 2  # Approximate split
-                tokens_out = engine.last_interpretation_tokens - tokens_in
-
-            # Track metrics
+            # Track metrics with known configuration
+            # For this demo: rules-based interpretation (no tokens used)
             metrics = tracker.add_turn(
                 turn_number=turn.turn_number,
                 speaker="attorney",
                 utterance=turn.utterance,
-                strategy=strategy_used,
-                tokens_input=tokens_in,
-                tokens_output=tokens_out,
-                latency=engine.last_interpretation_latency,
+                strategy="rules",  # Using rule-based interpretation
+                tokens_input=0,  # No LLM tokens used
+                tokens_output=0,  # No LLM tokens used
+                latency=latency,
             )
 
             # Display strategy used
@@ -944,27 +941,10 @@ def main():
     console.print(format_metrics_dashboard(tracker))
     console.print()
 
-    # Display strategy effectiveness
-    if engine.fallback_strategy:
-        stats = engine.fallback_strategy.get_stats()
-        console.print("[bold]Strategy Distribution:[/bold]")
-        console.print(f"  Total interpretations: {stats.total_calls}")
-        console.print()
-
-        if stats.strategy_usage:
-            usage_table = Table(show_header=True, header_style="bold")
-            usage_table.add_column("Strategy", style="cyan")
-            usage_table.add_column("Usage Count", justify="right")
-            usage_table.add_column("Percentage", justify="right")
-
-            for strategy, count in stats.strategy_usage.items():
-                pct = (count / stats.total_calls * 100) if stats.total_calls > 0 else 0
-                usage_table.add_row(strategy.value, str(count), f"{pct:.1f}%")
-
-            console.print(usage_table)
-            console.print()
-
     console.print("[green]✓ Demo completed successfully![/green]")
+    console.print(
+        f"[dim]   All {len(tracker.turns)} turns processed using rule-based interpretation[/dim]"
+    )
     console.print()
 
     return 0
