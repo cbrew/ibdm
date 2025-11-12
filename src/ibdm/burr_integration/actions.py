@@ -8,23 +8,27 @@ from typing import Any
 
 from burr.core import State, action
 
-from ibdm.core import DialogueMove
+from ibdm.core import DialogueMove, InformationState
 from ibdm.engine import DialogueMoveEngine
 
 
-@action(reads=["utterance", "speaker", "engine"], writes=["moves"])
+@action(reads=["utterance", "speaker", "information_state", "engine"], writes=["moves"])
 def interpret(state: State) -> tuple[dict[str, Any], State]:
     """Interpret utterance into dialogue moves.
 
     Args:
-        state: Current Burr state containing utterance, speaker, and engine
+        state: Current Burr state containing utterance, speaker, information_state, and engine
 
     Returns:
         Tuple of (result dict, updated state)
     """
     utterance: str = state["utterance"]
     speaker: str = state["speaker"]
+    info_state: InformationState = state["information_state"]
     engine: DialogueMoveEngine = state["engine"]
+
+    # Sync engine state from Burr State (Phase 1: dual tracking)
+    engine.state = info_state
 
     # Apply interpretation rules
     moves = engine.interpret(utterance, speaker)
@@ -34,39 +38,53 @@ def interpret(state: State) -> tuple[dict[str, Any], State]:
     return result, state.update(moves=moves)
 
 
-@action(reads=["moves", "engine"], writes=["integrated"])
+@action(reads=["moves", "information_state", "engine"], writes=["information_state", "integrated"])
 def integrate(state: State) -> tuple[dict[str, Any], State]:
     """Integrate dialogue moves into information state.
 
     Args:
-        state: Current Burr state containing moves and engine
+        state: Current Burr state containing moves, information_state, and engine
 
     Returns:
-        Tuple of (result dict, updated state)
+        Tuple of (result dict, updated state with updated information_state)
     """
     moves: list[DialogueMove] = state["moves"]
+    info_state: InformationState = state["information_state"]
     engine: DialogueMoveEngine = state["engine"]
+
+    # Sync engine state from Burr State (Phase 1: dual tracking)
+    engine.state = info_state
 
     # Apply each move to update state
     for move in moves:
         engine.state = engine.integrate(move)
 
+    # Sync updated state back to Burr State
+    updated_info_state = engine.state
+
     # Mark as integrated
     result = {"integrated": True, "move_count": len(moves)}
-    return result, state.update(integrated=True)
+    return result, state.update(information_state=updated_info_state, integrated=True)
 
 
-@action(reads=["engine"], writes=["response_move", "has_response"])
+@action(
+    reads=["information_state", "engine"],
+    writes=["information_state", "response_move", "has_response"],
+)
 def select(state: State) -> tuple[dict[str, Any], State]:
     """Select next dialogue action.
 
     Args:
-        state: Current Burr state containing engine
+        state: Current Burr state containing information_state and engine
 
     Returns:
         Tuple of (result dict, updated state)
     """
+    info_state: InformationState = state["information_state"]
     engine: DialogueMoveEngine = state["engine"]
+
+    # Sync engine state from Burr State (Phase 1: dual tracking)
+    engine.state = info_state
 
     # Check if it's our turn
     if engine.state.control.next_speaker != engine.agent_id:
@@ -76,28 +94,42 @@ def select(state: State) -> tuple[dict[str, Any], State]:
     # Select action using selection rules
     response_move = engine.select_action()
 
+    # Sync updated state back to Burr State (select_action may modify agenda)
+    updated_info_state = engine.state
+
     has_response = response_move is not None
     result = {"has_response": has_response, "response_move": response_move}
 
-    return result, state.update(has_response=has_response, response_move=response_move)
+    return result, state.update(
+        information_state=updated_info_state,
+        has_response=has_response,
+        response_move=response_move,
+    )
 
 
-@action(reads=["response_move", "engine"], writes=["utterance_text"])
+@action(
+    reads=["response_move", "information_state", "engine"],
+    writes=["information_state", "utterance_text"],
+)
 def generate(state: State) -> tuple[dict[str, Any], State]:
     """Generate utterance from dialogue move.
 
     Args:
-        state: Current Burr state containing response_move and engine
+        state: Current Burr state containing response_move, information_state, and engine
 
     Returns:
-        Tuple of (result dict, updated state)
+        Tuple of (result dict, updated state with updated information_state)
     """
     response_move: DialogueMove | None = state["response_move"]
+    info_state: InformationState = state["information_state"]
     engine: DialogueMoveEngine = state["engine"]
 
     if response_move is None:
         result = {"utterance_text": ""}
         return result, state.update(utterance_text="")
+
+    # Sync engine state from Burr State (Phase 1: dual tracking)
+    engine.state = info_state
 
     # Generate utterance using generation rules
     utterance_text = engine.generate(response_move)
@@ -106,25 +138,31 @@ def generate(state: State) -> tuple[dict[str, Any], State]:
     response_move.content = utterance_text
     engine.state = engine.integrate(response_move)
 
+    # Sync updated state back to Burr State
+    updated_info_state = engine.state
+
     result = {"utterance_text": utterance_text}
-    return result, state.update(utterance_text=utterance_text)
+    return result, state.update(information_state=updated_info_state, utterance_text=utterance_text)
 
 
-@action(reads=["engine"], writes=["ready"])
+@action(reads=[], writes=["information_state", "engine", "ready"])
 def initialize(state: State) -> tuple[dict[str, Any], State]:
-    """Initialize the dialogue engine.
+    """Initialize the dialogue engine and information state.
 
     Args:
         state: Current Burr state (may contain agent_id, rules, and engine_class)
 
     Returns:
-        Tuple of (result dict, updated state with engine)
+        Tuple of (result dict, updated state with engine and information_state)
     """
     # Get initialization parameters from state if available
     agent_id = state.get("agent_id", "system")
     rules = state.get("rules", None)
     engine_class = state.get("engine_class", DialogueMoveEngine)
     engine_config = state.get("engine_config", None)
+
+    # Create initial InformationState in Burr State
+    information_state = InformationState(agent_id=agent_id)
 
     # Create engine with appropriate class
     if engine_config is not None:
@@ -135,7 +173,7 @@ def initialize(state: State) -> tuple[dict[str, Any], State]:
         engine = engine_class(agent_id=agent_id, rules=rules)
 
     result = {"ready": True, "agent_id": agent_id}
-    return result, state.update(engine=engine, ready=True)
+    return result, state.update(engine=engine, information_state=information_state, ready=True)
 
 
 @action(reads=[], writes=["utterance", "speaker"])

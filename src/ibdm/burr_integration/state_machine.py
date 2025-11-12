@@ -214,15 +214,12 @@ class DialogueStateMachine:
         return self.app.state
 
     def get_information_state(self) -> Any:
-        """Get the current information state from the engine.
+        """Get the current information state from Burr State.
 
         Returns:
-            Current InformationState
+            Current InformationState from Burr State
         """
-        engine = self.app.state.get("engine")
-        if engine is not None:
-            return engine.state
-        return None
+        return self.app.state.get("information_state")
 
     def reset(self) -> None:
         """Reset the state machine to initial state."""
