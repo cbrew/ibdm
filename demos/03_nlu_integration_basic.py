@@ -55,7 +55,7 @@ from ibdm.core import (
 
 # IBDM Engine imports
 # NLU imports
-from ibdm.nlu import InterpretationStrategy
+# Note: InterpretationStrategy removed - using simple strings for strategy tracking
 
 # =============================================================================
 # Metrics Tracking
@@ -69,7 +69,7 @@ class TurnMetrics:
     turn_number: int
     speaker: str
     utterance: str
-    strategy_used: InterpretationStrategy | str
+    strategy_used: str
     tokens_input: int = 0
     tokens_output: int = 0
     cost: float = 0.0
@@ -83,10 +83,7 @@ class TurnMetrics:
     def calculate_cost(self) -> None:
         """Calculate cost based on model and tokens used."""
         # Pricing per million tokens (Claude models via LiteLLM)
-        if isinstance(self.strategy_used, InterpretationStrategy):
-            strategy_str = self.strategy_used.value
-        else:
-            strategy_str = str(self.strategy_used).lower()
+        strategy_str = str(self.strategy_used).lower()
 
         if "sonnet" in strategy_str:
             # Claude Sonnet 4.5: $3 input / $15 output per million
@@ -114,7 +111,7 @@ class MetricsTracker:
         turn_number: int,
         speaker: str,
         utterance: str,
-        strategy: InterpretationStrategy | str,
+        strategy: str,
         tokens_input: int = 0,
         tokens_output: int = 0,
         latency: float = 0.0,
@@ -170,11 +167,7 @@ class MetricsTracker:
         """Get distribution of strategies used."""
         distribution: dict[str, int] = {}
         for turn in self.turns:
-            if isinstance(turn.strategy_used, InterpretationStrategy):
-                strategy = turn.strategy_used.value
-            else:
-                strategy = str(turn.strategy_used).lower()
-
+            strategy = str(turn.strategy_used).lower()
             distribution[strategy] = distribution.get(strategy, 0) + 1
         return distribution
 
@@ -193,10 +186,7 @@ def format_turn_metrics(metrics: TurnMetrics) -> Table:
     table.add_column("Value")
 
     # Strategy color coding
-    if isinstance(metrics.strategy_used, InterpretationStrategy):
-        strategy_str = metrics.strategy_used.value
-    else:
-        strategy_str = str(metrics.strategy_used).lower()
+    strategy_str = str(metrics.strategy_used).lower()
 
     if "rules" in strategy_str or "pattern" in strategy_str:
         strategy_color = "green"
@@ -267,11 +257,7 @@ def format_metrics_dashboard(tracker: MetricsTracker) -> Panel:
     costs_by_strategy: dict[str, float] = {}
     tokens_by_strategy: dict[str, int] = {}
     for turn in tracker.turns:
-        if isinstance(turn.strategy_used, InterpretationStrategy):
-            strategy = turn.strategy_used.value
-        else:
-            strategy = str(turn.strategy_used).lower()
-
+        strategy = str(turn.strategy_used).lower()
         costs_by_strategy[strategy] = costs_by_strategy.get(strategy, 0.0) + turn.cost
         tokens_by_strategy[strategy] = tokens_by_strategy.get(strategy, 0) + turn.total_tokens
 
@@ -297,7 +283,7 @@ class DialogueTurn:
     turn_number: int
     speaker: str  # "attorney" or "system"
     utterance: str
-    expected_strategy: InterpretationStrategy | str
+    expected_strategy: str
     expected_dialogue_act: str
     expected_tokens_input: int = 0
     expected_tokens_output: int = 0
@@ -325,7 +311,7 @@ NDA_DIALOGUE_TURNS = [
         turn_number=2,
         speaker="attorney",
         utterance="Between Acme Corporation as disclosing party and TechStart Incorporated",
-        expected_strategy=InterpretationStrategy.HAIKU,
+        expected_strategy="haiku",
         expected_dialogue_act="answer",
         expected_tokens_input=60,
         expected_tokens_output=120,
@@ -360,7 +346,7 @@ NDA_DIALOGUE_TURNS = [
         turn_number=4,
         speaker="attorney",
         utterance="January 1st, 2025",
-        expected_strategy=InterpretationStrategy.HAIKU,
+        expected_strategy="haiku",
         expected_dialogue_act="answer",
         expected_tokens_input=50,
         expected_tokens_output=100,
@@ -378,7 +364,7 @@ NDA_DIALOGUE_TURNS = [
         turn_number=5,
         speaker="attorney",
         utterance="Three years",
-        expected_strategy=InterpretationStrategy.HAIKU,
+        expected_strategy="haiku",
         expected_dialogue_act="answer",
         expected_tokens_input=45,
         expected_tokens_output=90,
@@ -829,7 +815,15 @@ def main():
 
             # Get moves from Burr state (written by interpret action)
             burr_state = state_machine.get_state()
-            moves = burr_state.get("moves", [])
+            moves_data = burr_state.get("moves", [])
+
+            # Deserialize moves from dictionaries to DialogueMove objects
+            moves = []
+            for move_dict in moves_data:
+                if isinstance(move_dict, dict):
+                    moves.append(DialogueMove.from_dict(move_dict))
+                else:
+                    moves.append(move_dict)
 
             # Get token counts from engine if available
             tokens_in = 0
@@ -869,10 +863,19 @@ def main():
                         )
                         console.print()
 
-                    elif move.move_type == "answer" and isinstance(move.content, Answer):
+                    elif move.move_type == "answer":
                         # Update gathered info based on turn
+                        # Note: content might be Answer object or dict
                         if turn.turn_number == 2:
-                            gathered_info["parties"] = move.content.content
+                            # Extract content from Answer object or dict
+                            if isinstance(move.content, Answer):
+                                gathered_info["parties"] = move.content.content
+                            elif isinstance(move.content, dict):
+                                gathered_info["parties"] = move.content.get(
+                                    "content", str(move.content)
+                                )
+                            else:
+                                gathered_info["parties"] = str(move.content)
                             gathered_info["entities"] = turn.entities
                         elif turn.turn_number == 3:
                             gathered_info["nda_type"] = "Mutual"
