@@ -214,6 +214,7 @@ class NLUDialogueEngine(DialogueMoveEngine):
                     interpretation.dialogue_act,
                     utterance,
                     speaker,
+                    state,
                     interpretation,
                 )
                 moves.extend(act_moves)
@@ -224,7 +225,7 @@ class NLUDialogueEngine(DialogueMoveEngine):
 
             if act_result.confidence >= self.config.confidence_threshold:
                 moves = self._create_moves_from_act_type(
-                    act_result.dialogue_act, utterance, speaker
+                    act_result.dialogue_act, utterance, speaker, state
                 )
 
         return moves, nlu_context
@@ -234,6 +235,7 @@ class NLUDialogueEngine(DialogueMoveEngine):
         dialogue_act: str,
         utterance: str,
         speaker: str,
+        state: InformationState,
         interpretation: Any,
     ) -> list[DialogueMove]:
         """Create dialogue moves from dialogue act and interpretation.
@@ -242,6 +244,7 @@ class NLUDialogueEngine(DialogueMoveEngine):
             dialogue_act: The classified dialogue act
             utterance: Original utterance
             speaker: Speaker ID
+            state: Current information state
             interpretation: Full interpretation result
 
         Returns:
@@ -257,7 +260,7 @@ class NLUDialogueEngine(DialogueMoveEngine):
 
         # Answer
         elif dialogue_act == DialogueActType.ANSWER.value:
-            answer_move = self._create_answer_move(utterance, speaker, interpretation)
+            answer_move = self._create_answer_move(utterance, speaker, state, interpretation)
             if answer_move:
                 moves.append(answer_move)
 
@@ -324,7 +327,7 @@ class NLUDialogueEngine(DialogueMoveEngine):
         return moves
 
     def _create_moves_from_act_type(
-        self, act_type: str, utterance: str, speaker: str
+        self, act_type: str, utterance: str, speaker: str, state: InformationState
     ) -> list[DialogueMove]:
         """Create moves from dialogue act type (simplified version).
 
@@ -332,11 +335,12 @@ class NLUDialogueEngine(DialogueMoveEngine):
             act_type: Dialogue act type
             utterance: Original utterance
             speaker: Speaker ID
+            state: Current information state
 
         Returns:
             List of dialogue moves
         """
-        return self._create_moves_from_act(act_type, utterance, speaker, None)
+        return self._create_moves_from_act(act_type, utterance, speaker, state, None)
 
     def _create_question_move(
         self, utterance: str, speaker: str, interpretation: Any
@@ -417,20 +421,21 @@ class NLUDialogueEngine(DialogueMoveEngine):
         return None
 
     def _create_answer_move(
-        self, utterance: str, speaker: str, interpretation: Any
+        self, utterance: str, speaker: str, state: InformationState, interpretation: Any
     ) -> DialogueMove | None:
         """Create an answer move from utterance.
 
         Args:
             utterance: Original utterance
             speaker: Speaker ID
+            state: Current information state
             interpretation: Full interpretation (may be None)
 
         Returns:
             DialogueMove with answer, or None
         """
         # Check if there's a question on the QUD stack to answer
-        top_qud = self.state.shared.top_qud()
+        top_qud = state.shared.top_qud()
 
         if top_qud:
             # Create Answer object

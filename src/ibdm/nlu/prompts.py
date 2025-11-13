@@ -158,8 +158,9 @@ def create_dialogue_act_template() -> PromptTemplate:
         task_description="Classify the following utterance into one of these dialogue acts:\n"
         "- question: Requesting information\n"
         "- answer: Providing information in response to a question\n"
-        "- assertion: Making a statement or claim\n"
-        "- command: Giving an instruction or request for action\n"
+        "- assertion: Making a statement or claim (NOT requests or needs)\n"
+        "- command: Giving an instruction or request for action "
+        "(includes 'I need to...', 'I want to...', imperatives)\n"
         "- acknowledgment: Confirming understanding or receipt of information\n"
         "- clarification: Requesting or providing clarification\n"
         "- greeting: Opening or closing a conversation\n"
@@ -182,6 +183,16 @@ def create_dialogue_act_template() -> PromptTemplate:
     template.add_example(
         input="Please close the door.",
         output='{"act": "command", "confidence": 0.95}',
+    )
+
+    template.add_example(
+        input="I need to draft an NDA.",
+        output='{"act": "command", "confidence": 0.85}',
+    )
+
+    template.add_example(
+        input="I want to schedule a meeting for tomorrow.",
+        output='{"act": "command", "confidence": 0.85}',
     )
 
     template.add_example(
@@ -317,7 +328,8 @@ def create_semantic_parsing_template() -> PromptTemplate:
         system_prompt=(
             "You are an expert in computational semantics and formal meaning "
             "representation. Your task is to parse natural language utterances into "
-            "structured semantic representations."
+            "structured semantic representations. "
+            "IMPORTANT: Respond with ONLY valid JSON, no explanations or markdown formatting."
         ),
         task_description=(
             "Parse the following utterance into a structured semantic representation:\n"
@@ -326,7 +338,7 @@ def create_semantic_parsing_template() -> PromptTemplate:
             "- Capture modifiers (time, manner, degree, etc.)\n"
             "- Note any modal or aspectual information"
         ),
-        output_format="Respond with JSON:\n"
+        output_format="Respond with ONLY valid JSON (no markdown, no explanations):\n"
         "{\n"
         '  "predicate": "<main predicate>",\n'
         '  "arguments": [\n'
@@ -338,10 +350,10 @@ def create_semantic_parsing_template() -> PromptTemplate:
         "    ...\n"
         "  ]\n"
         "}",
-        include_reasoning=True,
+        include_reasoning=False,  # No reasoning to ensure pure JSON output
     )
 
-    # Add examples
+    # Add examples (no reasoning to ensure pure JSON output)
     template.add_example(
         input="Alice quickly drove to the airport yesterday.",
         output='{"predicate": "drive", '
@@ -353,9 +365,6 @@ def create_semantic_parsing_template() -> PromptTemplate:
         '{"type": "manner", "value": "quickly"}, '
         '{"type": "time", "value": "yesterday"}'
         "]}",
-        reasoning="The main predicate is 'drive'. Alice is the agent (doer). "
-        "The airport is the goal (destination). Modifiers include manner (quickly) "
-        "and time (yesterday).",
     )
 
     template.add_example(
