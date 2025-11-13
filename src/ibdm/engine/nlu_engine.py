@@ -8,7 +8,7 @@ import logging
 from dataclasses import dataclass
 from typing import Any
 
-from ibdm.core import Answer, DialogueMove, Question
+from ibdm.core import Answer, DialogueMove, InformationState, Question
 from ibdm.core.questions import AltQuestion, WhQuestion, YNQuestion
 from ibdm.engine.dialogue_engine import DialogueMoveEngine
 from ibdm.nlu import (
@@ -178,7 +178,9 @@ class NLUDialogueEngine(DialogueMoveEngine):
             logger.warning("Falling back to rule-based interpretation")
             self.config.use_llm = False
 
-    def interpret(self, utterance: str, speaker: str) -> list[DialogueMove]:
+    def interpret(
+        self, utterance: str, speaker: str, state: InformationState
+    ) -> list[DialogueMove]:
         """Interpret utterance using NLU or rules.
 
         This overrides the base interpret() to add NLU-based interpretation.
@@ -195,18 +197,19 @@ class NLUDialogueEngine(DialogueMoveEngine):
         Args:
             utterance: The utterance to interpret
             speaker: ID of the speaker
+            state: Current information state
 
         Returns:
             List of interpreted dialogue moves
         """
         # Use hybrid fallback strategy if enabled
         if self.fallback_strategy:
-            return self._interpret_with_hybrid_fallback(utterance, speaker)
+            return self._interpret_with_hybrid_fallback(utterance, speaker, state)
 
         # Legacy path: Try NLU-based interpretation first if enabled
         if self.config.use_nlu and self.config.use_llm and self.context_interpreter:
             try:
-                moves = self._interpret_with_nlu(utterance, speaker)
+                moves = self._interpret_with_nlu(utterance, speaker, state)
                 if moves:
                     logger.info(f"NLU interpreted {len(moves)} move(s) from utterance")
                     return moves
@@ -221,9 +224,11 @@ class NLUDialogueEngine(DialogueMoveEngine):
 
         # Fall back to rule-based interpretation
         logger.debug("Using rule-based interpretation")
-        return super().interpret(utterance, speaker)
+        return super().interpret(utterance, speaker, state)
 
-    def _interpret_with_hybrid_fallback(self, utterance: str, speaker: str) -> list[DialogueMove]:
+    def _interpret_with_hybrid_fallback(
+        self, utterance: str, speaker: str, state: InformationState
+    ) -> list[DialogueMove]:
         """Interpret utterance using hybrid fallback strategy.
 
         This method uses the HybridFallbackStrategy to intelligently select
@@ -236,13 +241,14 @@ class NLUDialogueEngine(DialogueMoveEngine):
         Args:
             utterance: The utterance to interpret
             speaker: ID of the speaker
+            state: Current information state
 
         Returns:
             List of interpreted dialogue moves
         """
         if not self.fallback_strategy:
             logger.warning("Hybrid fallback called but strategy not initialized")
-            return super().interpret(utterance, speaker)
+            return super().interpret(utterance, speaker, state)
 
         # Determine available strategies
         available = []
@@ -264,7 +270,7 @@ class NLUDialogueEngine(DialogueMoveEngine):
         self.last_interpretation_tokens = 0
         self.last_interpretation_latency = 0.0
 
-        moves, confidence = self._try_strategy(strategy, utterance, speaker)
+        moves, confidence = self._try_strategy(strategy, utterance, speaker, state)
 
         latency = time.time() - start_time
         self.last_interpretation_latency = latency
@@ -286,7 +292,9 @@ class NLUDialogueEngine(DialogueMoveEngine):
             cascade_start = time.time()
             self.last_interpretation_tokens = 0
 
-            cascade_moves, cascade_conf = self._try_strategy(next_strategy, utterance, speaker)
+            cascade_moves, cascade_conf = self._try_strategy(
+                next_strategy, utterance, speaker, state
+            )
 
             cascade_latency = time.time() - cascade_start
 
@@ -311,7 +319,11 @@ class NLUDialogueEngine(DialogueMoveEngine):
         return moves
 
     def _try_strategy(
-        self, strategy: InterpretationStrategy, utterance: str, speaker: str
+        self,
+        strategy: InterpretationStrategy,
+        utterance: str,
+        speaker: str,
+        state: InformationState,
     ) -> tuple[list[DialogueMove], float]:
         """Try a specific interpretation strategy.
 
@@ -319,13 +331,14 @@ class NLUDialogueEngine(DialogueMoveEngine):
             strategy: The strategy to try
             utterance: The utterance to interpret
             speaker: Speaker ID
+            state: Current information state
 
         Returns:
             Tuple of (moves, confidence)
         """
         if strategy == InterpretationStrategy.RULES:
             # Use rule-based interpretation
-            moves = super().interpret(utterance, speaker)
+            moves = super().interpret(utterance, speaker, state)
             # Rules don't have confidence, use 1.0 if successful
             confidence = 1.0 if moves else 0.0
             return moves, confidence
@@ -333,7 +346,7 @@ class NLUDialogueEngine(DialogueMoveEngine):
         elif strategy in [InterpretationStrategy.HAIKU, InterpretationStrategy.SONNET]:
             # Use LLM-based interpretation with model switching
             try:
-                moves = self._interpret_with_nlu(utterance, speaker, strategy)
+                moves = self._interpret_with_nlu(utterance, speaker, state, strategy)
                 # Get confidence from NLU results
                 # For now, use a heuristic: 0.8 if moves produced, 0.0 otherwise
                 confidence = 0.8 if moves else 0.0
@@ -373,13 +386,18 @@ class NLUDialogueEngine(DialogueMoveEngine):
         return self.context_interpreter
 
     def _interpret_with_nlu(
-        self, utterance: str, speaker: str, strategy: InterpretationStrategy | None = None
+        self,
+        utterance: str,
+        speaker: str,
+        state: InformationState,
+        strategy: InterpretationStrategy | None = None,
     ) -> list[DialogueMove]:
         """Interpret utterance using NLU components.
 
         Args:
             utterance: The utterance to interpret
             speaker: ID of the speaker
+            state: Current information state
             strategy: Optional strategy to use specific model (HAIKU or SONNET)
 
         Returns:
@@ -392,7 +410,7 @@ class NLUDialogueEngine(DialogueMoveEngine):
 
         # Use context interpreter for comprehensive analysis
         if interpreter:
-            interpretation = interpreter.interpret(utterance, self.state)
+            interpretation = interpreter.interpret(utterance, state)
 
             # Track token usage from this interpretation
             self.last_interpretation_tokens = interpreter.last_tokens_used

@@ -13,8 +13,10 @@ class TestDialogueMoveEngine:
         engine = DialogueMoveEngine(agent_id="test_agent")
         assert engine.agent_id == "test_agent"
         assert isinstance(engine.rules, RuleSet)
-        assert isinstance(engine.state, InformationState)
-        assert engine.state.agent_id == "test_agent"
+        # Engine is now stateless - can create initial state on demand
+        state = engine.create_initial_state()
+        assert isinstance(state, InformationState)
+        assert state.agent_id == "test_agent"
 
     def test_creation_with_rules(self):
         """Test creating a DialogueMoveEngine with custom rules."""
@@ -23,38 +25,45 @@ class TestDialogueMoveEngine:
         assert engine.rules is rules
 
     def test_reset(self):
-        """Test resetting the engine state."""
+        """Test creating a new initial state (replaces reset in stateless API)."""
         engine = DialogueMoveEngine(agent_id="test_agent")
 
-        # Modify state
+        # Create and modify state
+        state = engine.create_initial_state()
         q = WhQuestion(variable="x", predicate="test(x)")
-        engine.state.shared.push_qud(q)
-        assert len(engine.state.shared.qud) == 1
+        state.shared.push_qud(q)
+        assert len(state.shared.qud) == 1
 
-        # Reset
-        engine.reset()
-        assert len(engine.state.shared.qud) == 0
+        # Create new initial state (like reset)
+        new_state = engine.create_initial_state()
+        assert len(new_state.shared.qud) == 0
+        assert new_state.agent_id == "test_agent"
 
     def test_get_state(self):
-        """Test getting the current state."""
+        """Test creating initial state (replaces get_state in stateless API)."""
         engine = DialogueMoveEngine(agent_id="test_agent")
-        state = engine.get_state()
-        assert state is engine.state
+        state = engine.create_initial_state()
+        assert isinstance(state, InformationState)
+        assert state.agent_id == "test_agent"
 
     def test_set_state(self):
-        """Test setting a new state."""
+        """Test state cloning (replaces set_state in stateless API)."""
         engine = DialogueMoveEngine(agent_id="test_agent")
-        new_state = InformationState(agent_id="test_agent")
-        new_state.private.beliefs["test"] = "value"
+        state = engine.create_initial_state()
+        state.private.beliefs["test"] = "value"
 
-        engine.set_state(new_state)
-        assert engine.state is new_state
-        assert engine.state.private.beliefs["test"] == "value"
+        # Clone state to create independent copy
+        cloned_state = state.clone()
+        assert cloned_state.private.beliefs["test"] == "value"
+        # Verify independence
+        cloned_state.private.beliefs["test"] = "new_value"
+        assert state.private.beliefs["test"] == "value"
 
     def test_interpret_no_rules(self):
         """Test interpret with no interpretation rules."""
         engine = DialogueMoveEngine(agent_id="test_agent")
-        moves = engine.interpret("Hello", "user")
+        state = engine.create_initial_state()
+        moves = engine.interpret("Hello", "user", state)
         assert moves == []
 
     def test_interpret_with_rule(self):
@@ -84,7 +93,8 @@ class TestDialogueMoveEngine:
         rules.add_rule(rule)
 
         engine = DialogueMoveEngine(agent_id="test_agent", rules=rules)
-        moves = engine.interpret("Hello there", "user")
+        state = engine.create_initial_state()
+        moves = engine.interpret("Hello there", "user", state)
 
         assert len(moves) == 1
         assert moves[0].move_type == "greet"
@@ -95,11 +105,11 @@ class TestDialogueMoveEngine:
         engine = DialogueMoveEngine(agent_id="test_agent")
         move = DialogueMove(move_type="greet", content="Hello", speaker="user")
 
-        original_state = engine.state.clone()
-        new_state = engine.integrate(move)
+        state = engine.create_initial_state()
+        new_state = engine.integrate(move, state)
 
         # State should be unchanged if no rules
-        assert len(new_state.shared.qud) == len(original_state.shared.qud)
+        assert len(new_state.shared.qud) == len(state.shared.qud)
 
     def test_integrate_with_rule(self):
         """Test integrate with an integration rule."""
@@ -128,28 +138,34 @@ class TestDialogueMoveEngine:
         q = WhQuestion(variable="x", predicate="weather(x)")
         move = DialogueMove(move_type="ask", content=q, speaker="user")
 
-        assert len(engine.state.shared.qud) == 0
-        engine.state = engine.integrate(move)
-        assert len(engine.state.shared.qud) == 1
-        assert engine.state.shared.qud[0] == q
+        state = engine.create_initial_state()
+        assert len(state.shared.qud) == 0
+        new_state = engine.integrate(move, state)
+        assert len(new_state.shared.qud) == 1
+        assert new_state.shared.qud[0] == q
 
     def test_select_action_from_agenda(self):
         """Test selecting action from agenda."""
         engine = DialogueMoveEngine(agent_id="test_agent")
 
         # Add move to agenda
+        state = engine.create_initial_state()
         move = DialogueMove(move_type="greet", content="Hello", speaker="test_agent")
-        engine.state.private.agenda.append(move)
+        state.private.agenda.append(move)
 
-        selected = engine.select_action()
-        assert selected is move
-        assert len(engine.state.private.agenda) == 0
+        selected_move, new_state = engine.select_action(state)
+        # State is cloned, so move won't be same object but should be equal
+        assert selected_move.move_type == move.move_type
+        assert selected_move.content == move.content
+        assert selected_move.speaker == move.speaker
+        assert len(new_state.private.agenda) == 0
 
     def test_select_action_no_rules(self):
         """Test selecting action with no selection rules."""
         engine = DialogueMoveEngine(agent_id="test_agent")
-        selected = engine.select_action()
-        assert selected is None
+        state = engine.create_initial_state()
+        selected_move, new_state = engine.select_action(state)
+        assert selected_move is None
 
     def test_select_action_with_rule(self):
         """Test selecting action with a selection rule."""
@@ -180,19 +196,21 @@ class TestDialogueMoveEngine:
         engine = DialogueMoveEngine(agent_id="test_agent", rules=rules)
 
         # Add question to QUD
+        state = engine.create_initial_state()
         q = WhQuestion(variable="x", predicate="weather(x)")
-        engine.state.shared.push_qud(q)
+        state.shared.push_qud(q)
 
-        selected = engine.select_action()
-        assert selected is not None
-        assert selected.move_type == "answer"
+        selected_move, new_state = engine.select_action(state)
+        assert selected_move is not None
+        assert selected_move.move_type == "answer"
 
     def test_generate_no_rules(self):
         """Test generate with no generation rules uses defaults."""
         engine = DialogueMoveEngine(agent_id="test_agent")
 
+        state = engine.create_initial_state()
         move = DialogueMove(move_type="greet", content="", speaker="test_agent")
-        text = engine.generate(move)
+        text = engine.generate(move, state)
 
         assert text == "Hello!"
 
@@ -225,38 +243,41 @@ class TestDialogueMoveEngine:
 
         engine = DialogueMoveEngine(agent_id="test_agent", rules=rules)
 
+        state = engine.create_initial_state()
         move = DialogueMove(
             move_type="answer", content=Answer(content="sunny"), speaker="test_agent"
         )
-        text = engine.generate(move)
+        text = engine.generate(move, state)
 
         assert text == "The answer is: sunny"
 
     def test_default_generation_types(self):
         """Test default generation for different move types."""
         engine = DialogueMoveEngine(agent_id="test_agent")
+        state = engine.create_initial_state()
 
         greet_move = DialogueMove(move_type="greet", content="", speaker="test_agent")
-        assert engine.generate(greet_move) == "Hello!"
+        assert engine.generate(greet_move, state) == "Hello!"
 
         quit_move = DialogueMove(move_type="quit", content="", speaker="test_agent")
-        assert engine.generate(quit_move) == "Goodbye!"
+        assert engine.generate(quit_move, state) == "Goodbye!"
 
         q = WhQuestion(variable="x", predicate="weather(x)")
         ask_move = DialogueMove(move_type="ask", content=q, speaker="test_agent")
-        assert "Question:" in engine.generate(ask_move)
+        assert "Question:" in engine.generate(ask_move, state)
 
         answer_move = DialogueMove(
             move_type="answer", content=Answer(content="sunny"), speaker="test_agent"
         )
-        assert "Answer:" in engine.generate(answer_move)
+        assert "Answer:" in engine.generate(answer_move, state)
 
     def test_process_input_simple(self):
         """Test processing input with no rules."""
         engine = DialogueMoveEngine(agent_id="test_agent")
-        state, response = engine.process_input("Hello", "user")
+        initial_state = engine.create_initial_state()
+        new_state, response = engine.process_input("Hello", "user", initial_state)
 
-        assert state is not None
+        assert new_state is not None
         # No response expected without rules
         assert response is None
 
@@ -312,11 +333,12 @@ class TestDialogueMoveEngine:
         )
 
         engine = DialogueMoveEngine(agent_id="test_agent", rules=rules)
-        state, response = engine.process_input("What's the weather?", "user")
+        initial_state = engine.create_initial_state()
+        new_state, response = engine.process_input("What's the weather?", "user", initial_state)
 
         # Question should be on QUD
-        assert len(state.shared.qud) == 1
-        assert isinstance(state.shared.qud[0], WhQuestion)
+        assert len(new_state.shared.qud) == 1
+        assert isinstance(new_state.shared.qud[0], WhQuestion)
 
     def test_process_input_full_cycle(self):
         """Test full processing cycle with all rule types."""
@@ -413,10 +435,11 @@ class TestDialogueMoveEngine:
         )
 
         engine = DialogueMoveEngine(agent_id="test_agent", rules=rules)
-        state, response = engine.process_input("What is it?", "user")
+        initial_state = engine.create_initial_state()
+        new_state, response = engine.process_input("What is it?", "user", initial_state)
 
         # Should have interpreted, integrated, selected, and generated
-        assert len(state.shared.qud) == 1
+        assert len(new_state.shared.qud) == 1
         assert response is not None
         assert response.move_type == "answer"
         assert response.content == "It is test_value"
