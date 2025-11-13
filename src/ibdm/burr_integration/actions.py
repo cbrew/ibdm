@@ -8,16 +8,21 @@ from typing import Any
 
 from burr.core import State, action
 
+from ibdm.burr_integration.nlu_context import NLUContext
 from ibdm.core import DialogueMove, InformationState
 from ibdm.engine import DialogueMoveEngine
 
 
-@action(reads=["utterance", "speaker", "information_state", "engine"], writes=["moves"])
+@action(
+    reads=["utterance", "speaker", "information_state", "engine", "nlu_context"],
+    writes=["moves", "nlu_context"],
+)
 def interpret(state: State) -> tuple[dict[str, Any], State]:
     """Interpret utterance into dialogue moves.
 
     Args:
-        state: Current Burr state containing utterance, speaker, information_state, and engine
+        state: Current Burr state with utterance, speaker, information_state, engine,
+            and nlu_context
 
     Returns:
         Tuple of (result dict, updated state)
@@ -30,15 +35,34 @@ def interpret(state: State) -> tuple[dict[str, Any], State]:
     # Convert dict to InformationState object
     info_state = InformationState.from_dict(info_state_dict)
 
-    # Apply interpretation rules with explicit state (Phase 2: stateless methods)
-    moves = engine.interpret(utterance, speaker, info_state)
+    # Check if engine supports NLU context (Phase 4: NLU state integration)
+    if hasattr(engine, "interpret_with_nlu_context"):
+        # Get NLU context from state (or create empty if not present)
+        nlu_context_dict = state.get("nlu_context", NLUContext.create_empty().to_dict())
+        nlu_context = NLUContext.from_dict(nlu_context_dict)
 
-    # Convert moves to dicts for storage
-    moves_dicts = [m.to_dict() for m in moves]
+        # Use NLU-aware interpretation
+        moves, updated_nlu_context = engine.interpret_with_nlu_context(
+            utterance, speaker, info_state, nlu_context
+        )
 
-    # Update state with moves as dicts
-    result = {"moves": moves_dicts, "move_count": len(moves)}
-    return result, state.update(moves=moves_dicts)
+        # Convert moves and NLU context to dicts for storage
+        moves_dicts = [m.to_dict() for m in moves]
+        updated_nlu_context_dict = updated_nlu_context.to_dict()
+
+        # Update state with moves and NLU context
+        result = {"moves": moves_dicts, "move_count": len(moves)}
+        return result, state.update(moves=moves_dicts, nlu_context=updated_nlu_context_dict)
+    else:
+        # Use standard interpretation (backward compatibility)
+        moves = engine.interpret(utterance, speaker, info_state)
+
+        # Convert moves to dicts for storage
+        moves_dicts = [m.to_dict() for m in moves]
+
+        # Update state with moves as dicts
+        result = {"moves": moves_dicts, "move_count": len(moves)}
+        return result, state.update(moves=moves_dicts)
 
 
 @action(reads=["moves", "information_state", "engine"], writes=["information_state", "integrated"])
@@ -154,15 +178,15 @@ def generate(state: State) -> tuple[dict[str, Any], State]:
     )
 
 
-@action(reads=[], writes=["information_state", "engine", "ready"])
+@action(reads=[], writes=["information_state", "engine", "nlu_context", "ready"])
 def initialize(state: State) -> tuple[dict[str, Any], State]:
-    """Initialize the dialogue engine and information state.
+    """Initialize the dialogue engine, information state, and NLU context.
 
     Args:
         state: Current Burr state (may contain agent_id, rules, and engine_class)
 
     Returns:
-        Tuple of (result dict, updated state with engine and information_state)
+        Tuple of (result dict, updated state with engine, information_state, and nlu_context)
     """
     # Get initialization parameters from state if available
     agent_id = state.get("agent_id", "system")
@@ -174,6 +198,10 @@ def initialize(state: State) -> tuple[dict[str, Any], State]:
     information_state = InformationState(agent_id=agent_id)
     information_state_dict = information_state.to_dict()
 
+    # Create empty NLU context for Phase 4: NLU state integration
+    nlu_context = NLUContext.create_empty()
+    nlu_context_dict = nlu_context.to_dict()
+
     # Create engine with appropriate class
     if engine_config is not None:
         # For NLUDialogueEngine or other engines that need config
@@ -183,7 +211,12 @@ def initialize(state: State) -> tuple[dict[str, Any], State]:
         engine = engine_class(agent_id=agent_id, rules=rules)
 
     result = {"ready": True, "agent_id": agent_id}
-    return result, state.update(engine=engine, information_state=information_state_dict, ready=True)
+    return result, state.update(
+        engine=engine,
+        information_state=information_state_dict,
+        nlu_context=nlu_context_dict,
+        ready=True,
+    )
 
 
 @action(reads=[], writes=["utterance", "speaker"])
