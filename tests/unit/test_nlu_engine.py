@@ -72,7 +72,8 @@ class TestNLUDialogueEngine:
     def test_fallback_to_rules_when_nlu_disabled(self, engine_no_llm):
         """Test that engine falls back to rules when NLU disabled."""
         # Without rules, should return empty list
-        moves = engine_no_llm.interpret("Hello", "user")
+        state = engine_no_llm.create_initial_state()
+        moves = engine_no_llm.interpret("Hello", "user", state)
 
         assert moves == []
 
@@ -107,7 +108,8 @@ class TestNLUDialogueEngine:
         config = NLUEngineConfig(use_nlu=True, use_llm=False, fallback_to_rules=True)
         engine = NLUDialogueEngine("agent_1", rules=rules, config=config)
 
-        moves = engine.interpret("Hello", "user")
+        state = engine.create_initial_state()
+        moves = engine.interpret("Hello", "user", state)
 
         assert len(moves) == 1
         assert moves[0].move_type == "greet"
@@ -115,40 +117,46 @@ class TestNLUDialogueEngine:
 
     def test_process_input_without_llm(self, engine_no_llm):
         """Test processing input without LLM (no moves generated)."""
-        state, response = engine_no_llm.process_input("Hello", "user")
+        initial_state = engine_no_llm.create_initial_state()
+        new_state, response = engine_no_llm.process_input("Hello", "user", initial_state)
 
         # Without rules or LLM, no moves are generated
-        assert isinstance(state, InformationState)
+        assert isinstance(new_state, InformationState)
         assert response is None  # No response since no moves
 
     def test_get_and_set_state(self, engine_no_llm):
-        """Test getting and setting state."""
-        # Get initial state
-        state1 = engine_no_llm.get_state()
+        """Test creating and cloning state (stateless API)."""
+        # Create initial state
+        state1 = engine_no_llm.create_initial_state()
         assert isinstance(state1, InformationState)
 
-        # Create new state and set it
+        # Create new state and modify it
         state2 = InformationState(agent_id="agent_1")
         state2.shared.push_qud(WhQuestion(variable="x", predicate="weather(x)"))
 
-        engine_no_llm.set_state(state2)
+        # Clone state
+        state3 = state2.clone()
 
-        # Verify state was set
-        state3 = engine_no_llm.get_state()
+        # Verify clone has same data
         assert len(state3.shared.qud) == 1
+        # Verify they're independent
+        state3.shared.pop_qud()
+        assert len(state3.shared.qud) == 0
+        assert len(state2.shared.qud) == 1
 
     def test_reset_engine(self, engine_no_llm):
-        """Test resetting engine state."""
-        # Modify state
+        """Test creating new initial state (replaces reset in stateless API)."""
+        # Create and modify state
+        state = engine_no_llm.create_initial_state()
         question = WhQuestion(variable="x", predicate="test(x)")
-        engine_no_llm.state.shared.push_qud(question)
-        assert len(engine_no_llm.state.shared.qud) == 1
+        state.shared.push_qud(question)
+        assert len(state.shared.qud) == 1
 
-        # Reset
-        engine_no_llm.reset()
+        # Create new initial state (like reset)
+        new_state = engine_no_llm.create_initial_state()
 
-        # Verify state is clean
-        assert len(engine_no_llm.state.shared.qud) == 0
+        # Verify new state is clean
+        assert len(new_state.shared.qud) == 0
 
     def test_str_representation(self, engine_no_llm):
         """Test string representation."""
@@ -197,7 +205,8 @@ class TestNLUDialogueEngine:
         assert engine.dialogue_act_classifier is None
 
         # Should use rule-based interpretation
-        moves = engine.interpret("Hello", "user")
+        state = engine.create_initial_state()
+        moves = engine.interpret("Hello", "user", state)
         assert moves == []  # No rules, no moves
 
 
@@ -267,9 +276,10 @@ class TestNLUDialogueEngineWithLLM:
             pytest.skip("LLM not available")
 
         try:
-            state, response = engine.process_input("Hello!", "user")
+            initial_state = engine.create_initial_state()
+            new_state, response = engine.process_input("Hello!", "user", initial_state)
 
-            assert isinstance(state, InformationState)
+            assert isinstance(new_state, InformationState)
             # Response may or may not be None depending on dialogue state
 
         except Exception as e:
@@ -311,25 +321,27 @@ class TestNLUEngineIntegration:
         engine = NLUDialogueEngine("agent_1", rules=rules, config=config)
 
         # Process a question
-        state, response = engine.process_input("What's the weather?", "user")
+        initial_state = engine.create_initial_state()
+        new_state, response = engine.process_input("What's the weather?", "user", initial_state)
 
         # Question should be integrated into state
-        assert isinstance(state, InformationState)
+        assert isinstance(new_state, InformationState)
 
     def test_engine_maintains_state_across_turns(self):
-        """Test that engine maintains state across multiple turns."""
+        """Test that state is maintained across multiple turns (stateless API)."""
         config = NLUEngineConfig(use_nlu=False, use_llm=False)
         engine = NLUDialogueEngine("agent_1", config=config)
 
-        # Add a question to the state
+        # Create initial state and add a question
+        state = engine.create_initial_state()
         question = WhQuestion(variable="x", predicate="time(x)")
-        engine.state.shared.push_qud(question)
+        state.shared.push_qud(question)
 
-        # Process another utterance
-        state, response = engine.process_input("It's noon", "user")
+        # Process another utterance with existing state
+        new_state, response = engine.process_input("It's noon", "user", state)
 
         # State should still have the question
-        assert len(state.shared.qud) == 1
+        assert len(new_state.shared.qud) == 1
 
     def test_nlu_engine_compatible_with_base_engine(self):
         """Test that NLU engine is compatible with base DialogueMoveEngine interface."""
@@ -340,12 +352,10 @@ class TestNLUEngineIntegration:
         # Should be an instance of base class
         assert isinstance(engine, DialogueMoveEngine)
 
-        # Should have all base methods
+        # Should have all base methods (stateless API)
         assert hasattr(engine, "process_input")
         assert hasattr(engine, "interpret")
         assert hasattr(engine, "integrate")
         assert hasattr(engine, "select_action")
         assert hasattr(engine, "generate")
-        assert hasattr(engine, "reset")
-        assert hasattr(engine, "get_state")
-        assert hasattr(engine, "set_state")
+        assert hasattr(engine, "create_initial_state")

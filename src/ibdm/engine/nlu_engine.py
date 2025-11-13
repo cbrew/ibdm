@@ -701,8 +701,7 @@ class NLUDialogueEngine(DialogueMoveEngine):
             f"NLUDialogueEngine(agent={self.agent_id}, "
             f"nlu_enabled={self.config.use_nlu}, "
             f"llm_enabled={self.config.use_llm}, "
-            f"rules={self.rules.rule_count()}, "
-            f"qud={len(self.state.shared.qud)}"
+            f"rules={self.rules.rule_count()}"
         )
 
         if self.fallback_strategy:

@@ -55,7 +55,8 @@ class TestHybridFallbackIntegration:
         engine_with_fallback.reset_fallback_session()
 
         # Simple greeting should use fast-path/rules
-        engine_with_fallback.interpret("hello", "user")
+        state = engine_with_fallback.create_initial_state()
+        engine_with_fallback.interpret("hello", "user", state)
 
         stats_after = engine_with_fallback.get_fallback_stats()
 
@@ -123,7 +124,8 @@ class TestHybridFallbackIntegration:
     def test_latency_measurement_for_rules(self, engine_with_fallback):
         """Test that latency is measured even for rule-based interpretation."""
         # Simple utterance using rules
-        engine_with_fallback.interpret("yes", "user")
+        state = engine_with_fallback.create_initial_state()
+        engine_with_fallback.interpret("yes", "user", state)
 
         # Latency should be measured (even if very small)
         stats = engine_with_fallback.get_fallback_stats()
@@ -146,7 +148,8 @@ class TestHybridFallbackIntegration:
         engine_with_fallback.reset_fallback_session()
 
         # Interpret something to generate stats
-        engine_with_fallback.interpret("hello", "user")
+        state = engine_with_fallback.create_initial_state()
+        engine_with_fallback.interpret("hello", "user", state)
 
         stats_before = engine_with_fallback.get_fallback_stats()
         # Verify we have some stats
@@ -190,12 +193,13 @@ class TestHybridFallbackIntegration:
     def test_engine_str_includes_fallback_stats(self, engine_with_fallback):
         """Test that engine string representation includes fallback stats."""
         # Interpret something
-        engine_with_fallback.interpret("hello", "user")
+        state = engine_with_fallback.create_initial_state()
+        engine_with_fallback.interpret("hello", "user", state)
 
         engine_str = str(engine_with_fallback)
 
         # Should include fallback stats
-        assert "Fallback Stats" in engine_str or "rules=" in engine_str
+        assert "fallback" in engine_str or "rules=" in engine_str
 
 
 class TestModelSwitching:
@@ -265,7 +269,8 @@ class TestEngineWithoutHybridFallback:
     def test_interpret_works_without_fallback(self, engine_no_fallback):
         """Test that interpretation works without hybrid fallback."""
         # Should fall back to regular interpretation
-        moves = engine_no_fallback.interpret("hello", "user")
+        state = engine_no_fallback.create_initial_state()
+        moves = engine_no_fallback.interpret("hello", "user", state)
 
         # Should work, just without hybrid fallback stats
         assert isinstance(moves, list)
