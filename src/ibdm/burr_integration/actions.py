@@ -8,123 +8,171 @@ from typing import Any
 
 from burr.core import State, action
 
-from ibdm.core import DialogueMove
+from ibdm.core import DialogueMove, InformationState
 from ibdm.engine import DialogueMoveEngine
 
 
-@action(reads=["utterance", "speaker", "engine"], writes=["moves"])
+@action(reads=["utterance", "speaker", "information_state", "engine"], writes=["moves"])
 def interpret(state: State) -> tuple[dict[str, Any], State]:
     """Interpret utterance into dialogue moves.
 
     Args:
-        state: Current Burr state containing utterance, speaker, and engine
+        state: Current Burr state containing utterance, speaker, information_state, and engine
 
     Returns:
         Tuple of (result dict, updated state)
     """
     utterance: str = state["utterance"]
     speaker: str = state["speaker"]
+    info_state_dict: dict = state["information_state"]
     engine: DialogueMoveEngine = state["engine"]
 
-    # Apply interpretation rules
-    moves = engine.interpret(utterance, speaker)
+    # Convert dict to InformationState object
+    info_state = InformationState.from_dict(info_state_dict)
 
-    # Update state with moves
-    result = {"moves": moves, "move_count": len(moves)}
-    return result, state.update(moves=moves)
+    # Apply interpretation rules with explicit state (Phase 2: stateless methods)
+    moves = engine.interpret(utterance, speaker, info_state)
+
+    # Convert moves to dicts for storage
+    moves_dicts = [m.to_dict() for m in moves]
+
+    # Update state with moves as dicts
+    result = {"moves": moves_dicts, "move_count": len(moves)}
+    return result, state.update(moves=moves_dicts)
 
 
-@action(reads=["moves", "engine"], writes=["integrated"])
+@action(reads=["moves", "information_state", "engine"], writes=["information_state", "integrated"])
 def integrate(state: State) -> tuple[dict[str, Any], State]:
     """Integrate dialogue moves into information state.
 
     Args:
-        state: Current Burr state containing moves and engine
+        state: Current Burr state containing moves, information_state, and engine
 
     Returns:
-        Tuple of (result dict, updated state)
+        Tuple of (result dict, updated state with updated information_state)
     """
-    moves: list[DialogueMove] = state["moves"]
+    moves_dicts: list[dict] = state["moves"]
+    info_state_dict: dict = state["information_state"]
     engine: DialogueMoveEngine = state["engine"]
 
-    # Apply each move to update state
+    # Convert from dicts to objects
+    moves = [DialogueMove.from_dict(m) for m in moves_dicts]
+    info_state = InformationState.from_dict(info_state_dict)
+
+    # Apply each move to update state (Phase 2: functional style)
+    updated_info_state = info_state
     for move in moves:
-        engine.state = engine.integrate(move)
+        updated_info_state = engine.integrate(move, updated_info_state)
+
+    # Convert back to dict for storage
+    updated_info_state_dict = updated_info_state.to_dict()
 
     # Mark as integrated
     result = {"integrated": True, "move_count": len(moves)}
-    return result, state.update(integrated=True)
+    return result, state.update(information_state=updated_info_state_dict, integrated=True)
 
 
-@action(reads=["engine"], writes=["response_move", "has_response"])
+@action(
+    reads=["information_state", "engine"],
+    writes=["information_state", "response_move", "has_response"],
+)
 def select(state: State) -> tuple[dict[str, Any], State]:
     """Select next dialogue action.
 
     Args:
-        state: Current Burr state containing engine
+        state: Current Burr state containing information_state and engine
 
     Returns:
         Tuple of (result dict, updated state)
     """
+    info_state_dict: dict = state["information_state"]
     engine: DialogueMoveEngine = state["engine"]
 
+    # Convert from dict to object
+    info_state = InformationState.from_dict(info_state_dict)
+
     # Check if it's our turn
-    if engine.state.control.next_speaker != engine.agent_id:
+    if info_state.control.next_speaker != engine.agent_id:
         result = {"has_response": False, "response_move": None}
         return result, state.update(has_response=False, response_move=None)
 
-    # Select action using selection rules
-    response_move = engine.select_action()
+    # Select action using selection rules (Phase 2: pure function)
+    response_move, updated_info_state = engine.select_action(info_state)
+
+    # Convert back to dicts for storage
+    updated_info_state_dict = updated_info_state.to_dict()
+    response_move_dict = response_move.to_dict() if response_move else None
 
     has_response = response_move is not None
-    result = {"has_response": has_response, "response_move": response_move}
+    result = {"has_response": has_response, "response_move": response_move_dict}
 
-    return result, state.update(has_response=has_response, response_move=response_move)
+    return result, state.update(
+        information_state=updated_info_state_dict,
+        has_response=has_response,
+        response_move=response_move_dict,
+    )
 
 
-@action(reads=["response_move", "engine"], writes=["utterance_text"])
+@action(
+    reads=["response_move", "information_state", "engine"],
+    writes=["information_state", "utterance_text"],
+)
 def generate(state: State) -> tuple[dict[str, Any], State]:
     """Generate utterance from dialogue move.
 
     Args:
-        state: Current Burr state containing response_move and engine
+        state: Current Burr state containing response_move, information_state, and engine
 
     Returns:
-        Tuple of (result dict, updated state)
+        Tuple of (result dict, updated state with updated information_state)
     """
-    response_move: DialogueMove | None = state["response_move"]
+    response_move_dict: dict | None = state["response_move"]
+    info_state_dict: dict = state["information_state"]
     engine: DialogueMoveEngine = state["engine"]
 
-    if response_move is None:
+    if response_move_dict is None:
         result = {"utterance_text": ""}
         return result, state.update(utterance_text="")
 
-    # Generate utterance using generation rules
-    utterance_text = engine.generate(response_move)
+    # Convert from dicts to objects
+    response_move = DialogueMove.from_dict(response_move_dict)
+    info_state = InformationState.from_dict(info_state_dict)
+
+    # Generate utterance using generation rules (Phase 2: pure function)
+    utterance_text = engine.generate(response_move, info_state)
 
     # Update move content and integrate our own move
     response_move.content = utterance_text
-    engine.state = engine.integrate(response_move)
+    updated_info_state = engine.integrate(response_move, info_state)
+
+    # Convert back to dict for storage
+    updated_info_state_dict = updated_info_state.to_dict()
 
     result = {"utterance_text": utterance_text}
-    return result, state.update(utterance_text=utterance_text)
+    return result, state.update(
+        information_state=updated_info_state_dict, utterance_text=utterance_text
+    )
 
 
-@action(reads=["engine"], writes=["ready"])
+@action(reads=[], writes=["information_state", "engine", "ready"])
 def initialize(state: State) -> tuple[dict[str, Any], State]:
-    """Initialize the dialogue engine.
+    """Initialize the dialogue engine and information state.
 
     Args:
         state: Current Burr state (may contain agent_id, rules, and engine_class)
 
     Returns:
-        Tuple of (result dict, updated state with engine)
+        Tuple of (result dict, updated state with engine and information_state)
     """
     # Get initialization parameters from state if available
     agent_id = state.get("agent_id", "system")
     rules = state.get("rules", None)
     engine_class = state.get("engine_class", DialogueMoveEngine)
     engine_config = state.get("engine_config", None)
+
+    # Create initial InformationState and convert to dict for Burr State
+    information_state = InformationState(agent_id=agent_id)
+    information_state_dict = information_state.to_dict()
 
     # Create engine with appropriate class
     if engine_config is not None:
@@ -135,7 +183,7 @@ def initialize(state: State) -> tuple[dict[str, Any], State]:
         engine = engine_class(agent_id=agent_id, rules=rules)
 
     result = {"ready": True, "agent_id": agent_id}
-    return result, state.update(engine=engine, ready=True)
+    return result, state.update(engine=engine, information_state=information_state_dict, ready=True)
 
 
 @action(reads=[], writes=["utterance", "speaker"])

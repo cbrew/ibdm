@@ -38,14 +38,19 @@ class TestBurrActions:
 
     def test_select_action_not_our_turn(self):
         """Test selection when it's not our turn."""
+        from ibdm.core import InformationState
+
         app = create_dialogue_application(agent_id="system")
 
         # Initialize
         app.step()
 
-        # Set next_speaker to someone else
-        engine = app.state["engine"]
-        engine.state.control.next_speaker = "user"
+        # Set next_speaker to someone else (convert dict to object, modify, convert back)
+        info_state_dict = app.state["information_state"]
+        info_state = InformationState.from_dict(info_state_dict)
+        info_state.control.next_speaker = "user"
+        info_state_dict = info_state.to_dict()
+        app._state = app.state.update(information_state=info_state_dict)
 
         # Run select
         state = app.state

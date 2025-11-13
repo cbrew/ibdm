@@ -13,8 +13,8 @@ Key Demonstrations:
 - Question Under Discussion (QUD) stack evolution
 - Entity extraction for legal entities (organizations, dates, jurisdictions)
 - Task accommodation (system infers document requirements)
-- Hybrid fallback strategy (pattern matching → Haiku → Sonnet)
-- Cost optimization and performance metrics
+- LLM-based natural language understanding with Claude Sonnet
+- Performance metrics and token tracking
 
 Requirements:
 - IBDM_API_KEY environment variable must be set
@@ -744,18 +744,17 @@ def main():
 
         console.print(f"[dim]  ✓ Loaded {rules.rule_count()} IBDM rules[/dim]")
 
-        # Simple, explicit configuration - just use Haiku for NLU
+        # Simple, explicit configuration - use Sonnet for NLU
         engine_config = NLUEngineConfig(
-            use_nlu=True,  # Enable NLU interpretation
-            use_llm=True,  # Enable LLM calls
-            llm_model=ModelType.HAIKU,  # Use Haiku model
-            enable_hybrid_fallback=False,  # No fallback - just use what we configured
+            llm_model=ModelType.SONNET,  # Use Sonnet model (Policy #9)
+            temperature=0.3,
+            max_tokens=2000,
         )
 
         console.print("[dim]  ✓ Configuration validated[/dim]")
         console.print()
         console.print("[cyan]Configuration:[/cyan]")
-        console.print(f"  • Model: {ModelType.HAIKU.value}")
+        console.print(f"  • Model: {ModelType.SONNET.value}")
         console.print(f"  • Rules: {rules.rule_count()} IBDM rules loaded")
         console.print(f"  • API Key: IBDM_API_KEY ({'✓ set' if check_api_key() else '✗ missing'})")
         console.print()

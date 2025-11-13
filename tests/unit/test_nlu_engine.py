@@ -2,10 +2,10 @@
 
 import pytest
 
-from ibdm.core import DialogueMove, InformationState
+from ibdm.core import InformationState
 from ibdm.core.questions import WhQuestion, YNQuestion
 from ibdm.engine.nlu_engine import NLUDialogueEngine, NLUEngineConfig, create_nlu_engine
-from ibdm.rules import RuleSet
+from ibdm.nlu import ModelType
 
 
 class TestNLUEngineConfig:
@@ -15,150 +15,90 @@ class TestNLUEngineConfig:
         """Test default configuration."""
         config = NLUEngineConfig()
 
-        assert config.use_nlu is True
-        assert config.use_llm is True
+        assert config.llm_model == ModelType.SONNET
         assert config.confidence_threshold == 0.5
-        assert config.fallback_to_rules is True
+        assert config.temperature == 0.3
+        assert config.max_tokens == 2000
 
     def test_custom_config(self):
         """Test custom configuration."""
         config = NLUEngineConfig(
-            use_nlu=True,
-            use_llm=False,
+            llm_model=ModelType.HAIKU,
             confidence_threshold=0.7,
-            fallback_to_rules=False,
+            temperature=0.5,
+            max_tokens=1000,
         )
 
-        assert config.use_nlu is True
-        assert config.use_llm is False
+        assert config.llm_model == ModelType.HAIKU
         assert config.confidence_threshold == 0.7
-        assert config.fallback_to_rules is False
+        assert config.temperature == 0.5
+        assert config.max_tokens == 1000
 
 
 class TestNLUDialogueEngine:
     """Tests for NLUDialogueEngine (without LLM calls)."""
 
     @pytest.fixture
-    def engine_no_llm(self):
-        """Create engine with LLM disabled."""
-        config = NLUEngineConfig(use_nlu=True, use_llm=False)
+    def engine(self):
+        """Create engine with NLU."""
+        config = NLUEngineConfig()
         return NLUDialogueEngine("agent_1", config=config)
 
-    @pytest.fixture
-    def engine_with_llm(self):
-        """Create engine with LLM enabled (will try to initialize)."""
-        config = NLUEngineConfig(use_nlu=True, use_llm=True)
-        return NLUDialogueEngine("agent_1", config=config)
-
-    def test_create_engine(self, engine_no_llm):
+    def test_create_engine(self, engine):
         """Test creating NLU engine."""
-        assert engine_no_llm.agent_id == "agent_1"
-        assert engine_no_llm.config.use_nlu is True
-        assert engine_no_llm.config.use_llm is False
+        assert engine.agent_id == "agent_1"
+        assert engine.config.llm_model == ModelType.SONNET
 
     def test_create_engine_with_factory(self):
         """Test creating engine with factory function."""
-        engine = create_nlu_engine("agent_2", use_nlu=True, use_llm=False)
+        engine = create_nlu_engine("agent_2")
 
         assert engine.agent_id == "agent_2"
         assert isinstance(engine, NLUDialogueEngine)
 
-    def test_engine_initializes_without_llm(self, engine_no_llm):
-        """Test engine works without LLM."""
-        assert engine_no_llm.dialogue_act_classifier is None
-        assert engine_no_llm.question_analyzer is None
-        assert engine_no_llm.entity_tracker is None
-
-    def test_fallback_to_rules_when_nlu_disabled(self, engine_no_llm):
-        """Test that engine falls back to rules when NLU disabled."""
-        # Without rules, should return empty list
-        moves = engine_no_llm.interpret("Hello", "user")
-
-        assert moves == []
-
-    def test_fallback_to_rules_with_rule_set(self):
-        """Test fallback to rules works with rule set."""
-        from ibdm.rules import UpdateRule
-
-        rules = RuleSet()
-
-        # Add a simple interpretation rule
-        def greet_rule(state: InformationState) -> InformationState:
-            utt = state.private.beliefs.get("_temp_utterance", "")
-            if "hello" in utt.lower():
-                state.private.agenda.append(
-                    DialogueMove(
-                        move_type="greet",
-                        content="Hello!",
-                        speaker=state.private.beliefs.get("_temp_speaker", "unknown"),
-                    )
-                )
-            return state
-
-        rule = UpdateRule(
-            name="greet_rule",
-            rule_type="interpretation",
-            preconditions=lambda s: True,
-            effects=greet_rule,
-            priority=1,
-        )
-        rules.add_rule(rule)
-
-        config = NLUEngineConfig(use_nlu=True, use_llm=False, fallback_to_rules=True)
-        engine = NLUDialogueEngine("agent_1", rules=rules, config=config)
-
-        moves = engine.interpret("Hello", "user")
-
-        assert len(moves) == 1
-        assert moves[0].move_type == "greet"
-        assert moves[0].speaker == "user"
-
-    def test_process_input_without_llm(self, engine_no_llm):
-        """Test processing input without LLM (no moves generated)."""
-        state, response = engine_no_llm.process_input("Hello", "user")
-
-        # Without rules or LLM, no moves are generated
-        assert isinstance(state, InformationState)
-        assert response is None  # No response since no moves
-
-    def test_get_and_set_state(self, engine_no_llm):
-        """Test getting and setting state."""
-        # Get initial state
-        state1 = engine_no_llm.get_state()
+    def test_get_and_set_state(self, engine):
+        """Test creating and cloning state (stateless API)."""
+        # Create initial state
+        state1 = engine.create_initial_state()
         assert isinstance(state1, InformationState)
 
-        # Create new state and set it
+        # Create new state and modify it
         state2 = InformationState(agent_id="agent_1")
         state2.shared.push_qud(WhQuestion(variable="x", predicate="weather(x)"))
 
-        engine_no_llm.set_state(state2)
+        # Clone state
+        state3 = state2.clone()
 
-        # Verify state was set
-        state3 = engine_no_llm.get_state()
+        # Verify clone has same data
         assert len(state3.shared.qud) == 1
+        # Verify they're independent
+        state3.shared.pop_qud()
+        assert len(state3.shared.qud) == 0
+        assert len(state2.shared.qud) == 1
 
-    def test_reset_engine(self, engine_no_llm):
-        """Test resetting engine state."""
-        # Modify state
+    def test_reset_engine(self, engine):
+        """Test creating new initial state (replaces reset in stateless API)."""
+        # Create and modify state
+        state = engine.create_initial_state()
         question = WhQuestion(variable="x", predicate="test(x)")
-        engine_no_llm.state.shared.push_qud(question)
-        assert len(engine_no_llm.state.shared.qud) == 1
+        state.shared.push_qud(question)
+        assert len(state.shared.qud) == 1
 
-        # Reset
-        engine_no_llm.reset()
+        # Create new initial state (like reset)
+        new_state = engine.create_initial_state()
 
-        # Verify state is clean
-        assert len(engine_no_llm.state.shared.qud) == 0
+        # Verify new state is clean
+        assert len(new_state.shared.qud) == 0
 
-    def test_str_representation(self, engine_no_llm):
+    def test_str_representation(self, engine):
         """Test string representation."""
-        s = str(engine_no_llm)
+        s = str(engine)
 
         assert "NLUDialogueEngine" in s
         assert "agent_1" in s
-        assert "nlu_enabled" in s
+        assert "model" in s
 
-    def test_create_question_from_analysis(self, engine_no_llm):
+    def test_create_question_from_analysis(self, engine):
         """Test creating Question objects from analysis."""
 
         # Create a mock analysis object
@@ -169,12 +109,12 @@ class TestNLUDialogueEngine:
                 self.confidence = 0.9
 
         analysis = MockAnalysis()
-        question = engine_no_llm._create_question_from_analysis(analysis, "What's the weather?")
+        question = engine._create_question_from_analysis(analysis, "What's the weather?")
 
         assert isinstance(question, WhQuestion)
         assert question.predicate == "weather"
 
-    def test_create_yn_question_from_analysis(self, engine_no_llm):
+    def test_create_yn_question_from_analysis(self, engine):
         """Test creating yes/no question."""
 
         class MockAnalysis:
@@ -183,22 +123,10 @@ class TestNLUDialogueEngine:
                 self.confidence = 0.9
 
         analysis = MockAnalysis()
-        question = engine_no_llm._create_question_from_analysis(analysis, "Is it raining?")
+        question = engine._create_question_from_analysis(analysis, "Is it raining?")
 
         assert isinstance(question, YNQuestion)
         assert question.proposition == "Is it raining?"
-
-    def test_engine_with_nlu_disabled(self):
-        """Test engine with NLU completely disabled."""
-        config = NLUEngineConfig(use_nlu=False)
-        engine = NLUDialogueEngine("agent_1", config=config)
-
-        # Should not initialize NLU components
-        assert engine.dialogue_act_classifier is None
-
-        # Should use rule-based interpretation
-        moves = engine.interpret("Hello", "user")
-        assert moves == []  # No rules, no moves
 
 
 class TestNLUDialogueEngineWithLLM:
@@ -207,32 +135,27 @@ class TestNLUDialogueEngineWithLLM:
     @pytest.mark.run_llm
     def test_create_engine_with_llm(self):
         """Test creating engine with LLM enabled."""
-        config = NLUEngineConfig(use_nlu=True, use_llm=True)
+        config = NLUEngineConfig()
         engine = NLUDialogueEngine("agent_1", config=config)
 
-        # If API key is available, NLU components should be initialized
-        assert engine.config.use_nlu is True
-
-        # If LLM initialization failed, it should fall back gracefully
-        if not engine.config.use_llm:
-            assert engine.dialogue_act_classifier is None
+        # NLU components should be initialized
+        assert engine.dialogue_act_classifier is not None
+        assert engine.question_analyzer is not None
+        assert engine.context_interpreter is not None
 
     @pytest.mark.run_llm
     def test_interpret_with_llm(self):
         """Test interpretation with LLM (if available)."""
-        config = NLUEngineConfig(
-            use_nlu=True, use_llm=True, confidence_threshold=0.5, fallback_to_rules=False
-        )
+        config = NLUEngineConfig(confidence_threshold=0.5)
         engine = NLUDialogueEngine("agent_1", config=config)
 
         # Try to interpret a simple greeting
         try:
-            moves = engine.interpret("Hello there!", "user")
+            state = engine.create_initial_state()
+            moves = engine.interpret("Hello there!", "user", state)
 
-            # If LLM is available, should produce move(s)
-            if engine.config.use_llm and engine.dialogue_act_classifier:
-                # May or may not produce moves depending on classification
-                assert isinstance(moves, list)
+            # Should produce move(s)
+            assert isinstance(moves, list)
 
         except Exception as e:
             # If LLM not available or fails, that's ok for this test
@@ -241,15 +164,13 @@ class TestNLUDialogueEngineWithLLM:
     @pytest.mark.run_llm
     def test_question_interpretation_with_llm(self):
         """Test question interpretation with LLM."""
-        config = NLUEngineConfig(use_nlu=True, use_llm=True)
+        config = NLUEngineConfig()
         engine = NLUDialogueEngine("agent_1", config=config)
-
-        if not engine.config.use_llm or not engine.question_analyzer:
-            pytest.skip("LLM not available")
 
         try:
             # Interpret a question
-            moves = engine.interpret("What's the weather today?", "user")
+            state = engine.create_initial_state()
+            moves = engine.interpret("What's the weather today?", "user", state)
 
             # Should produce at least one move
             assert isinstance(moves, list)
@@ -260,16 +181,14 @@ class TestNLUDialogueEngineWithLLM:
     @pytest.mark.run_llm
     def test_process_input_with_llm(self):
         """Test full processing with LLM."""
-        config = NLUEngineConfig(use_nlu=True, use_llm=True)
+        config = NLUEngineConfig()
         engine = NLUDialogueEngine("agent_1", config=config)
 
-        if not engine.config.use_llm:
-            pytest.skip("LLM not available")
-
         try:
-            state, response = engine.process_input("Hello!", "user")
+            initial_state = engine.create_initial_state()
+            new_state, response = engine.process_input("Hello!", "user", initial_state)
 
-            assert isinstance(state, InformationState)
+            assert isinstance(new_state, InformationState)
             # Response may or may not be None depending on dialogue state
 
         except Exception as e:
@@ -279,73 +198,35 @@ class TestNLUDialogueEngineWithLLM:
 class TestNLUEngineIntegration:
     """Integration tests for NLU engine."""
 
-    def test_question_answer_sequence_no_llm(self):
-        """Test question-answer sequence without LLM."""
-        from ibdm.rules import UpdateRule
-
-        # Create engine with rules for testing
-        rules = RuleSet()
-
-        # Rule to handle questions
-        def question_rule(state: InformationState) -> InformationState:
-            utt = state.private.beliefs.get("_temp_utterance", "")
-            speaker = state.private.beliefs.get("_temp_speaker", "unknown")
-
-            if "?" in utt:
-                # Create a question move
-                move = DialogueMove(move_type="ask", content=utt, speaker=speaker)
-                state.private.agenda.append(move)
-
-            return state
-
-        rule = UpdateRule(
-            name="question_rule",
-            rule_type="interpretation",
-            preconditions=lambda s: True,
-            effects=question_rule,
-            priority=1,
-        )
-        rules.add_rule(rule)
-
-        config = NLUEngineConfig(use_nlu=True, use_llm=False, fallback_to_rules=True)
-        engine = NLUDialogueEngine("agent_1", rules=rules, config=config)
-
-        # Process a question
-        state, response = engine.process_input("What's the weather?", "user")
-
-        # Question should be integrated into state
-        assert isinstance(state, InformationState)
-
     def test_engine_maintains_state_across_turns(self):
-        """Test that engine maintains state across multiple turns."""
-        config = NLUEngineConfig(use_nlu=False, use_llm=False)
+        """Test that state is maintained across multiple turns (stateless API)."""
+        config = NLUEngineConfig()
         engine = NLUDialogueEngine("agent_1", config=config)
 
-        # Add a question to the state
+        # Create initial state and add a question
+        state = engine.create_initial_state()
         question = WhQuestion(variable="x", predicate="time(x)")
-        engine.state.shared.push_qud(question)
+        state.shared.push_qud(question)
 
-        # Process another utterance
-        state, response = engine.process_input("It's noon", "user")
+        # Process another utterance with existing state
+        new_state, response = engine.process_input("It's noon", "user", state)
 
         # State should still have the question
-        assert len(state.shared.qud) == 1
+        assert len(new_state.shared.qud) == 1
 
     def test_nlu_engine_compatible_with_base_engine(self):
         """Test that NLU engine is compatible with base DialogueMoveEngine interface."""
         from ibdm.engine import DialogueMoveEngine
 
-        engine = create_nlu_engine("agent_1", use_nlu=False, use_llm=False)
+        engine = create_nlu_engine("agent_1")
 
         # Should be an instance of base class
         assert isinstance(engine, DialogueMoveEngine)
 
-        # Should have all base methods
+        # Should have all base methods (stateless API)
         assert hasattr(engine, "process_input")
         assert hasattr(engine, "interpret")
         assert hasattr(engine, "integrate")
         assert hasattr(engine, "select_action")
         assert hasattr(engine, "generate")
-        assert hasattr(engine, "reset")
-        assert hasattr(engine, "get_state")
-        assert hasattr(engine, "set_state")
+        assert hasattr(engine, "create_initial_state")

@@ -35,6 +35,35 @@ class PrivateIS:
     last_utterance: DialogueMove | None = None
     """Latest utterance produced by this agent"""
 
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to JSON-serializable dict."""
+        return {
+            "plan": [p.to_dict() if hasattr(p, "to_dict") else str(p) for p in self.plan],
+            "agenda": [m.to_dict() if hasattr(m, "to_dict") else str(m) for m in self.agenda],
+            "beliefs": self.beliefs.copy(),
+            "last_utterance": (
+                self.last_utterance.to_dict()
+                if self.last_utterance and hasattr(self.last_utterance, "to_dict")
+                else str(self.last_utterance)
+                if self.last_utterance
+                else None
+            ),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "PrivateIS":
+        """Reconstruct from dict.
+
+        Note: Plans, agenda, and last_utterance are not fully reconstructed.
+        For now, we only restore beliefs which are standard Python types.
+        """
+        return cls(
+            plan=[],  # Plans would need Plan.from_dict() - skip for now
+            agenda=[],  # Moves would need DialogueMove.from_dict() - skip for now
+            beliefs=data.get("beliefs", {}).copy(),
+            last_utterance=None,  # Would need DialogueMove.from_dict() - skip for now
+        )
+
     def __str__(self) -> str:
         """Return string representation."""
         return (
@@ -60,6 +89,32 @@ class SharedIS:
 
     last_moves: list[DialogueMove] = field(default_factory=lambda: [])
     """Recent moves from dialogue partners"""
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to JSON-serializable dict.
+
+        Note: Converts set to list for JSON compatibility.
+        """
+        return {
+            "qud": [q.to_dict() if hasattr(q, "to_dict") else str(q) for q in self.qud],
+            "commitments": list(self.commitments),  # Convert set to list
+            "last_moves": [
+                m.to_dict() if hasattr(m, "to_dict") else str(m) for m in self.last_moves
+            ],
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "SharedIS":
+        """Reconstruct from dict.
+
+        Note: QUD and moves are not fully reconstructed (stored as empty).
+        For now, we only restore commitments which are simple strings.
+        """
+        return cls(
+            qud=[],  # Questions would need Question.from_dict() - skip for now
+            commitments=set(data.get("commitments", [])),  # Convert list back to set
+            last_moves=[],  # Moves would need DialogueMove.from_dict() - skip for now
+        )
 
     def __str__(self) -> str:
         """Return string representation."""
@@ -99,6 +154,25 @@ class ControlIS:
     dialogue_state: str = "active"
     """Dialogue state: 'active', 'paused', 'ended'"""
 
+    def to_dict(self) -> dict[str, str]:
+        """Convert to JSON-serializable dict."""
+        return {
+            "speaker": self.speaker,
+            "next_speaker": self.next_speaker,
+            "initiative": self.initiative,
+            "dialogue_state": self.dialogue_state,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, str]) -> "ControlIS":
+        """Reconstruct from dict."""
+        return cls(
+            speaker=data.get("speaker", "user"),
+            next_speaker=data.get("next_speaker", "system"),
+            initiative=data.get("initiative", "mixed"),
+            dialogue_state=data.get("dialogue_state", "active"),
+        )
+
     def __str__(self) -> str:
         """Return string representation."""
         return (
@@ -128,6 +202,38 @@ class InformationState:
 
     agent_id: str = "system"
     """ID of the agent owning this information state"""
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to JSON-serializable dict.
+
+        This ensures proper serialization for Burr's persistence layer.
+
+        Returns:
+            Dictionary representation suitable for JSON serialization
+        """
+        return {
+            "private": self.private.to_dict(),
+            "shared": self.shared.to_dict(),
+            "control": self.control.to_dict(),
+            "agent_id": self.agent_id,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "InformationState":
+        """Reconstruct InformationState from dict.
+
+        Args:
+            data: Dictionary representation from to_dict()
+
+        Returns:
+            Reconstructed InformationState
+        """
+        return cls(
+            private=PrivateIS.from_dict(data.get("private", {})),
+            shared=SharedIS.from_dict(data.get("shared", {})),
+            control=ControlIS.from_dict(data.get("control", {})),
+            agent_id=data.get("agent_id", "system"),
+        )
 
     def clone(self) -> "InformationState":
         """Create a deep copy of the information state.

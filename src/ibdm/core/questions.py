@@ -32,6 +32,15 @@ class Question(ABC):
         pass
 
     @abstractmethod
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to JSON-serializable dict.
+
+        Returns:
+            Dictionary representation suitable for JSON serialization
+        """
+        pass
+
+    @abstractmethod
     def __str__(self) -> str:
         """Return a human-readable string representation."""
         pass
@@ -56,6 +65,15 @@ class WhQuestion(Question):
             return False
         # An answer resolves a Wh-question if it provides a value
         return answer.question_ref is None or answer.question_ref == self
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to JSON-serializable dict."""
+        return {
+            "type": "wh",
+            "variable": self.variable,
+            "predicate": self.predicate,
+            "constraints": self.constraints.copy(),
+        }
 
     def __str__(self) -> str:
         """Return string representation."""
@@ -89,6 +107,14 @@ class YNQuestion(Question):
             return content.lower() in ["yes", "no", "true", "false"]
         return False
 
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to JSON-serializable dict."""
+        return {
+            "type": "yn",
+            "proposition": self.proposition,
+            "parameters": self.parameters.copy(),
+        }
+
     def __str__(self) -> str:
         """Return string representation."""
         params_str = ""
@@ -115,6 +141,13 @@ class AltQuestion(Question):
         # An answer resolves an alternative question if it selects one alternative
         content = str(answer.content).lower()
         return any(alt.lower() in content or content in alt.lower() for alt in self.alternatives)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to JSON-serializable dict."""
+        return {
+            "type": "alt",
+            "alternatives": self.alternatives.copy(),
+        }
 
     def __str__(self) -> str:
         """Return string representation."""
