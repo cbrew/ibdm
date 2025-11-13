@@ -33,6 +33,14 @@ def create_generation_rules() -> list[UpdateRule]:
             priority=10,
             rule_type="generation",
         ),
+        # Command generation (acknowledgment)
+        UpdateRule(
+            name="generate_command",
+            preconditions=_is_command_move,
+            effects=_generate_command_text,
+            priority=9,
+            rule_type="generation",
+        ),
         # Question generation (ask moves)
         UpdateRule(
             name="generate_question",
@@ -73,6 +81,12 @@ def _is_quit_move(state: InformationState) -> bool:
     """Check if the move to generate is a quit."""
     move = state.private.beliefs.get("_temp_generate_move")
     return isinstance(move, DialogueMove) and move.move_type == "quit"
+
+
+def _is_command_move(state: InformationState) -> bool:
+    """Check if the move to generate is a command."""
+    move = state.private.beliefs.get("_temp_generate_move")
+    return isinstance(move, DialogueMove) and move.move_type == "command"
 
 
 def _is_ask_move(state: InformationState) -> bool:
@@ -124,6 +138,18 @@ def _generate_quit_text(state: InformationState) -> InformationState:
     else:
         # Initiating quit
         text = "Goodbye!"
+
+    new_state.private.beliefs["_temp_generated_text"] = text
+    return new_state
+
+
+def _generate_command_text(state: InformationState) -> InformationState:
+    """Generate text for a command move."""
+    new_state = state.clone()
+    move = new_state.private.beliefs.get("_temp_generate_move")
+
+    # Acknowledge the command
+    text = f"I understand: {move.content}"
 
     new_state.private.beliefs["_temp_generated_text"] = text
     return new_state

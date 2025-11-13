@@ -40,6 +40,37 @@ class Question(ABC):
         """
         pass
 
+    @staticmethod
+    def from_dict(data: dict[str, Any]) -> "Question":
+        """Factory method to create Question from dict.
+
+        Args:
+            data: Dictionary representation from to_dict()
+
+        Returns:
+            Reconstructed Question object (WhQuestion, YNQuestion, or AltQuestion)
+
+        Raises:
+            ValueError: If question type is unknown
+        """
+        question_type = data.get("type")
+
+        if question_type == "wh":
+            return WhQuestion(
+                variable=data.get("variable", "x"),
+                predicate=data.get("predicate", ""),
+                constraints=data.get("constraints", {}),
+            )
+        elif question_type == "yn":
+            return YNQuestion(
+                proposition=data.get("proposition", ""),
+                parameters=data.get("parameters", {}),
+            )
+        elif question_type == "alt":
+            return AltQuestion(alternatives=data.get("alternatives", []))
+        else:
+            raise ValueError(f"Unknown question type: {question_type}")
+
     @abstractmethod
     def __str__(self) -> str:
         """Return a human-readable string representation."""

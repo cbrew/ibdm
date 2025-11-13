@@ -195,9 +195,7 @@ def demo_qud_stack():
     print("\nUser: 'I want to book a flight to Paris'")
 
     # Initial QUD
-    qud = [
-        WhQuestion(variable="flight", predicate="book", constraints={"destination": "Paris"})
-    ]
+    qud = [WhQuestion(variable="flight", predicate="book", constraints={"destination": "Paris"})]
     print(f"QUD: {[str(q) for q in qud]}")
 
     print("\nSystem: 'When would you like to travel?'")

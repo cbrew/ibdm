@@ -28,12 +28,8 @@ def calculate_costs(interactions_per_day):
     AVG_OUTPUT = 250
 
     # Always-LLM approach (Sonnet 4.5 for everything)
-    always_llm_input = (
-        interactions_per_day * AVG_INPUT * (SONNET_INPUT / 1_000_000)
-    )
-    always_llm_output = (
-        interactions_per_day * AVG_OUTPUT * (SONNET_OUTPUT / 1_000_000)
-    )
+    always_llm_input = interactions_per_day * AVG_INPUT * (SONNET_INPUT / 1_000_000)
+    always_llm_output = interactions_per_day * AVG_OUTPUT * (SONNET_OUTPUT / 1_000_000)
     always_llm_daily = always_llm_input + always_llm_output
 
     # Hybrid approach
@@ -43,20 +39,12 @@ def calculate_costs(interactions_per_day):
 
     rules_cost = 0  # Free!
 
-    haiku_input = (
-        0.25 * interactions_per_day * AVG_INPUT * (HAIKU_INPUT / 1_000_000)
-    )
-    haiku_output = (
-        0.25 * interactions_per_day * AVG_OUTPUT * (HAIKU_OUTPUT / 1_000_000)
-    )
+    haiku_input = 0.25 * interactions_per_day * AVG_INPUT * (HAIKU_INPUT / 1_000_000)
+    haiku_output = 0.25 * interactions_per_day * AVG_OUTPUT * (HAIKU_OUTPUT / 1_000_000)
     haiku_cost = haiku_input + haiku_output
 
-    sonnet_input = (
-        0.05 * interactions_per_day * AVG_INPUT * (SONNET_INPUT / 1_000_000)
-    )
-    sonnet_output = (
-        0.05 * interactions_per_day * AVG_OUTPUT * (SONNET_OUTPUT / 1_000_000)
-    )
+    sonnet_input = 0.05 * interactions_per_day * AVG_INPUT * (SONNET_INPUT / 1_000_000)
+    sonnet_output = 0.05 * interactions_per_day * AVG_OUTPUT * (SONNET_OUTPUT / 1_000_000)
     sonnet_cost = sonnet_input + sonnet_output
 
     hybrid_daily = rules_cost + haiku_cost + sonnet_cost

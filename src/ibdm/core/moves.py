@@ -29,6 +29,9 @@ class DialogueMove:
     timestamp: float = field(default_factory=lambda: time.time())
     """Timestamp when the move was created"""
 
+    metadata: dict[str, Any] = field(default_factory=dict)
+    """Additional metadata about the move (e.g., confidence scores, NLU annotations)"""
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to JSON-serializable dict.
 
@@ -48,13 +51,14 @@ class DialogueMove:
             ),
             "speaker": self.speaker,
             "timestamp": self.timestamp,
+            "metadata": self.metadata.copy(),
         }
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "DialogueMove":
         """Reconstruct DialogueMove from dict.
 
-        Note: Content is stored as string if it was a complex object.
+        Properly deserializes Question and Answer objects from their dict representations.
 
         Args:
             data: Dictionary representation from to_dict()
@@ -62,11 +66,28 @@ class DialogueMove:
         Returns:
             Reconstructed DialogueMove
         """
+        content = data.get("content")
+
+        # Deserialize Questions and Answers from dict representations
+        if isinstance(content, dict):
+            # Import here to avoid circular dependency
+            from ibdm.core.answers import Answer
+            from ibdm.core.questions import Question
+
+            # Check if it's a Question (has 'type' field)
+            if "type" in content:
+                content = Question.from_dict(content)
+            # Check if it's an Answer (has 'question_ref' field)
+            elif "question_ref" in content:
+                content = Answer.from_dict(content)
+            # Otherwise leave as dict
+
         return cls(
             move_type=data.get("move_type", "unknown"),
-            content=data.get("content"),  # Keep as-is (may be string or dict)
+            content=content,
             speaker=data.get("speaker", "unknown"),
             timestamp=data.get("timestamp", time.time()),
+            metadata=data.get("metadata", {}),
         )
 
     def __str__(self) -> str:

@@ -17,6 +17,14 @@ def create_integration_rules() -> list[UpdateRule]:
         List of integration rules
     """
     return [
+        # Command integration - treat commands like requests
+        UpdateRule(
+            name="integrate_command",
+            preconditions=_is_command_move,
+            effects=_integrate_command,
+            priority=12,
+            rule_type="integration",
+        ),
         # Request integration - task accommodation (no QUD change needed, plan already created)
         UpdateRule(
             name="integrate_request",
@@ -71,6 +79,12 @@ def create_integration_rules() -> list[UpdateRule]:
 # Precondition functions
 
 
+def _is_command_move(state: InformationState) -> bool:
+    """Check if the temporary move is a 'command' move."""
+    move = state.private.beliefs.get("_temp_move")
+    return isinstance(move, DialogueMove) and move.move_type == "command"
+
+
 def _is_request_move(state: InformationState) -> bool:
     """Check if the temporary move is a 'request' move."""
     move = state.private.beliefs.get("_temp_move")
@@ -108,6 +122,27 @@ def _is_quit_move(state: InformationState) -> bool:
 
 
 # Effect functions
+
+
+def _integrate_command(state: InformationState) -> InformationState:
+    """Integrate a 'command' move by treating it like a request.
+
+    Command moves (like "I need to draft an NDA") trigger task accommodation.
+    Commands are similar to requests - they express user goals/intentions.
+    """
+    new_state = state.clone()
+    move = new_state.private.beliefs.get("_temp_move")
+
+    if not isinstance(move, DialogueMove):
+        return new_state
+
+    # Add to last_moves for history
+    new_state.shared.last_moves.append(move)
+
+    # System should respond to the command
+    new_state.control.next_speaker = new_state.agent_id
+
+    return new_state
 
 
 def _integrate_request(state: InformationState) -> InformationState:
