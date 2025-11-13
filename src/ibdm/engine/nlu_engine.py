@@ -8,6 +8,7 @@ import logging
 from dataclasses import dataclass
 from typing import Any
 
+from ibdm.burr_integration.nlu_context import NLUContext
 from ibdm.core import Answer, DialogueMove, InformationState, Question
 from ibdm.core.questions import AltQuestion, WhQuestion, YNQuestion
 from ibdm.engine.dialogue_engine import DialogueMoveEngine
@@ -17,15 +18,11 @@ from ibdm.nlu import (
     DialogueActClassifier,
     DialogueActClassifierConfig,
     DialogueActType,
-    EntityTracker,
-    EntityTrackerConfig,
     LLMConfig,
     ModelType,
     QuestionAnalyzer,
     QuestionAnalyzerConfig,
     QuestionType,
-    ReferenceResolver,
-    ReferenceResolverConfig,
 )
 from ibdm.rules import RuleSet
 
@@ -86,49 +83,45 @@ class NLUDialogueEngine(DialogueMoveEngine):
 
         self.config = config or NLUEngineConfig()
 
-        # Initialize NLU components
+        # Store LLM config for creating stateful components on-demand
+        self.llm_config = LLMConfig(
+            model=self.config.llm_model,
+            temperature=self.config.temperature,
+            max_tokens=self.config.max_tokens,
+        )
+
+        # Initialize stateless NLU components (dialogue act classifier,
+        # question analyzer, context interpreter).
+        # Note: Entity tracker and reference resolver are NOT instance variables -
+        # they're managed via NLUContext
         self.dialogue_act_classifier: DialogueActClassifier | None = None
         self.question_analyzer: QuestionAnalyzer | None = None
-        self.entity_tracker: EntityTracker | None = None
-        self.reference_resolver: ReferenceResolver | None = None
         self.context_interpreter: ContextInterpreter | None = None
-
-        # Track last interpretation stats for token/latency reporting
-        self.last_interpretation_tokens: int = 0
-        self.last_interpretation_latency: float = 0.0
 
         self._initialize_nlu_components()
 
         logger.info(f"Initialized NLU engine for agent {agent_id}")
 
     def _initialize_nlu_components(self) -> None:
-        """Initialize NLU components based on configuration."""
+        """Initialize stateless NLU components based on configuration.
+
+        Note: EntityTracker and ReferenceResolver are NOT initialized here.
+        They are created fresh for each interpretation from NLUContext data.
+        """
         try:
-            # Configure LLM with settings from config
-            llm_config = LLMConfig(
-                model=self.config.llm_model,
-                temperature=self.config.temperature,
-                max_tokens=self.config.max_tokens,
-            )
-
-            # Dialogue act classifier
+            # Dialogue act classifier (stateless)
             self.dialogue_act_classifier = DialogueActClassifier(
-                DialogueActClassifierConfig(llm_config=llm_config)
+                DialogueActClassifierConfig(llm_config=self.llm_config)
             )
 
-            # Question analyzer
-            self.question_analyzer = QuestionAnalyzer(QuestionAnalyzerConfig(llm_config=llm_config))
-
-            # Entity tracker and reference resolver
-            self.entity_tracker = EntityTracker(EntityTrackerConfig())
-            self.reference_resolver = ReferenceResolver(
-                self.entity_tracker,
-                ReferenceResolverConfig(llm_config=llm_config, use_llm=True),
+            # Question analyzer (stateless)
+            self.question_analyzer = QuestionAnalyzer(
+                QuestionAnalyzerConfig(llm_config=self.llm_config)
             )
 
-            # Context interpreter (integrates other components)
+            # Context interpreter (stateless - integrates other components)
             self.context_interpreter = ContextInterpreter(
-                ContextInterpreterConfig(llm_config=llm_config)
+                ContextInterpreterConfig(llm_config=self.llm_config)
             )
 
             logger.info("NLU components initialized successfully")
@@ -156,32 +149,60 @@ class NLUDialogueEngine(DialogueMoveEngine):
         Returns:
             List of interpreted dialogue moves
         """
-        return self._interpret_with_nlu(utterance, speaker, state)
+        # Use empty NLU context for backwards compatibility
+        nlu_context = NLUContext.create_empty()
+        moves, _ = self.interpret_with_nlu_context(utterance, speaker, state, nlu_context)
+        return moves
+
+    def interpret_with_nlu_context(
+        self, utterance: str, speaker: str, state: InformationState, nlu_context: NLUContext
+    ) -> tuple[list[DialogueMove], NLUContext]:
+        """Interpret utterance using NLU with explicit context management.
+
+        This method accepts and returns NLUContext, enabling stateless engine design
+        where NLU state (entities, references) is managed by Burr State.
+
+        Args:
+            utterance: The utterance to interpret
+            speaker: ID of the speaker
+            state: Current information state
+            nlu_context: NLU context from previous turn
+
+        Returns:
+            Tuple of (dialogue moves, updated NLU context)
+        """
+        return self._interpret_with_nlu(utterance, speaker, state, nlu_context)
 
     def _interpret_with_nlu(
         self,
         utterance: str,
         speaker: str,
         state: InformationState,
-    ) -> list[DialogueMove]:
+        nlu_context: NLUContext,
+    ) -> tuple[list[DialogueMove], NLUContext]:
         """Interpret utterance using NLU components.
 
         Args:
             utterance: The utterance to interpret
             speaker: ID of the speaker
             state: Current information state
+            nlu_context: NLU context from previous turn
 
         Returns:
-            List of interpreted dialogue moves
+            Tuple of (dialogue moves, updated NLU context)
         """
+        import time
+
+        start_time = time.time()
         moves: list[DialogueMove] = []
 
         # Use context interpreter for comprehensive analysis
         if self.context_interpreter:
             interpretation = self.context_interpreter.interpret(utterance, state)
 
-            # Track token usage from this interpretation
-            self.last_interpretation_tokens = self.context_interpreter.last_tokens_used
+            # Track token usage and latency in NLU context
+            nlu_context.last_interpretation_tokens = self.context_interpreter.last_tokens_used
+            nlu_context.last_interpretation_latency = time.time() - start_time
 
             # Extract entities and update tracker (if available)
             if hasattr(interpretation, "entities") and interpretation.entities:
@@ -206,7 +227,7 @@ class NLUDialogueEngine(DialogueMoveEngine):
                     act_result.dialogue_act, utterance, speaker
                 )
 
-        return moves
+        return moves, nlu_context
 
     def _create_moves_from_act(
         self,
@@ -431,18 +452,12 @@ class NLUDialogueEngine(DialogueMoveEngine):
         )
 
     def reset(self) -> None:
-        """Reset the engine and NLU components."""
+        """Reset the engine.
+
+        Note: NLU context (entities, references) is now managed by Burr State,
+        not by the engine. Callers should reset NLUContext separately if needed.
+        """
         super().reset()
-
-        # Reset NLU trackers
-        if self.entity_tracker:
-            self.entity_tracker = EntityTracker(EntityTrackerConfig())
-
-        if self.reference_resolver and self.entity_tracker:
-            self.reference_resolver = ReferenceResolver(
-                self.entity_tracker,
-                ReferenceResolverConfig(use_llm=True),
-            )
 
     def __str__(self) -> str:
         """Return string representation."""

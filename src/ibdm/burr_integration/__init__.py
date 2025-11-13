@@ -6,6 +6,7 @@ as a Burr application with state tracking and visualization.
 """
 
 from ibdm.burr_integration.actions import generate, idle, initialize, integrate, interpret, select
+from ibdm.burr_integration.nlu_context import NLUContext
 from ibdm.burr_integration.state_machine import DialogueStateMachine, create_dialogue_application
 
 __all__ = [
@@ -19,4 +20,6 @@ __all__ = [
     # State machine
     "create_dialogue_application",
     "DialogueStateMachine",
+    # NLU context
+    "NLUContext",
 ]
