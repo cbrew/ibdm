@@ -669,6 +669,8 @@ class RulesCoverageMetrics:
         """
         Find rule names in source file via static analysis.
 
+        Looks for UpdateRule instantiations with name= parameters.
+
         Args:
             filename: Name of the rules file
 
@@ -686,10 +688,24 @@ class RulesCoverageMetrics:
 
             rule_names = set()
 
-            # Look for function definitions
+            # Look for UpdateRule instantiations with name= parameter
             for node in ast.walk(tree):
-                if isinstance(node, ast.FunctionDef):
-                    rule_names.add(node.name.lower())
+                # Find Call nodes (function calls)
+                if isinstance(node, ast.Call):
+                    # Check if calling UpdateRule
+                    func_name = None
+                    if isinstance(node.func, ast.Name):
+                        func_name = node.func.id
+
+                    if func_name == "UpdateRule":
+                        # Extract name= keyword argument
+                        for keyword in node.keywords:
+                            if keyword.arg == "name":
+                                # Get the string value
+                                if isinstance(keyword.value, ast.Constant):
+                                    value = keyword.value.value
+                                    if isinstance(value, str):
+                                        rule_names.add(value.lower())
 
             return rule_names
         except Exception:
