@@ -132,15 +132,30 @@ pytest tests/unit/test_questions.py -v       # Run relevant tests
 pytest                                       # Run full suite
 ```
 
-### 6. Document via Beads
+### 6. Document via Beads with Larsson Tracking
 
-**Policy**: Track design decisions and tasks in beads.
+**Policy**: Track design decisions and tasks in beads with automatic Larsson alignment measurement.
 
+**Larsson-Tracked Workflow** (PREFERRED):
+```bash
+.claude/beads-larsson.sh start <task-id>     # Start task (auto baseline + prediction prompt)
+# ... work on task ...
+.claude/beads-larsson.sh complete <task-id>  # Complete task (auto final + review)
+```
+
+**Standard Beads Commands** (untracked):
 ```bash
 .claude/beads-helpers.sh ready               # Check ready tasks
-.claude/beads-helpers.sh start <task-id>     # Start task
-.claude/beads-helpers.sh done <task-id> "msg" # Complete task
+.claude/beads-helpers.sh current             # Show in-progress tasks
+.claude/beads-helpers.sh summary             # Project summary
 ```
+
+**How Larsson Tracking Works**:
+1. `start <task-id>`: Generates baseline fidelity report, prompts for prediction
+2. Work on task with normal git workflow
+3. `complete <task-id>`: Generates final report, compares with baseline, reviews prediction
+
+All reports tagged with timestamp and git hash in `reports/` directory.
 
 ### 7. Own All Code Quality Issues
 
@@ -167,9 +182,10 @@ pytest                                       # Run full suite
 ### Daily Session
 
 ```bash
-# 1. Check and start task
+# 1. Check and start task (with Larsson tracking)
 .claude/beads-helpers.sh ready
-.claude/beads-helpers.sh start <task-id>
+.claude/beads-larsson.sh start <task-id>
+# → Generates baseline report, prompts for prediction
 
 # 2. Work loop (repeat for each step)
 #    - Write test → Implement → Run test
@@ -184,8 +200,9 @@ pytest
 # 4. Commit
 git commit -m "feat(scope): description"
 
-# 5. Complete task
-.claude/beads-helpers.sh done <task-id> "message"
+# 5. Complete task (with Larsson review)
+.claude/beads-larsson.sh complete <task-id> "message"
+# → Generates final report, compares with baseline, reviews prediction
 ```
 
 ### Before Pushing
