@@ -147,10 +147,20 @@ class ArchitecturalComplianceMetrics:
 
         try:
             # Check if all four phase actions exist in Burr
-            actions = self.burr_app.graph.actions if hasattr(self.burr_app, "graph") else {}
+            if not hasattr(self.burr_app, "graph"):
+                return 0.0
+
+            actions = self.burr_app.graph.actions
             required_phases = ["interpret", "integrate", "select", "generate"]
 
-            phases_found = sum(1 for phase in required_phases if phase in actions)
+            # Extract action names from Burr actions (list or dict)
+            if isinstance(actions, dict):
+                action_names = set(actions.keys())
+            else:
+                # Actions is a list - extract names from Action objects
+                action_names = {action.name for action in actions}
+
+            phases_found = sum(1 for phase in required_phases if phase in action_names)
             return (phases_found / len(required_phases)) * 100
         except Exception:
             return 0.0
