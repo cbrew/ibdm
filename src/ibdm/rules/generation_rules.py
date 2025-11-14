@@ -6,7 +6,18 @@ They implement template-based and context-aware generation strategies.
 Based on Larsson (2002) Issue-based Dialogue Management.
 """
 
-from ibdm.core import AltQuestion, Answer, DialogueMove, InformationState, WhQuestion, YNQuestion
+from typing import Union
+
+from ibdm.core import (
+    AltQuestion,
+    Answer,
+    DialogueMove,
+    InformationState,
+    Plan,
+    WhQuestion,
+    YNQuestion,
+)
+from ibdm.core.domain import DomainModel
 from ibdm.rules.update_rules import UpdateRule
 
 
@@ -107,6 +118,57 @@ def _is_assertion_move(state: InformationState) -> bool:
     return isinstance(move, DialogueMove) and move.move_type == "assert"
 
 
+# Plan context helpers
+
+
+def _get_active_plan(state: InformationState) -> Plan | None:
+    """Get currently active plan, if any.
+
+    Returns the first active plan from the plan stack, or None if no active plans.
+    """
+    for plan in state.private.plan:
+        if plan.is_active():
+            return plan
+    return None
+
+
+def _get_plan_progress(plan: Plan | None) -> tuple[int, int]:
+    """Get plan progress (completed, total).
+
+    Args:
+        plan: Plan object
+
+    Returns:
+        Tuple of (completed_count, total_count)
+    """
+    if not plan or not plan.subplans:
+        return (0, 0)
+
+    completed = sum(1 for sp in plan.subplans if sp.status == "completed")
+    total = len(plan.subplans)
+    return (completed, total)
+
+
+def _get_domain_for_plan(plan: Plan | None) -> DomainModel | None:
+    """Get domain model for plan.
+
+    Args:
+        plan: Plan object
+
+    Returns:
+        DomainModel instance, or None if plan type not recognized
+    """
+    if not plan:
+        return None
+
+    if plan.plan_type == "nda_drafting":
+        from ibdm.domains.nda_domain import get_nda_domain
+
+        return get_nda_domain()
+
+    return None
+
+
 # Effect functions
 
 
@@ -156,46 +218,147 @@ def _generate_command_text(state: InformationState) -> InformationState:
 
 
 def _generate_question_text(state: InformationState) -> InformationState:
-    """Generate text for a question move."""
+    """Generate text for a question move with plan awareness."""
     new_state = state.clone()
     move = new_state.private.beliefs.get("_temp_generate_move")
-
     question = move.content
-    text = ""
 
+    # Check for active plan
+    active_plan = _get_active_plan(state)
+
+    if active_plan:
+        # Plan-driven generation
+        if active_plan.plan_type == "nda_drafting":
+            text = _generate_nda_question(question, active_plan, state)
+        else:
+            # Fallback for unknown plan types
+            text = _generate_generic_question(question)
+    else:
+        # No active plan - use generic
+        text = _generate_generic_question(question)
+
+    new_state.private.beliefs["_temp_generated_text"] = text
+    return new_state
+
+
+def _generate_generic_question(question: Union[WhQuestion, YNQuestion, AltQuestion]) -> str:
+    """Generate generic question text (existing logic).
+
+    Args:
+        question: Question object (WhQuestion, YNQuestion, or AltQuestion)
+
+    Returns:
+        Generated question text
+    """
     if isinstance(question, WhQuestion):
         # Generate wh-question text
         wh_word = question.constraints.get("wh_word", "what")
 
         # Special case for common questions
         if question.predicate == "how_can_i_help":
-            text = "How can I help you?"
+            return "How can I help you?"
         elif question.predicate == "clarification_needed":
-            text = "Could you please clarify what you mean?"
+            return "Could you please clarify what you mean?"
         else:
             # Generic wh-question
             predicate = question.predicate.replace("_", " ")
-            text = f"{wh_word.capitalize()} {predicate}?"
+            return f"{wh_word.capitalize()} {predicate}?"
 
     elif isinstance(question, YNQuestion):
         # Generate yes/no question text
         proposition = question.proposition.replace("_", " ")
-        text = f"{proposition.capitalize()}?"
+        return f"{proposition.capitalize()}?"
 
     elif isinstance(question, AltQuestion):
         # Generate alternative question text
         if len(question.alternatives) == 2:
-            text = f"{question.alternatives[0].capitalize()} or {question.alternatives[1]}?"
+            return f"{question.alternatives[0].capitalize()} or {question.alternatives[1]}?"
         else:
             alt_list = ", ".join(question.alternatives[:-1])
-            text = f"{alt_list.capitalize()}, or {question.alternatives[-1]}?"
+            return f"{alt_list.capitalize()}, or {question.alternatives[-1]}?"
 
     else:
         # Fallback to string representation
-        text = str(question)
+        return str(question)
 
-    new_state.private.beliefs["_temp_generated_text"] = text
-    return new_state
+
+def _generate_nda_question(
+    question: Union[WhQuestion, YNQuestion, AltQuestion], plan: Plan, state: InformationState
+) -> str:
+    """Generate NDA-specific question with context and progress.
+
+    Uses domain model descriptions for better phrasing and adds progress feedback.
+
+    Args:
+        question: Question object
+        plan: Active NDA plan
+        state: Information state
+
+    Returns:
+        Generated question text with context
+    """
+    completed, total = _get_plan_progress(plan)
+    domain = _get_domain_for_plan(plan)
+
+    # Get predicate description from domain (if available)
+    predicate_desc = None
+    if domain and isinstance(question, WhQuestion) and question.predicate in domain.predicates:
+        predicate_desc = domain.predicates[question.predicate].description
+
+    # Generate question based on predicate
+    if isinstance(question, WhQuestion):
+        if question.predicate == "legal_entities":
+            # Parties question
+            text = "What are the names of the parties entering into this NDA?"
+        elif question.predicate == "date":
+            # Effective date question
+            text = "What is the effective date for the NDA?"
+        elif question.predicate == "time_period":
+            # Duration question
+            text = (
+                "How long should the confidentiality obligations last? (e.g., '2 years', '5 years')"
+            )
+        else:
+            # Fallback to generic with predicate description
+            if predicate_desc:
+                text = f"{predicate_desc}?"
+            else:
+                predicate = question.predicate.replace("_", " ")
+                text = f"What {predicate}?"
+
+    elif isinstance(question, AltQuestion):
+        # Alternative questions - use domain sorts if available
+        if "mutual" in question.alternatives or "one-way" in question.alternatives:
+            # NDA type question
+            alt_text = " or ".join(question.alternatives)
+            text = f"Should this be a {alt_text} NDA?"
+        elif "California" in question.alternatives or "Delaware" in question.alternatives:
+            # Jurisdiction question
+            states = ", ".join(question.alternatives[:-1])
+            last_state = question.alternatives[-1]
+            if len(question.alternatives) == 2:
+                first = question.alternatives[0]
+                second = question.alternatives[1]
+                text = f"Which state's law should govern the NDA: {first} or {second}?"
+            else:
+                text = f"Which state's law should govern the NDA: {states}, or {last_state}?"
+        else:
+            # Generic alternative question
+            text = _generate_generic_question(question)
+
+    elif isinstance(question, YNQuestion):
+        # Yes/no questions
+        text = _generate_generic_question(question)
+
+    else:
+        # Fallback
+        text = _generate_generic_question(question)
+
+    # Add progress indicator if not first question
+    if completed > 0:
+        text = f"[Step {completed + 1} of {total}] {text}"
+
+    return text
 
 
 def _generate_answer_text(state: InformationState) -> InformationState:
