@@ -197,6 +197,89 @@ class TestIntegrationRules:
         # Check that subplan was marked as completed
         assert new_state.private.plan[0].subplans[0].status == "completed"
 
+    def test_integrate_answer_pushes_next_question(self):
+        """Test answer integration pushes next question to QUD after completing subplan."""
+        from ibdm.core import Plan
+
+        rules = create_integration_rules()
+        ruleset = RuleSet()
+        for rule in rules:
+            ruleset.add_rule(rule)
+
+        state = InformationState(agent_id="system")
+
+        # Create two questions and corresponding findout subplans
+        question1 = WhQuestion(variable="x", predicate="departure_city")
+        question2 = WhQuestion(variable="y", predicate="arrival_city")
+
+        subplan1 = Plan(plan_type="findout", content=question1, status="active")
+        subplan2 = Plan(plan_type="findout", content=question2, status="active")
+
+        # Create parent plan with both subplans
+        parent_plan = Plan(
+            plan_type="nda_drafting",
+            content="draft_nda",
+            status="active",
+            subplans=[subplan1, subplan2],
+        )
+        state.private.plan.append(parent_plan)
+
+        # Push first question to QUD
+        state.shared.push_qud(question1)
+
+        # Create answer move for first question
+        answer = Answer(content="New York", question_ref=question1)
+        move = DialogueMove(move_type="answer", content=answer, speaker="user")
+        state.private.beliefs["_temp_move"] = move
+
+        new_state = ruleset.apply_rules("integration", state)
+
+        # Check that first subplan was completed
+        assert new_state.private.plan[0].subplans[0].status == "completed"
+
+        # Check that QUD now contains the next question
+        assert len(new_state.shared.qud) == 1
+        assert new_state.shared.top_qud() == question2
+
+    def test_integrate_answer_empty_qud_when_plan_complete(self):
+        """Test answer integration leaves QUD empty when no more subplans."""
+        from ibdm.core import Plan
+
+        rules = create_integration_rules()
+        ruleset = RuleSet()
+        for rule in rules:
+            ruleset.add_rule(rule)
+
+        state = InformationState(agent_id="system")
+
+        # Create only one question and subplan
+        question = WhQuestion(variable="x", predicate="departure_city")
+        subplan = Plan(plan_type="findout", content=question, status="active")
+
+        parent_plan = Plan(
+            plan_type="nda_drafting",
+            content="draft_nda",
+            status="active",
+            subplans=[subplan],
+        )
+        state.private.plan.append(parent_plan)
+
+        # Push question to QUD
+        state.shared.push_qud(question)
+
+        # Create answer move
+        answer = Answer(content="New York", question_ref=question)
+        move = DialogueMove(move_type="answer", content=answer, speaker="user")
+        state.private.beliefs["_temp_move"] = move
+
+        new_state = ruleset.apply_rules("integration", state)
+
+        # Check that subplan was completed
+        assert new_state.private.plan[0].subplans[0].status == "completed"
+
+        # Check that QUD is now empty (no more questions)
+        assert len(new_state.shared.qud) == 0
+
     def test_integrate_greet_adds_response(self):
         """Test greeting integration adds response to agenda."""
         rules = create_integration_rules()

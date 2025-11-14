@@ -230,7 +230,7 @@ def _form_task_plan(state: InformationState) -> InformationState:
     return new_state
 
 
-def _extract_context(move: DialogueMove, state: InformationState) -> dict:
+def _extract_context(move: DialogueMove, state: InformationState) -> dict[str, str]:
     """Extract context from move for plan building.
 
     Args:
@@ -279,6 +279,38 @@ def _complete_subplan_for_question(state: InformationState, question: Question) 
                 # Mark subplan as completed
                 subplan.complete()
                 return  # Found and completed, done
+
+
+def _get_next_question_from_plan(state: InformationState) -> Question | None:
+    """Get the next question from the next active subplan.
+
+    After completing a subplan, find the next active findout subplan
+    and return its question. Returns None if no more active subplans.
+
+    Args:
+        state: Information state containing plans
+
+    Returns:
+        Next question to push to QUD, or None if plan is complete
+
+    Note:
+        Implements plan progression per Larsson (2002) Section 2.6.
+        Searches through active plans for the next findout subplan.
+    """
+    # Iterate through active plans
+    for plan in state.private.plan:
+        if not plan.is_active():
+            continue
+
+        # Find first active subplan
+        for subplan in plan.subplans:
+            if subplan.is_active() and subplan.plan_type == "findout":
+                # Found next active findout subplan
+                if isinstance(subplan.content, Question):
+                    return subplan.content
+
+    # No more active subplans
+    return None
 
 
 def _integrate_command(state: InformationState) -> InformationState:
@@ -394,6 +426,13 @@ def _integrate_answer(state: InformationState) -> InformationState:
                 # Mark corresponding subplan as completed (Larsson Section 2.6)
                 # Find and complete the findout subplan for this question
                 _complete_subplan_for_question(new_state, top_question)
+
+                # Push next question to QUD if there are more active subplans
+                # This implements plan progression per Larsson Section 2.6
+                next_question = _get_next_question_from_plan(new_state)
+                if next_question:
+                    new_state.shared.push_qud(next_question)
+                # If no next question, QUD remains empty (plan complete)
 
         # Add to last_moves
         new_state.shared.last_moves.append(move)
