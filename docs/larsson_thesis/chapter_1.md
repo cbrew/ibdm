@@ -1,0 +1,373 @@
+Chapter 1
+Introduction
+1.1 Theaimofthisstudy
+Theprimary aimofthisstudyistoexploreissue-based dialogue management,anap-
+proachtodialogue managementanddialogue modellingwhichregardsissues,modelled
+semanticallyasquestions, asaprimary organizing andmotivatingforceindialogue.
+Thisexploration willproceedbothonatheoretical andapractical implementationlevel.
+Starting fromabasicaccountofissue-based dialogue management,wegradually extend
+thecoverageofthetheoryandtheimplementationtomorecomplex typesofdialogue. A
+secondary aimistoexploitthedifferences betweenthesuccessiveversionsofthetheory
+(andimplementation)toprovideaformalcharacterization ofdifferenttypesofdialogue.
+Wewillonlybeconcerned withwhat Allen et al.(2001)refertoaspracticaldialogue,i.e.
+dialogue focusedonaccomplishing aconcrete task.
+Ourgeneralstrategy forreachingthesegoalswillbetotryasfaraspossibleto\keepthings
+simple"; thatis,foreachtypeofdialogue wetrytogiveanaccountthathandlesexactly
+thosephenomena appearinginthattypeofdialogue. However,wealsowanttokeepthings
+fairlygeneral,toenablereuseofcomponentsofasimpleversioninamorecomplex version
+ofthetheoryandimplementation.
+Inthischapter,wewillfirstmotivateexploring theissue-based approachtodialogue man-
+agement. Wewillthengiveanoutlineofthisthesisandgivebriefdescriptions ofthe
+implementations. Finally,wewillintroducethe Trindi Kit ,atoolkitforbuilding and
+experimentingwithdialogue systems, whichhasbeenusedfortheimplementations.
+1
+
+2 CHAPTER 1. INTR ODUCTION
+1.2 Rationale
+1.2.1 Whydialogue management?
+Thepurposeofstudying dialogue modellinganddialogue managementistoprovidemodels
+allowingustoexplorehowlanguage, andespeciallyspokendialogue, isusedindifferent
+activities (inthesenseof Allwood,1995).Whatenablesagents(humanormachines)to
+participate indialogue? Whatkindofinformation doesadialogue participant(or DP)need
+tokeeptrackof?Howisthisinformation usedforinterpreting andgenerating linguistic
+behaviour?Howisdialogue structured, andhowcanthesestructures beexplained? These
+aresomeofthequestions thatareaddressed bytheoriesofdialogue modellinganddialogue
+management.
+Apartfromthesemoretheoretical motivations,therearealsopractical reasonsforbeing
+interestedinthesefields. Ourmainpractical concernisbuilding dialogue systemstoenable
+naturalhuman-computer interaction. Thereisawidelyheldbeliefthatinterfacesusing
+spokendialogue maybethe\nextbigthing"inthefieldofhuman-computer interaction.
+However,webelievethatbeforethiscanhappen,dialogue systemsmustbecomemoreflex-
+iblethancurrentlyavailablecommercial systems. Andtoachievethis,weneedtobaseour
+implementationsonreasonable theoriesofdialogue modellinganddialogue management.
+Theimplementationofdialogue systemscanalsofeedbackintothetheoretical modellingof
+dialogue, providedtheactualimplementationsarecloselyrelatedtotheunderlying theory
+ofdialogue. Oneofthedesigngoalsbehind Trindi Kit istomakethedistance between
+theoryandimplementationasshortaspossible,byprovidingahigh-levelprogramming
+toolallowingabstraction fromlow-levelcomputational matters.
+1.2.2 Whyexploretheissue-based approach?
+Thisthesisshowshowissues(modelledsemanticallyasquestions) ingeneralcanbeused
+asabasisfordialogue management. Butwhyshouldweexploretheissue-based approach
+todialogue management?Toanswerthisquestion, wefirstneedtosetthescenebysaying
+something aboutdialogue managementingeneral. Thereisstillnosingledominating
+paradigm indialogue management,butwecanattempt todiscernafewmajorcompeting
+approaches.
+Theplan-basedapproachhasitsoriginsinclassic AIandappliesplanning andplanrecog-
+nitiontechnologies tothemodellingofactionsindialogue (i.e.utterances) (seee.g. Allen
+and Perrault(1980),Cohenand Levesque(1990),Sidnerand Israel(1981),Moore(1994)
+
+1.2. RATIONALE 3
+and Carberry(1990)). Workinthisareahassofarbeenprimarily theoretical andfairly
+complex fromacomputational pointofview. Examples ofimplementationsusingthis
+approacharethe TRAINS and TRIPSsystems(Allen et al.,2001).
+Therelatedlogic-basedapproachisthatofrepresentingdialogue anddialogue contextin
+somelogicalformalism (seee.g. Hulstijn (2000)and Sadek(1991)). Thismakesitpossi-
+bleinprinciple tododialogue managementusinggeneralreasoning machinery(inference
+engines) toderiveexpectations andsuitable utterances tobeperformed. Examples of
+implementationsusingthisapproachis Sadek(1991)and Bosand Gabsdil(2000).
+Itcanbequestioned whether generalplanning and/orinference isreallyneededindialogue
+management,especiallyfortherathersimplekindsofdialogues thataresufficientformany
+usefulapplications. Indeed,wefindthatmostsystemsthatareactuallydeployedusemuch
+simplermethodsformodellingandmanaging dialogue.
+Inthefinitestateapproach,dialogues arescriptedutterance byutterance onaveryconcrete
+level. Eachutterance leadstoanewstate,wherevariouspossiblefollowuputterances are
+allowed,eachleadingtoanewstate. Asamodelofdialogue thisapproachisproblematic
+sinceitdoesnotreallyexplaindialogue structure; rather,itdescribesit,andinavery
+rigidway. Asatoolfordialogue modelling,thefinitestateapproachisinpractice limited
+toverysimpledialogue wherethenumberofavailableoptionsatanypointinthedialogue
+isverysmall. Thefinite-state approachisusede.g.by Suttonand Kayser(1996).
+Intheform-based(orframe-based)approach,dialogue isreduced totheprocessoffilling
+inaform. Formsprovideaverybasicformalism whichissufficientforsimpledialogue,
+butitishardtoseehowitcanbeextended tohandlemorecomplex kindsofdialogue, e.g.
+negotiative,tutorial, orcollaborativeplanning dialogue. Issue-based dialogue management,
+ontheotherhand,isindependentofthechoiceofsemanticformalism. Thisenablesan
+issue-based systemtobeincremen tallyextended tohandledialogue phenomena involving
+morecomplex semantics. Theform-based approachisusede.g.in Voice XML (Mc Glashan
+etal.,2001)and MIMIC(Chu-Carroll, 2000).
+Inanabstract sense,thegoalofallpractical dialogue istocommunicateinformation which
+isusefulinsomeactivity. Thismeansthatconversational goalsshoulddescribemissing
+information. Tofulfilaconversational goal,whatweneedtodoistocommunicatethe
+missinginformation. Now,aprimary reasontosuspectthattheissue-based approachto
+dialogue managementmightbeworthexploring isthatissues,orquestions, essentiallyare
+entitiesspecifyingcertainpiecesofas-yet-unavailableinformation. Thatis,conversational
+goalscantoalargeextentbemodelledasquestions.
+Inaddition toissuesarisingfromtheactivityinwhichadialogue takesplace,therearealso
+\meta-issues" whicharisefromthedialogue itself. Didtheotherparticipantunderstand
+myutterance correctly? Should Iacceptwhatshejustsaidastrue?Havewereacheda
+
+4 CHAPTER 1. INTR ODUCTION
+mutualunderstanding ofwhat Imeantwithmyprevious utterance?
+Intheissue-based approachwetakequestions tobefirst-class (i.e.irreducible) objects.
+Thisisgenerally notdoneineitherframe-based orplan-based approaches. Insteadofrep-
+resentingquestions directly,frame-based andplan-based theories userelatedmechanisms
+whichdosimilarworkbutdonothavethesameindependentmotivationasquestions.
+1.3 Outlineofthisthesis
+Belowisanoverviewofthechaptersofthisthesis,withshortdescriptions oftheircontents.
+Thebasicstructure ofthethesisistofirstexplorebasicissue-based dialogue management
+andimplemen tabasicsystemillustrating theuseofissue-based dialogue management.
+Inthefollowingchapters, thissimplesystemisextended tohandlethegrounding issues,
+addressing unraised issues,action-orienteddialogue andandissuesundernegotiation.
+²Chapter 2:Basicissue-based dialoguemanagement. Asastarting pointfor
+exploring issue-based dialogue managementusingtheinformation stateapproach,
+Ginzburg's concept of Questions Under Discussion isintroduced,andwebeginto
+exploretheuseof QUDasthebasisforthedialogue management(Dialogue Move
+Engine)componentofadialogue system. Thebasicusesof QUDistomodelraising
+andaddressing issuesindialogue, including theresolution ofelliptical answers. Also,
+dialogue plansandasimplesemanticsisintroducedandimplemen ted.
+²Chapter 3:Grounding issues. Inalldialogue, issuesconcerning contact,per-
+ception, understanding andacceptance ofutterances areofcentralimportance. We
+refertotheseas\meta-issues", or\grounding issues". Wegiveanaccountofthese
+issueswheretheconcepts ofoptimism andpessimism regarding grounding areem-
+ployed. Apartial-co veragemodeloffeedbackrelatedtogrounding ismotivatedfrom
+theperspectiveofusefulness inadialogue system,andimplemen ted. Thisallows
+thesystemtoproduceandrespondtofeedbackconcerning issuesdealingwiththe
+grounding ofutterances.
+²Chapter 4:Addressing unraisedissues. Inchapter 2,wesawhowdialogue
+canbedrivenbyraisingandaddressing issues. Butinrealdialogue, oneoften
+seesutterances whichcanbeconstrued asaddressing issueswhichhavenotbeen
+explicitly raisedinthedialogue. Toenablemoreflexibledialogue behaviour,we
+makeadistinction betweenalocalandaglobal QUD(referring tothelatteras
+\openissues",orjust\issues"). Thenotionsofquestion andissueaccommodation
+arethenintroducedtoallowthesystemtobemoreflexibleinthewayutterances
+areinterpreted relativetothedialogue context. Question accommodationallowsthe
+
+1.4. THEIBISFAMIL YOFSYSTEMS 5
+systemtounderstand answersaddressing issueswhichhavenotyetbeenraised. In
+casesofambiguity,whereananswermatchesseveralpossiblequestions, clarification
+dialogues maybeneeded.
+²Chapter 5:Action-orientedandnegotiativedialogue. Weextendourtheory
+andthe IBi Ssystemtohandleaction-orienteddialogue (AOD),whichinvolve DPs
+performing non-comm unicativeactionssuchase.g.reserving tickets. Inaddition to
+issuesandquestions underdiscussion, thissystemalsohastokeeptrackofactions.
+Theconceptofissueaccommodationisextended toincludeactionaccommodation.
+Weillustrate AODwithanimplementationofa VCRcontrolsystem,whosedialogue
+plansarebasedonmenus. Anissue-based accountofnegotiativedialogue (ND)is
+thensketched(butnotimplemen ted).Thenotionof Issues Under Negotiation is
+introducedtoaccountforsituations whereseveralalternativesolutions (answers)to
+aproblem (issue)arebeingdiscussed.
+²Chapter 6:Conclusions andfutureresearch. Wefirstsummarize theprevious
+chapters. Wethenusetheresultstoclassifyvariousdialogue typesandapplications,
+andsaysomething abouttherelation oftheissue-based modeltheanaccountof
+dialogue structure. Finally,wediscussfutureresearchissues.
+1.4 The IBi Sfamilyofsystems
+Inthisthesiswedescribefourversionsofthe IBi Ssystem 1. Starting fromasimpleversion
+(IBi S1)illustrating issue-based dialogue managementforwhatwe(following Hulstijn,
+2000)refertoasinquiry-oriente ddialogue(e.g.database searchdialogue), thethesis
+gradually developsboththeoryandimplementationtoalsohandlegrounding, question
+accommodationandaction-orienteddialogue. Below,welistsomeimportantfeatures of
+eachofthefourversions. Appendix Blistsallrulesandruleclassesusedbytherespective
+systems, withreferences tothepagewheretheyareexplained.
+²IBi S1
+{Inquiry-orienteddialogue
+{Multitasking
+{Information sharingbetweenplans
+{Perfectcommunication assumed
+{Application totravelinformation
+1The IBi Ssystemislooselybasedontheprevious Go Di Ssystem(Larsson etal.,2000 a)However,the
+dialogue managementcomponentswererewritten fromscratchfor IBi S.
+
+6 CHAPTER 1. INTR ODUCTION
+²IBi S2
+{Interactive Communication Managemen t(ICM),including grounding andse-
+quencing
+{Issue-based grounding
+{Dynamic grounding andfeedbackstrategies
+²IBi S3
+{Question accommodation
+{Denyingandrevisinginformation
+{Correcting thesystem
+²IBi S4
+{Action Oriented Dialogue
+{Application tomenu-based VCRcontrol
+1.5 Trindi Kit
+Fortheimplementationof IBi Swewilluse Trindi Kit ,atoolkitforimplemen tingand
+experimentingwith Information Statesand Dialogue Move Engines 2. Inthissection,we
+givearoughoverviewoftheinformation stateapproachasimplemen tedin Trindi Kit ;a
+moredetailed descriptions ofrelevantpartsof Trindi Kit canbefoundin Appendix A.
+Theaimof Trindi Kit istoprovideaframeworkforexperimentingwithimplementations
+ofdifferenttheories ofinformation state,information stateupdateanddialogue control.
+Keytotheinformation stateapproachisidentifyingtherelevantaspectsofinformation
+indialogue, howtheyareupdated,andhowupdatingprocessesarecontrolled. This
+simpleviewcanbeusedtocompare arangeofapproachesandspecifictheoriesofdialogue
+managementwithinthesameframework.
+Theinformation stateofa DPrepresentstheinformation thatthe DPhasataparticular
+pointinthedialogue, incorporatingthecumulativeadditions fromprevious actionsinthe
+dialogue, andmotivatingfutureaction. Forexample, statemen tsgenerally addproposi-
+tionalinformation; questions generally providemotivationforotherstoprovidespecific
+statemen ts. Information stateisalsoreferredtobysimilarnames,suchas\conversational
+score",or\discourse context"and\mentalstate".
+2Thissectioncontainsmaterial from Larssonand Traum(2000).
+
+1.5. TRINDIKIT 7
+The Trindi Kit isatoolkittoallowsystemdesigners tobuilddialogue managementcom-
+ponentsaccording totheirparticular theories ofinformation states. Itallowsspecific
+theories ofdialogue tobeformalized, implemen ted,tested,compared, anditerativelyre-
+formulated. Keytothisapproachisthenotionofupdateofinformation state,withmost
+updatesrelatedtotheobservationandperformance ofdialoguemoves.
+Weviewaninformation statetheoryofdialogue modellingasconsisting ofthefollowing:
+²Adescription oftheinformational componentsofthetheoryofdialogue mod-
+elling,including aspectsofcommon contextaswellasinternalmotivatingfactors
+(e.g.,participants,common ground,linguistic andintentionalstructure, obligations
+andcommitmen ts,beliefs,intentions,usermodels,etc.).
+²Formalrepresentations oftheabovecomponents(e.g.,aslists,sets,typedfea-
+turestructures, records, Discourse Represen tation Structures (DRSs), propositions
+ormodaloperatorswithinalogic,etc.).
+²Asetofdialoguemovesthatwilltriggertheupdateoftheinformation state.
+Thesewillgenerally alsobecorrelated withexternally performed actions, suchas
+particular naturallanguage utterances. Acomplete theoryofdialogue behaviourwill
+alsorequirerulesforrecognizing andrealizing theperformance ofthesemoves,e.g.,
+withtraditional speechandnaturallanguage understanding andgeneration systems.
+²Asetofupdaterules,thatgoverntheupdatingoftheinformation state,given
+variousconditions ofthecurrentinformation stateandperformed dialogue moves,
+including (inthecaseofparticipating inadialogue ratherthanjustmonitoring one)
+asetofselection rules,thatlicensechoosingaparticular dialogue movetoperform
+givenconditions ofthecurrentinformation state.
+²Anupdatestrategy fordeciding whichrule(s)toselectatagivenpoint,fromthe
+setofapplicable ones. Thisstrategy canrangefromsomething assimpleas\pick
+thefirstrulethatapplies" tomoresophisticated arbitration mechanisms, basedon
+gametheory,utilitytheory,orstatistical methods.
+Because ofitsgenerality,Trindi Kit allowsimplementation,andcomparison ofawide
+rangeoftheoriesofdialogue management,rangingfromsystemsbasedon FSAstocomplex
+systems basedongeneralreasoning, planning, andplanrecognition. Importantdesign
+goalsbehindthe Trindi Kit architecture includemakingthedistance betweentheoryand
+implementationasshortaspossible,andprovidingaframeworkenabling amodularplug-
+and-playapproachtotheconstruction ofdialogue systems. The Trindi Kit architecture
+supportsandencourages theseparation ofproceduraldialogue knowledge(whichisspecific
+todialogue type)fromdomainknowledge(whichisspecifictoacertaindomain).
+
+8 CHAPTER 1. INTR ODUCTION
+Figure 1.1:Asketchofthe Trindi Kit architecture
+
+1.5. TRINDIKIT 9
+Trindi Kit implemen tsanarchitecture basedonthenotionofaninformation state. Asys-
+temconsistsofanumberofmodules(including speechrecognizer andsynthesizer, natural
+language interpretation andgeneration, anda Dialogue Move Engine)whichcanreadfrom
+andwritetotheinformation stateusinginformation stateupdaterules. External resources
+canbehookeduptotheinformation state. Acontrollerwiresthemodulestogether. The
+Trindi Kit architecture isoutlined in Figure 1.1.
+Themaincomponentsofthearchitecture arethefollowing:
+²the Total Information State(TIS),consisting of
+{the Information State(IS)variable
+{moduleinterfacevariables
+{resource interfacevariables;
+²the Dialogue Move Engine(DME), consisting ofoneormoremodules;the DMEis
+responsibleforupdatingthe TISbasedonobservedmoves,andselecting movesto
+beperformed bythesystem;
+²othermodules,operatingaccording tomodulealgorithms;
+²acontroller,wiringtogether theothermodules,eitherinsequence orthrough some
+asynchronous mechanism;and
+²resources, suchaslexicons, databases, deviceinterfaces, etc.
+Total Information State The Total Information State(TIS)consistsofthreecompo-
+nents:theinformation statevariable(IS),themoduleinterfacevariables(MIVs), andthe
+resource interfacevariables(RIVs).
+The ISvariable,themoduleinterfacevariables, andtheresource interfacevariables go
+underthecollectivename TISvariables .In Trindi Kit ,each TISvariableisdefinedas
+anabstract datastructure, i.e.anobjectofacertaindatatype. The TISisaccessed by
+modulesthrough conditions andupdates,andthedatatypesofthevariouscomponentsof
+the TISdetermine whichconditions andupdatesareavailable.
+Information State(IS)The Information Staterepresentsinformation availabletoa
+dialogue participant,atanygivenstageofthedialogue. Theinformation stateismodelled
+asanabstract datastructure (record, DRS,set,stacketc.)whichcanbeinspectedand
+updatedbydialogue systemmodules.
+
+10 CHAPTER 1. INTR ODUCTION
+Dialogue Move Engine The Dialogue Move Engineisthemoduleorcollection ofmod-
+uleswhichupdatestheinformation statebasedonobserveddialogue moves,andforselect-
+ingmovestobeperformed. Abstractly ,the DMEcanbeseenasimplemen tingafunction
+fromacollection ofinputdialogue movesandaningoinginformation statetoacollection
+ofoutputdialogue movesandanoutgoing state(seealso Ljunglöof,2000).
+ADMEcanberegarded asadialogue manager basedontheconcepts ofdialogue moves
+andinformation states. Thismeansthata DMEisacertaintypeofdialogue manager,
+i.e.onewhichaccesses aninformation stateandwhoseinputandoutputaredialogue
+moves. Dialogue managers whicharenot DMEsaree.g.thosewhichusefinitestate
+representationsofadialogue andtakestringsoftextasinputandoutput,suchasthe
+CSLUtoolkit(Suttonand Kayser,1996).
+Updaterules Updaterulesarerulesforupdatingtheinformation state. Theyconsist
+ofarulename,aprecondition list,andaneffectlist. Thepreconditions areconditions on
+the TIS,andtheeffectsareoperations onthe TIS. Ifthepreconditions ofarulearetrue
+forthe TIS,thentheeffectsofthatrulecanbeappliedtothe TIS. Rulesalsohaveaclass.
+Tothisextentourupdaterulesaresimilarto STRIPS operators(Fikesand Nilsson,1971).
+Theformatwewilluseisgivenin(1.1).
+(1.1) rule:Rulename
+class:Ruleclass
+pre:8
+>>><
+>>>:Condition 1
+Condition 2
+...
+Condition n
+eff:8
+>>><
+>>>:Update 1
+Update 2
+...
+Update m
+Rulesaregroupedintoclassesandthereisanupdatealgorithm whichdetermines when
+thevariousclassesofrulesshouldfire. Iftheconditions holdwhentheruleistried,the
+updateswillbeappliedtotheinformation state.
+Updatealgorithms Updatealgorithms arealgorithms forupdatingthe TIS. Theyin-
+cludeconditions onthe TISandcallstoapply(classesof)updaterules.
+Amodulecontainsoneormorealgorithms whichitexecutes according toinstructions from
+thecontroller. Thealgorithm language containsthebasicimperativeconstructions, and
+
+1.5. TRINDIKIT 11
+allowscallstoupdaterulesandupdateruleclassesaswellaschecks,queriesandupdatesto
+the TIS. Trindi Kit providesalanguage forwritingmodulealgorithms, called DME-ADL
+(Dialogue Move Engine Algorithm Definition Language).
+Modules Inaddition tothe DMEtherearemoduleslikespeechrecognizers, parsers,
+etcetera. Modulescaninspectandupdatethetotalinformation state.
+Typically,non-DME modulescanonlyaccessacertainnumberofdesignated TISvariables,
+so-called moduleinterfacevariables .Thepurposeofthesevariablesistoenablenon-DME
+modulestointeractwitheachotherandwiththe DMEmodules. Itispossibletoallow
+non-DME modulestoaccessthe IS,butthiswillsignifican tlyreducetheabilitytousethe
+moduleinsystemsusingotherkindsof IStypes.
+Controller Thecontrollerwiresthemodulestogether usingacontrolalgorithm. It
+canalsoaccessthewhole TIS. ATrindi Kit systemcanberuneitherseriallyorasyn-
+chronously .
+Resources andresourceinterfaces Resources areattachedtothe TISviaresource
+interfaces, consisting ofadatatypedefinition fortheresource andaresource variableof
+thattype. Asotherpartsofthe TIS,theyareaccessed fromupdaterulesviaconditions
+andupdates.
+Anoteonthedifference betweenmodulesandresources: Resources aredeclarativ eknowl-
+edgesources, external totheinformation state,whichareusedinupdaterulesandal-
+gorithms. Modules,ontheotherhand,areagentswhichinteractwiththeinformation
+stateandarecalleduponbythecontroller. Ofcourse,thereisaproceduralelementto
+allkindsofinformation search,whichmeansamongotherthingsthatonemustbecareful
+nottoengageinextensivetime-consuming searches. Conversely,modulescanbedefined
+declarativ elyandthushaveadeclarativ eelement. Thereisnosharpdistinction dictat-
+ingthechoicebetweenresource ormodule;forexample, itispossibletohavetheparser
+bearesource. However,itisimportanttoconsider theconsequences ofchoosingtosee
+something asaresource ormodule.
+Bysupportingresources, Trindi Kit encourages modularitywithregardtothevarious
+knowledge-bases usedbyasystem. Forexample, separating domain-sp ecificbutlanguage-
+independentknowledgefromalanguage-dep endent(anddomain-sp ecific)lexiconenables
+loadinganewlanguage withoutaffecting thedomainknowledge,andthereisonlyonefile
+toeditwheneditingthedomainknowledge,whichdecreases theriskforerror.
+
+12 CHAPTER 1. INTR ODUCTION
+Buildingasystem
+Tobuildasystem, onemustminimally supplyan Information Statetypedeclaration,
+a DMEconsisting of TISupdaterulesandoneorseveralmodulealgorithm(s), anda
+controller,operatingaccording toacontrolalgorithm. Anyusefulsystemisalsolikely
+toneedadditional modules,e.g.forgettinginputfromtheuser,interpreting thisinput,
+generating systemutterances, andprovidingoutputfortheuser. Alsoneededareinterface
+variablesforthesemodules,whicharedesignated partsofthe TISwherethemodulesare
+allowedtoreadandwriteaccording totheirassociated TISaccessrestrictions.
+Thisprovidesuswithadomain-indep endentsystem. Touseasystemforanapplica-
+tiononemustalsoprovideresources suchasdatabases, planlibraries etc. Theresources
+areaccessible fromthemodulesthrough theresource interfaces, whichdefineapplicable
+conditions and(optionally) operations ontheresource.
+Figure 1.2:Therelationbetween Trindi Kit and IBi S
+Asanexample, therelationbetween Trindi Kit ,IBi S,andan IBi Sapplication isshown
+
+1.6. SUMMAR Y 13
+in Figure 1.2.
+1.6 Summary
+Inthischapter,wepresentedtheaimofthisstudyandgavesomeinitialmotivations
+forexploring theissue-based approachtodialogue management. Wethengaveabrief
+overviewofthethesisandtherelatedversionsofthe IBi Ssystem. Finally,wegaveavery
+briefintroductiontothe Trindi Kit architecture andtheinformation stateapproachto
+dialogue implemen tedtherein.
+
+14 CHAPTER 1. INTR ODUCTION
+

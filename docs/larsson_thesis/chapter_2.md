@@ -1,0 +1,241 @@
+Chapter 2
+Basic issue-based dialogue
+management
+2.1 Introduction
+Thischapterdescribesthetheoretical foundations andimplementationofthebasic IBi S
+system(IBi S1)forhandling inquiry-orienteddialogue using Questions Under Discussion
+anddomain-sp ecificdialogue plans. Wefirstdiscussthenotionofinquiry-orienteddialogue.
+Thenwepresentthe IBi S1 systemwhichimplemen tsourinitialaccountofinquiry-oriented
+dialogue. Theupdaterulesforthissystemarebasedon Ginzburg's accountofquerying
+andassertion indialogue (Ginzburg, forthand 1996).Weargueforsomemodifications
+ofthetheory,partlyfromtheviewpointofusefulness inadialogue system. Wealsogive
+examples ofdialogues withthesystem. Finally,wediscusstheissue-based approachto
+dialogue managementandcompare itwithsomeotherapproaches.
+2.1.1 Asampledialogue
+Belowisasimpleexample whatwewillrefertoasinquiry-oriente ddialogueconducted
+betweenauserand IBi S11.
+1Thedialogues numbered(dialogue x.y)areactualdialogues withthe IBi Ssystem,generated auto-
+matically bythe LATEXprintingfacilityin Trindi Kit .Somedialogues havebeenmanuallypost-processed
+toremoveirrelevantinformation andincreasereadabilit y. Forconvenience,thetextinterfacehasbeenused
+togenerate theexamples, but IBi Scanalsousespokeninputandoutput. Insomeexamples, numbers
+areappendedtoutterances toindicate (fake)speechrecognition scores. Theinformation statesoccuring
+insomedialogues haveoccasionally beenabbreviated byremovingorabbreviating irrelevantinformation.
+15
+
+16 CHAPTER 2. BASIC ISSUE-BASED DIALOGUE MANA GEMENT
+(dialogue 2.1)
+S>Welcome tothetravelagency!
+U>hello
+U>priceinformation please
+S>Howdoyouwanttotravel?
+U>aflightplease
+S>Whatcitydoyouwanttogoto?
+U>paris
+S>Whatcitydoyouwanttogofrom?
+U>fromlondon
+S>Whatmonthdoyouwanttoleave?
+U>inapril
+S>Whatdaydoyouwanttoleave?
+U>ascheapaspossible
+S>Whatdaydoyouwanttoleave?
+U>thefifth
+S>Whatclassdidyouhaveinmind?
+U>ascheapaspossible
+S>Itwillcost 123 crowns.
+U>bye
+S>Thankyouforyourvisit!
+Typically,aninquiry-orienteddialogue willstartwithaquestion fromtheinquirer(inthe
+contextofadialogue system,user).Followingthis,theexpert(system) willasktheinquirer
+anumberofquestions andperformadatabase searchbasedontheanswersgivenbythe
+inquirer. Thissubsection ofthedialogue canbeviewedasaninformation-seeking dialogue
+withtheexpertaskingthequestions andtheinquirer providingtheanswers. Finally,
+theexpertcananswertheinquirers initialquerybasedontheresultsofthedatabase
+search. Thepairingoftheinquirers initialqueryandtheexpert'sfinalanswercanalso
+beregarded asaninformation-seeking dialogue (although discontinuous).Thedialogue as
+awholecontainsquestions frombothexpertandinquirer andisthusaninquiry-oriented
+dialogue.
+2.1.2 Information exchangeandinquiry-orienteddialogue
+If\exchangeofinformation" istakeninitswidestsense,itispossibletoarguethatall
+dialogue isinformation exchangedialogue, sincealldialogue involvestheexchangeofin-
+formation between DPs. Forexample, General Bgivinganordertoprivate Htocleanthe
+hallcouldbeseenasexchanging theinformation that Hmustcleanthehall. Giventhis
+definition, theterm\information exchangedialogue" wouldmeanthesameas\dialogue".
+
+2.1. INTR ODUCTION 17
+Itisuseful,however,tohaveaconceptofinquiry-orienteddialogue whichdoesnotinclude
+givingordersorinstructions toperformactionschanging thestateoftheworld(rather
+thanjustchanging theinformation statesof DPs),orindeedanyutterance resulting ina
+DPhavinganobligation orcommitmen ttoperformsomeaction. However,itmustalso
+berememberedthatutterances arealsoactions,and DPscanbeobligedtoperformthem;
+forexample, aquestion canbesaidtointroduceanobligation onthehearertorespondto
+thatquestion. Sowestillwanttoallowutterances whichresultinobligations toperform
+communicativeactionsthatarepartofthedialogue 2. Ofcourse,thesameappliestothese
+obligedactionsthemselv es. Ineffect,thisdefinitions servestoexcludeorders,instructions
+etc.frominformation-orienteddialogue.
+Withthismotivation,theterm Inquiry Oriented Dialogue, or IOD,willhenceforth betaken
+torefertoanydialogue whosesolepurposeisthetransference ofinformation, andwhich
+doesnotinvolveany DPassuming (ortryingtomakeanother DPassume) commitmen ts
+orobligations concerning anynon-comm unicativeactionsoutsidethedialogue.
+Hulstijn (2000)definesthedialogue gameofinquiryinthefollowingway:
+Thedialogue gameofinquiryisdefinedastheexchangeofinformation between
+twoparticipants:aninquirer andanexpert(...).Theinquirer hasacertain
+information need. Hergoalinthegameistoaskquestions inthedomainin
+ordertosatisfyherinformation need. Theexperthasaccesstoadatabase
+aboutthedomain. Hisgoalistoanswerquestions. (...)[T]heexpertmayask
+questions too.(Hulstijn, 2000 p.66)
+Here,tworolesareintroduced:inquirerandexpert. Thisconceptisparticularly wellsuited
+fordialogue systemsfordatabase search,whichhappenstobethetypeofdialogue wewill
+initiallybeexploring. Inadialogue systemsetting,thesystemistypicallytheexpertand
+theuseristheinquirer.
+Initially,wewillbedealingonlywithasubtypeofinquiry-orienteddialogue, namelynon-
+negotiative IOD. Negotiativ edialogue hererefersto,roughly,dialogue where DPscan
+discussandcompare severaldifferentalternativesolutions toaproblem. Non-negotiative
+dialogue issufficientwhendatabase searchescanbeexpectedtoreturnonlyasingleresult
+(ratherthane.g.atable).Obviouslythisisinsufficien tfordealingwithmanyinformation-
+seekingdomains andapplications. In Chapter 4 wewillbeabletohandlesemi-negotiative
+dialogue, whereseveralalternativescanbeintroducedinthedialogue; however,theintro-
+ductionofanewalternativ ewillalwaysremovetheprevious alternativ ewhichthuscannot
+bereturned tounlessreintroduced\fromscratch".
+2Thereservationthattheobligedactionsarepartofthedialogue ismeanttoexcludeutterances which
+imposeanobligation toperformacommunicativeactiondirected atsomeagentwhoisnota DP,e.g.
+\Tell Marthatogohome".
+
+18 CHAPTER 2. BASIC ISSUE-BASED DIALOGUE MANA GEMENT
+2.2 Sharedandprivateinformation indialogue
+Thebasicideaofissue-based dialogue managementistodescribedialogue intermsof
+issuesbeingraisedandresolved. The DP'suserepresentationsoftheseissuestomanage
+theircontributions todialogue. Theinformation stateapproachtodialogue management
+providesthetoolsforformalizing thetypeofinformation that DP'skeeptrackof,andhow
+thisinformation isupdatedasthedialogue proceeds.
+Abasicdivision ofthisinformation isthatofprivateinformation and(whatthe DP
+believestobe)sharedinformation. Variousformulations ofthesharedparthasbeen
+proposed,following Stalnaker(1979),andvarioustermshavebeenusedtodescribeit.
+Theprivatepartoftheinformation statehasbeenthesubjectofmuchworkin AI,e.g.
+Cohenand Levesque(1990)and Raoand Georgeff (1991),andworkondialogue inspired
+by AI,e.g. Allenand Perrault(1980),Sidnerand Israel(1981),Carberry(1990),Grosz
+and Sidner(1990)and Sadek(1991).Thismodelhasalsobeenextended toincludeshared
+information, e.g.socialattitudes suchasobligations (Traumand Hinkelman,1992,Traum
+and Allen,1994,Traum,1996).
+Inthisthesiswewillstartfrom Ginzburg's notionofa Dialogue Gameboard(DGB)asa
+modelofthesharedpartoftheinformation state. Ginzburg's modelalsoincludes whatcan
+beseenasaplace-holder fortheprivatepartoftheinformation state:a DP'sunpublicized
+mentalsituation (UNPUB-MS). Wewillprovideanexplicitstructuring of UNPUB-MS
+influenced bythe BDImodel.
+Thissectionprovidesashortintroductiontothenotionofaconversational scoreboard,
+and Ginzburg's developmentofthisnotion,the DGB. Wealsogiveabriefintroductionto
+the BDImodel.
+2.2.1 The BDImodel
+Inthe BDImodel(Wooldridge and Jennings, 1995,Cohenand Levesque,1990,Raoand
+Georgeff, 1991),agentsaremodelledusingthreeprivateattitudes: Belief,Desire,and
+Intention. Aroughdescription oftheseattitudes mayrunasfollows,although thereare
+manyotherformulations: Beliefsarepropositionstakentobetruebyanagent;Desires
+are,roughly,goalsthattheagentwishestoachieve(although hemaynotintendtodoso,
+e.g.ifhebelievesthatthegoalcannotbeachieved).Intentionsareactionsthetheagent
+intendstoperform.
+Often,BDImodelsareusedasabasisforformulatingrationalit yconstrain tsguidingthe
+behaviourofrationalagents. Theseconstrain tshavetheformoflogicalinference rulesin
+
+2.2. SHARED AND PRIVATEINFORMA TION INDIALOGUE 19
+somemodallogic,andthuspresupposecomplete andcorrectinferentialabilitiesinrational
+agents. Inimplementations,inference usuallyrequires someinference heuristics inorder
+toavoidexcessivecomputational complexit y. Adiscussion of BDImodelsofdialogue and
+therelationto QUD-based modelscanbefoundin Larsson(1998).
+2.2.2 Stalnakerand Lewis
+In Stalnaker(1979),Stalnakerusestheconcept ofacommongroundwhichkeepstrack
+ofthecurrentstateofadialogue. On Stalnaker'saccount,thecommon groundisan
+unstructured setofpropositions; also,Stalnakeronlydealswiththeeffectsofassertions
+onthescoreboard. Typically,theeffectofasserting aproposition pistoaddptothe
+scoreboard 3
+David Lewis,in Lewis(1979),drawingananalogue betweenconversation andbaseball,
+usesa\conversational scoreboard"tokeeptrackofconversational interaction. Lewisalso
+introducestheconceptofaccommodationtodescribehowthescoreboardcan\evolvein
+suchawayasisrequired inordertomakewhateveroccurscountascorrectplay."This
+notionwillbeexploited in Chapter 4;inbrief,ifsomeutterance urequires Xtobeinthe
+scoreboardinordertobefelicitous, and Xisnotinthescoreboardwhenuisuttered, X
+isaccommo dated(addedtothescoreboard)sothatubecomesfelicitous.
+2.2.3 Ginzburg's Dialogue Gameboard
+Themaindifference between Stalnaker'sand Lewis'modelsand Ginzburg's isthatwhile
+theformerassumeafairlyunstructured formalization ofcommon ground-essentially,a
+setofpropositions -thelatterprovidesaricherstructure whichincludes propositions,
+questions, anddialogue moves. Also,while Stalnakerand Lewisweremainlyinterested in
+howassertions changethecommon ground,Ginzburg's inclusion ofquestions enablesthe
+modellingofhowtheraisingofquestions affectthecommon ground.
+Ginzburg alsostressesthatthe DGBisaquasi-shar edobject,inthesensethateach DPhas
+herownversionofthe DGBandtheremaybedifferences (mismatc hes)betweenthe DGBs
+ofdifferent DPs. Thisfollowsfromtheviewthat DGBand UNPUB-MS arecomponents
+ofa DPsmentalstate.
+In Ginzburg (1996),Ginzburg structures aparticipant'sversionofthe DGBintothree
+3Tobemoreprecise,Stalnakerseesthecommon groundasthesetofpossibleworldscompatible with
+allpropositionsasserted sofar,andtheeffectofasserting anewpropositionpistoremoveanyworldsin
+which Pisnottrue.
+
+20 CHAPTER 2. BASIC ISSUE-BASED DIALOGUE MANA GEMENT
+separate fieldswhichhedescribesasfollows:
+²FACTS:setofcommonly agreeduponfacts
+²QUD('questions underdiscussion'): asetthatspecifiesthecurrentlydiscussable
+questions, partially orderedbyÁ('takesconversational precedence'). Ifqismaximal
+in QUD,itispermissible toprovideanyinformation specifictoqusing(optionally)
+ashortanswer.
+²LATEST-MO VE:contentofthelatestmovemade:itispermissible tomakewhatever
+movesareavailableasreactions tothelatestmove.
+QUDisintendedtomodelaviewofconversation asthesettingupofpossiblequestions
+todiscussandthesubsequen tresolving ofsomeofthesequestions. Atanytime,aspeaker
+maychoosetoaddsomething tothe QUD,ortoaddressoneofthequestions inthe QUD.
+Theeffectonthe DGBofa DPaskingaquestion isto(a)\significan tlyrestrictthespace
+offelicitous follow-upassertions orqueries", and(b)\tolicenseanelliptical formwhich
+(overtly)conveysonlythefocuscomponentoftheresponse".
+Asanexample, S'sutterance in(2.1)resultsinthequestion \Whatcitydoestheuserwant
+togoto?"beingaddedto QUD. Thislicensestheelliptical responsein U'sutterance.
+(2.1)S>Whatcitydoyouwanttogoto?
+U>paris
+2.3 Overviewof IBi S1
+Ourinitialsystemwillbeabletohandlesimplenon-negotiativeinquiry-orienteddialogue,
+usinganaccountofbasicissue-based dialogue managementbasedon Ginzburg's theory.
+2.3.1IBi S1 architecture
+The IBi S1 architecture shownbelowisaninstantiationofthegeneral Trindi Kit architec-
+ture. Thecomponentsofthearchitecture arethefollowing:
+²the Information State(IS)
+
+2.3. OVERVIEW OFIBIS1 21
+²domain-indep endentmodules,operatingaccording tomodulealgorithms
+²the Dialogue Move Engine(DME), consisting oftwomodules(Updateand Select);
+the DMEisresponsibleforupdatingthe ISbasedonobservedmoves,andselecting
+movestobeperformed bythesystem.
+²acontroller,wiringtogether theothermodules,eitherinsequence orthrough an
+asynchronous mechanism.
+²threedomain-dep endentresources: Database, Lexicon, and Domain Knowledge
+Figure 2.1:IBi S1 architecture
+Thisarchitecture isusedalsofor IBi S2 and IBi S3;however,for IBi S4 wewillusea
+differentresource configuration.
+Controlalgorithm
+Thecontrolalgorithm usedby IBi S1 isshownin(2.2).
+
+22 CHAPTER 2. BASIC ISSUE-BASED DIALOGUE MANA GEMENT
+(2.2)repeathselect
+ifnotisempty($nextmoves)
+thenhgenerate
+output
+updatei
+test($program state==run)
+input
+interpret
+updatei
+The IBi Ssystemusesmodulesincluded inthe Trindi Kit packageforinput,interpre-
+tation,generation andoutput. Theinterpretation andgeneration modulesaredescribed
+in Section A.7. Theupdateandselection modulesaredescribedin Sections 2.8 and 2.9,
+respectively.
+Turntakingisregulated bythefollowingprinciple: ifselectfindsamovetoperform,the
+systemwillgenerate astringandoutputittotheuser. The TISisthenupdated,and
+providedtheprogram statevariableisstillsettorun,thesystemreadsinputfromthe
+user,interpretsit,andagainupdatesthe TIS. Thismeansthatifselectfindsnomoveto
+perform,theturnwillbehandedovertotheuser.
+2.3.2 Simplifying assumptions
+Forourinitialsystem,wewillmakesomesimplifying assumptions, whichineffectwillpro-
+videuswithasystemthatonlyhandlesalimitedrangeofdialogue phenomena. Later,we
+willremovesomeoftheselimitations andextendtheimplementationcorrespondingly. The
+simplifying assumptions willmakeiteasiertoformulateasimplebasicsetofinformation
+stateupdaterules.
+²Allutterancesareunderstoodandaccepted. Thisassumption willberemovedin
+Section 3.
+²Utteranceinterpretationdoesnotinvolvetheidentificationofreferents,andreferents
+arenotrepresentedintheinformation state. Thisassumption willberemovedin

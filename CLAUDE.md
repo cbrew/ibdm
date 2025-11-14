@@ -700,6 +700,282 @@ NLU Layer → Domain Model → IBDM Rules → NLG Layer
 - Reusable integration rules
 - No mixing of syntactic and pragmatic processing
 
+### 12. Larsson Algorithmic Principles (Source of Truth)
+
+**Policy**: Implementation MUST follow the algorithmic principles from Larsson (2002) as documented in `docs/LARSSON_ALGORITHMS.md`.
+
+**Rationale**: Larsson's thesis provides the theoretical foundation and proven algorithms for IBDM. Deviation from these principles without justification leads to non-Larsson-compliant implementations that may introduce subtle bugs or architectural inconsistencies.
+
+**Authoritative Reference**: `docs/LARSSON_ALGORITHMS.md` (extracted from `docs/larsson_thesis/`)
+
+#### Core Algorithmic Principles
+
+**1. Control Flow: Algorithm 2.2**
+```
+repeat {
+    select                    // Choose next system move(s)
+    if not isEmpty($nextMoves) {
+        generate              // Convert moves to strings
+        output                // Output to user
+        update                // Update state after output
+    }
+    test($programState == run)
+    input                     // Get user input
+    interpret                 // Parse to moves
+    update                    // Integrate user moves
+}
+```
+
+**Key Rules**:
+- Select runs BEFORE system output
+- Update runs AFTER each output and input
+- Single rule application per update cycle
+- First-applicable-rule selection
+
+**2. Information State Structure**
+
+All dialogue state must be explicitly represented in the Information State. No hidden state in engines.
+
+**IBiS1 (Basic)**:
+```python
+InformationState(
+    private=Private(
+        plan=[],      # Task plans (list of Plan)
+        bel=set(),    # Beliefs (set of Proposition)
+        agenda=[]     # Action agenda (ordered set)
+    ),
+    shared=Shared(
+        qud=[],       # Questions Under Discussion (stack, LIFO)
+        com=set(),    # Common ground (set of Proposition)
+        lu=None       # Latest utterance/move
+    )
+)
+```
+
+**IBiS3 Extensions (Accommodation)**:
+```python
+private.issues = []   # Accommodated questions (not yet raised to QUD)
+```
+
+**IBiS4 Extensions (Actions)**:
+```python
+private.actions = []  # Pending device actions
+private.iun = set()   # Issues Under Negotiation
+```
+
+**3. Semantic Operations**
+
+All semantic operations must be implemented:
+
+- **resolves(Answer, Question)**: Answer resolves Question
+- **combines(Question, Answer)**: Combine to form Proposition
+- **relevant(Answer, Question)**: Answer is relevant to Question
+- **depends(Q1, Q2)**: Q1 depends on Q2 (Q2 must be answered first)
+- **postcond(Action)**: Postcondition (effect) of Action
+- **dominates(P1, P2)**: P1 dominates P2 in negotiation
+
+See `docs/LARSSON_ALGORITHMS.md` Section "Semantic Operations" for detailed specifications.
+
+**4. QUD as Stack (LIFO)**
+
+QUD MUST be a stack with LIFO semantics:
+
+```python
+# ✅ Correct
+def push_qud(state: InformationState, question: Question):
+    state.shared.qud.append(question)  # Push to top
+
+def top_qud(state: InformationState) -> Question | None:
+    return state.shared.qud[-1] if state.shared.qud else None
+
+def pop_qud(state: InformationState):
+    if state.shared.qud:
+        state.shared.qud.pop()
+
+# ❌ Wrong: QUD as unordered set
+# state.shared.qud = set()  # NO!
+```
+
+**Rationale**: Top of QUD is the maximal question (highest priority). Stack ensures proper question resolution order.
+
+**5. Task Plan Formation in Integration**
+
+Plans are formed in the INTEGRATION phase, NOT interpretation:
+
+```python
+# ✅ Correct (Integration phase)
+def integrate_task_request(state: InformationState, move: DialogueMove):
+    if move.type == "request_task":
+        domain = get_domain()
+        plan = domain.get_plan(move.content)
+        state.private.plan.append(plan)
+        # Accommodate first question
+        if plan.subplans:
+            state.private.issues.append(plan.subplans[0].content)
+    return state
+
+# ❌ Wrong (Interpretation phase)
+def interpret(utterance: str):
+    # DON'T create plans here!
+    # plan = create_plan(...)  # NO!
+    return DialogueMove(type="request_task", content=task_type)
+```
+
+**6. Accommodation Before Raising**
+
+Questions follow two-stage process (IBiS3+):
+
+1. **Accommodation**: Question enters `private.issues`
+2. **Raising**: Question moves to `shared.qud`
+
+```python
+# ✅ Correct: Two-stage process
+def accommodate_question(state: InformationState, q: Question):
+    state.private.issues.append(q)  # Stage 1: Accommodate
+
+def raise_question(state: InformationState):
+    if state.private.issues:
+        q = state.private.issues.pop(0)
+        state.shared.qud.append(q)  # Stage 2: Raise to QUD
+```
+
+**Rationale**: Enables incremental questioning, clarification, and dependent question handling.
+
+**7. Single Rule Application Per Cycle**
+
+Update rules apply ONE AT A TIME:
+
+```python
+# ✅ Correct
+def update_state(state: InformationState, moves: list[DialogueMove]):
+    for rule in update_rules:
+        if rule.preconditions_met(state, moves):
+            state = rule.apply(state, moves)
+            return state  # Stop after first rule
+    return state
+
+# ❌ Wrong: Multiple rules per cycle
+def update_state(state: InformationState, moves: list[DialogueMove]):
+    for rule in update_rules:
+        if rule.preconditions_met(state, moves):
+            state = rule.apply(state, moves)  # NO! Don't continue
+    return state
+```
+
+**Rationale**: Ensures predictable state transitions, easier debugging, Larsson compliance.
+
+**8. Explicit State, Pure Functions**
+
+Engine methods are PURE FUNCTIONS - no hidden state:
+
+```python
+# ✅ Correct: Pure function
+class DialogueMoveEngine:
+    def interpret(self, utterance: str, state: InformationState) -> list[DialogueMove]:
+        # State passed explicitly
+        return parse_utterance(utterance, state)
+
+# ❌ Wrong: Hidden state
+class DialogueMoveEngine:
+    def __init__(self):
+        self.state = InformationState()  # Hidden!
+
+    def interpret(self, utterance: str) -> list[DialogueMove]:
+        # Where does state come from?
+        return parse_utterance(utterance)
+```
+
+**9. Domain Independence**
+
+Rules are DOMAIN-INDEPENDENT. Domain knowledge in RESOURCES:
+
+```python
+# ✅ Correct: Domain-independent rule
+def integrate_answer_rule(state: InformationState, move: DialogueMove) -> InformationState:
+    if move.type == "answer":
+        answer = move.content
+        question = top_qud(state)
+        if domain.resolves(answer, question):  # Domain resource
+            prop = domain.combines(question, answer)  # Domain resource
+            state.shared.com.add(prop)
+            pop_qud(state)
+    return state
+
+# ❌ Wrong: Domain-specific rule
+def integrate_nda_answer(state: InformationState, move: DialogueMove):
+    if move.content == "mutual":  # Hardcoded domain knowledge!
+        state.shared.com.add("nda_type(mutual)")
+```
+
+**10. Questions as First-Class Objects**
+
+Questions are IRREDUCIBLE objects, not reduced to knowledge preconditions:
+
+```python
+# ✅ Correct: Questions are objects
+@dataclass
+class WhQuestion(Question):
+    variable: str
+    predicate: str
+
+    def resolves_with(self, answer: Answer) -> bool:
+        return isinstance(answer, ShortAnswer) and answer.predicate == self.predicate
+
+# ❌ Wrong: Questions reduced to preconditions
+class KnowledgePrecondition:
+    def __init__(self, prop: str):
+        self.required_knowledge = prop  # Question is just missing knowledge
+```
+
+**Rationale**: Questions have structure, resolution semantics, and pragmatic effects beyond knowledge gaps.
+
+#### Implementation Checklists
+
+**IBiS1 (Basic System)**:
+- [ ] Four-phase architecture (Interpret → Update → Select → Generate)
+- [ ] Information State with private/shared separation
+- [ ] QUD as stack (LIFO)
+- [ ] Control loop (Algorithm 2.2)
+- [ ] Update rules: IntegrateAsk, IntegrateAnswer, DowndateQUD, FindPlan, ExecFindout
+- [ ] Selection rules: SelectFromPlan, SelectAsk, SelectAnswer
+- [ ] Semantic operations: resolves, combines
+- [ ] Domain model with predicates, sorts, plan builders
+- [ ] Single rule per cycle
+- [ ] Pure functions (explicit state passing)
+
+**IBiS3 Extensions (Accommodation)**:
+- [ ] `private.issues` field
+- [ ] Two-stage accommodation (issues → QUD)
+- [ ] Update rules: IssueAccommodation, LocalQuestionAccommodation
+- [ ] DependentIssueAccommodation with `depends()` relation
+- [ ] IssueClarification, QuestionReaccommodation
+
+**IBiS4 Extensions (Actions)**:
+- [ ] `private.actions` and `private.iun` fields
+- [ ] Update rules: IntegrateRequest, ExecuteAction, ActionAccommodation
+- [ ] Selection rules: SelectConfirmAction, SelectProposeAlternative
+- [ ] `postcond()` semantic operation
+- [ ] Device interface with action execution
+
+#### Verification Against Larsson
+
+When implementing or reviewing code, verify:
+
+1. ✅ Control flow matches Algorithm 2.2
+2. ✅ Information State structure matches Figures 2.2, 3.1, 4.1, or 5.1
+3. ✅ Update/Select rules match Chapter 2-5 specifications
+4. ✅ Semantic operations implemented correctly
+5. ✅ No hidden state in engines (explicit state passing)
+6. ✅ QUD is stack (LIFO), not set or list
+7. ✅ Task plan formation in integration, not interpretation
+8. ✅ Questions accommodated before raised (IBiS3+)
+9. ✅ Single rule application per cycle
+10. ✅ Domain independence (rules don't hardcode domain knowledge)
+
+**Reference Document**: See `docs/LARSSON_ALGORITHMS.md` for complete algorithmic specifications, rule definitions, and cross-system evolution table.
+
+**Thesis Source**: `docs/larsson_thesis/` contains the original thesis split into chapters (Larsson, 2002).
+
 ## Workflow Integration
 
 ### Daily Work Session
