@@ -11,7 +11,7 @@ This domain model provides semantic grounding for:
 
 from ibdm.core.domain import DomainModel
 from ibdm.core.plans import Plan
-from ibdm.core.questions import WhQuestion, AltQuestion
+from ibdm.core.questions import AltQuestion, WhQuestion
 
 
 def create_nda_domain() -> DomainModel:
@@ -115,9 +115,7 @@ def _build_nda_plan(context: dict) -> Plan:
         ),
         Plan(
             plan_type="findout",
-            content=AltQuestion(
-                alternatives=["California", "Delaware", "New York"]
-            ),
+            content=AltQuestion(alternatives=["California", "Delaware", "New York"]),
             status="active",
         ),
     ]

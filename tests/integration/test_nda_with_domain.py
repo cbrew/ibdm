@@ -7,13 +7,12 @@ Tests that the complete NDA workflow uses the domain model correctly:
 - Domain validates answers (type checking)
 """
 
-import pytest
 
 from ibdm.core.information_state import InformationState
 from ibdm.core.moves import DialogueMove
+from ibdm.core.questions import WhQuestion
 from ibdm.domains.nda_domain import get_nda_domain
 from ibdm.rules.integration_rules import create_integration_rules
-from ibdm.core.questions import WhQuestion
 
 
 class TestNDAWorkflowWithDomain:
@@ -198,9 +197,7 @@ class TestNDAWorkflowWithDomain:
             None,  # Step 5: AltQuestion (jurisdiction)
         ]
 
-        for i, (subplan, expected_pred) in enumerate(
-            zip(plan.subplans, expected_predicates)
-        ):
+        for i, (subplan, expected_pred) in enumerate(zip(plan.subplans, expected_predicates)):
             if expected_pred:
                 assert isinstance(subplan.content, WhQuestion)
                 assert subplan.content.predicate == expected_pred
@@ -215,9 +212,7 @@ class TestDomainModelExtensibility:
         from ibdm.core.domain import DomainModel
 
         domain = DomainModel(name="test")
-        domain.add_predicate(
-            "new_predicate", arity=1, arg_types=["test_type"], description="Test"
-        )
+        domain.add_predicate("new_predicate", arity=1, arg_types=["test_type"], description="Test")
 
         assert "new_predicate" in domain.predicates
 
@@ -261,9 +256,7 @@ class TestDomainSemanticGrounding:
 
         for pred_name, pred_spec in domain.predicates.items():
             assert pred_spec.description, f"{pred_name} missing description"
-            assert (
-                len(pred_spec.description) > 10
-            ), f"{pred_name} has too short description"
+            assert len(pred_spec.description) > 10, f"{pred_name} has too short description"
 
     def test_sorts_define_valid_values(self):
         """Test that sorts define valid value sets."""
@@ -271,9 +264,9 @@ class TestDomainSemanticGrounding:
 
         for sort_name, individuals in domain.sorts.items():
             assert len(individuals) > 0, f"{sort_name} has no individuals"
-            assert all(
-                isinstance(ind, str) for ind in individuals
-            ), f"{sort_name} has non-string individuals"
+            assert all(isinstance(ind, str) for ind in individuals), (
+                f"{sort_name} has non-string individuals"
+            )
 
     def test_predicates_reference_sorts(self):
         """Test that predicate arg_types reference defined sorts."""

@@ -2,10 +2,10 @@
 
 import pytest
 
-from ibdm.core.domain import DomainModel, PredicateSpec
 from ibdm.core.answers import Answer
-from ibdm.core.questions import WhQuestion, YNQuestion
+from ibdm.core.domain import DomainModel, PredicateSpec
 from ibdm.core.plans import Plan
+from ibdm.core.questions import WhQuestion
 
 
 class TestPredicateSpec:

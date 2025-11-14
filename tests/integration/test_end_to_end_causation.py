@@ -14,7 +14,6 @@ Chain of Causation:
 NO MOCKING - everything uses real implementations.
 """
 
-import pytest
 
 from ibdm.core import InformationState, WhQuestion
 from ibdm.engine import DialogueMoveEngine
@@ -90,9 +89,9 @@ class TestEndToEndCausationChain:
         updated_state = engine.integrate(move, state)
 
         # Verify plan was created in belief state
-        assert (
-            len(updated_state.private.plan) == 1
-        ), "Integration should create plan in private.plan"
+        assert len(updated_state.private.plan) == 1, (
+            "Integration should create plan in private.plan"
+        )
 
         plan = updated_state.private.plan[0]
         assert plan.plan_type == "nda_drafting", "Should be NDA plan from domain"
@@ -105,9 +104,9 @@ class TestEndToEndCausationChain:
 
         question = updated_state.shared.qud[-1]  # Top of QUD
         assert isinstance(question, WhQuestion), "First question should be WhQuestion"
-        assert (
-            question.predicate == "legal_entities"
-        ), "First question should ask for legal_entities (from domain)"
+        assert question.predicate == "legal_entities", (
+            "First question should ask for legal_entities (from domain)"
+        )
 
         print(f"✓ Step 2 (INTEGRATE): Pushed question to QUD: {question.predicate}")
 
@@ -125,9 +124,7 @@ class TestEndToEndCausationChain:
 
         selected_question = response_move.content
         assert isinstance(selected_question, WhQuestion), "Should be asking WhQuestion"
-        assert (
-            selected_question.predicate == "legal_entities"
-        ), "Should ask question from QUD"
+        assert selected_question.predicate == "legal_entities", "Should ask question from QUD"
 
         print(f"✓ Step 3 (SELECT): Selected ask move for {selected_question.predicate}")
 
@@ -144,9 +141,9 @@ class TestEndToEndCausationChain:
         # Should use NDA-specific template from generation_rules.py
         # _generate_nda_question() generates:
         # "What are the names of the parties entering into this NDA?"
-        assert (
-            "parties" in utterance_text.lower() or "organizations" in utterance_text.lower()
-        ), f"Should ask about parties/organizations, got: {utterance_text}"
+        assert "parties" in utterance_text.lower() or "organizations" in utterance_text.lower(), (
+            f"Should ask about parties/organizations, got: {utterance_text}"
+        )
 
         # Should NOT be generic template like "What legal entities?"
         assert "legal_entities" not in utterance_text, "Should not use raw predicate name"
@@ -221,9 +218,7 @@ class TestEndToEndCausationChain:
         # - Utterance is NOT just echoing input
         # - Utterance is generated from belief state (plan + QUD)
         assert "draft" not in utterance_1.lower() or utterance_1 != "I need to draft an NDA"
-        assert (
-            len(utterance_1) > 10
-        ), "Should be a real question, not just echoing"  # Real question
+        assert len(utterance_1) > 10, "Should be a real question, not just echoing"  # Real question
 
         # The utterance asks about parties because:
         # 1. Integration created plan in belief state
@@ -280,9 +275,7 @@ class TestEndToEndCausationChain:
         )
 
         # Verify they're different (plan affects output)
-        assert (
-            utterance_no_plan != utterance_with_plan
-        ), "Plan in belief state should change output"
+        assert utterance_no_plan != utterance_with_plan, "Plan in belief state should change output"
 
 
 class TestNoMockingVerification:
@@ -330,9 +323,9 @@ class TestNoMockingVerification:
         updated_state = engine.integrate(move, state)
 
         # After integration: plan exists
-        assert (
-            len(updated_state.private.plan) == 1
-        ), "Integration should create real plan"  # Real plan created
+        assert len(updated_state.private.plan) == 1, (
+            "Integration should create real plan"
+        )  # Real plan created
 
         # Verify it's a real Plan object from domain
         plan = updated_state.private.plan[0]

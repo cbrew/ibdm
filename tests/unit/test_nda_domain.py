@@ -1,8 +1,8 @@
 """Tests for NDA domain."""
 
-from ibdm.domains.nda_domain import create_nda_domain, get_nda_domain, _build_nda_plan
 from ibdm.core.domain import DomainModel
-from ibdm.core.questions import WhQuestion, AltQuestion
+from ibdm.core.questions import AltQuestion, WhQuestion
+from ibdm.domains.nda_domain import _build_nda_plan, create_nda_domain, get_nda_domain
 
 
 class TestNDADomainCreation:
@@ -249,16 +249,12 @@ class TestNDADomainIntegration:
 
         # All should be defined in domain
         for pred in plan_predicates:
-            assert (
-                pred in domain.predicates
-            ), f"Plan uses undefined predicate: {pred}"
+            assert pred in domain.predicates, f"Plan uses undefined predicate: {pred}"
 
     def test_all_predicate_descriptions_present(self):
         """Test that all predicates have descriptions."""
         domain = get_nda_domain()
 
         for pred_name, pred_spec in domain.predicates.items():
-            assert (
-                pred_spec.description
-            ), f"Predicate {pred_name} missing description"
+            assert pred_spec.description, f"Predicate {pred_name} missing description"
             assert len(pred_spec.description) > 10, f"{pred_name} has too short description"

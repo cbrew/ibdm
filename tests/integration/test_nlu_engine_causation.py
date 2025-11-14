@@ -96,7 +96,8 @@ class TestNLUEngineCausationChain:
         assert len(integrated_state.shared.qud) >= 1, "Should push question to QUD"
 
         question = integrated_state.shared.qud[-1]
-        print(f"✓ QUD top question: {question.predicate if hasattr(question, 'predicate') else question}")
+        q_display = question.predicate if hasattr(question, "predicate") else question
+        print(f"✓ QUD top question: {q_display}")
 
         # STEP 3: SELECT (should choose to ask question)
         response_move, final_state = engine.select_action(integrated_state)
@@ -132,10 +133,10 @@ class TestCausationChainComparison:
 
     def test_pattern_engine_fails_on_nda_request(self):
         """
-        Document that DialogueMoveEngine (pattern-based) fails to recognize NDA requests.
+        Document that DialogueMoveEngine (pattern-based) now recognizes NDA requests.
 
-        This is EXPECTED behavior - pattern-based interpretation doesn't
-        understand "I need to draft an NDA" as a command.
+        Updated: Pattern-based interpretation now includes command/request detection,
+        so it successfully understands "I need to draft an NDA" as a command.
         """
         from ibdm.engine import DialogueMoveEngine
 
@@ -152,25 +153,23 @@ class TestCausationChainComparison:
         moves = engine.interpret("I need to draft an NDA", "user", state)
         move = moves[0]
 
-        # Pattern-based creates assert move (fallback)
-        assert move.move_type == "assert", "Pattern-based creates assert (fallback)"
+        # Pattern-based now creates command move
+        assert move.move_type == "command", "Pattern-based recognizes commands"
 
-        # Integrate - no plan created because move type is wrong
+        # Integrate - plan should be created
         integrated = engine.integrate(move, state)
 
-        # No plan because form_task_plan precondition checks for command/request
-        assert (
-            len(integrated.private.plan) == 0
-        ), "Pattern-based doesn't trigger plan formation"
+        # Plan should be created because form_task_plan detects command type
+        assert len(integrated.private.plan) == 1, "Pattern-based triggers plan formation"
 
-        assert len(integrated.shared.qud) == 0, "No question pushed to QUD"
+        assert len(integrated.shared.qud) == 1, "Question pushed to QUD"
 
         print("\n" + "=" * 70)
         print("PATTERN-BASED ENGINE (DialogueMoveEngine):")
         print("=" * 70)
-        print(f"Move type: {move.move_type} (assert = fallback)")
-        print(f"Plans created: {len(integrated.private.plan)} (none)")
-        print(f"QUD size: {len(integrated.shared.qud)} (none)")
-        print("\nConclusion: Pattern-based interpretation doesn't recognize NDA requests.")
-        print("Need NLU engine with LLM for proper classification.")
+        print(f"Move type: {move.move_type} (command)")
+        print(f"Plans created: {len(integrated.private.plan)} (1 plan)")
+        print(f"QUD size: {len(integrated.shared.qud)} (1 question)")
+        print("\nConclusion: Pattern-based interpretation now recognizes NDA requests!")
+        print("Command detection rules successfully identify task-oriented utterances.")
         print("=" * 70)
