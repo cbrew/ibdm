@@ -1,6 +1,17 @@
 #!/bin/bash
 # Beads helper commands for IBDM project
 
+# Ensure Go bin is in PATH (where bd is installed)
+export PATH="$HOME/go/bin:$PATH"
+
+# Verify bd is available
+if ! command -v bd &> /dev/null; then
+    echo "Error: 'bd' command not found" >&2
+    echo "Install beads: GOTOOLCHAIN=auto go install github.com/steveyegge/beads/cmd/bd@latest" >&2
+    echo "Ensure \$HOME/go/bin is in your PATH" >&2
+    exit 1
+fi
+
 # Show ready work (tasks with no blockers)
 ready() {
   echo "=== Ready Tasks (No Blockers) ==="

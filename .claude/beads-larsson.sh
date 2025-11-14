@@ -4,6 +4,20 @@
 
 set -e
 
+# Ensure Go bin is in PATH (where bd is installed)
+export PATH="$HOME/go/bin:$PATH"
+
+# Verify bd is available (only for bd commands, not for our custom commands)
+check_bd() {
+    if ! command -v bd &> /dev/null; then
+        echo "Error: 'bd' command not found" >&2
+        echo "Install beads: GOTOOLCHAIN=auto go install github.com/steveyegge/beads/cmd/bd@latest" >&2
+        echo "Ensure \$HOME/go/bin is in your PATH" >&2
+        return 1
+    fi
+    return 0
+}
+
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPORTS_DIR="${PROJECT_ROOT}/reports"
 PREDICTIONS_DIR="${REPORTS_DIR}/predictions"
