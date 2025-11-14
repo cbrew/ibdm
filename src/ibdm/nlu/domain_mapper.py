@@ -63,9 +63,7 @@ class NLUDomainMapper:
             # We'll handle duration via TEMPORAL or NUMERICAL entities
         }
 
-    def map_entities_to_answer(
-        self, entities: list[Entity], question_predicate: str
-    ) -> str | None:
+    def map_entities_to_answer(self, entities: list[Entity], question_predicate: str) -> str | None:
         """Map extracted entities to answer content.
 
         Filters entities by predicate type and formats them appropriately
@@ -98,9 +96,7 @@ class NLUDomainMapper:
         # Find entity type(s) that map to this predicate
         for entity_type, predicate in self.entity_to_predicate.items():
             if predicate == question_predicate:
-                relevant_entities = [
-                    e for e in entities if e.entity_type == entity_type
-                ]
+                relevant_entities = [e for e in entities if e.entity_type == entity_type]
                 break
 
         if not relevant_entities:
@@ -115,9 +111,7 @@ class NLUDomainMapper:
             # Single value predicates - first entity
             return relevant_entities[0].text
 
-    def get_predicate_for_entity_type(
-        self, entity_type: EntityType
-    ) -> str | None:
+    def get_predicate_for_entity_type(self, entity_type: EntityType) -> str | None:
         """Get domain predicate for NLU entity type.
 
         Args:

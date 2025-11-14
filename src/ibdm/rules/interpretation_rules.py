@@ -91,6 +91,14 @@ def create_interpretation_rules() -> list[UpdateRule]:
             priority=5,
             rule_type="interpretation",
         ),
+        # Commands/requests (task-oriented utterances)
+        UpdateRule(
+            name="interpret_command",
+            preconditions=_is_command_request,
+            effects=_create_command_move,
+            priority=4,
+            rule_type="interpretation",
+        ),
         # Assertions (lowest priority - only if nothing else matches)
         UpdateRule(
             name="interpret_assertion",
@@ -198,6 +206,28 @@ def _is_answer(state: InformationState) -> bool:
     return word_count <= 20  # Arbitrary threshold
 
 
+def _is_command_request(state: InformationState) -> bool:
+    """Check if utterance is a command or request for the system to perform a task."""
+    utterance = state.private.beliefs.get("_temp_utterance", "").lower()
+
+    # Check for command/request patterns
+    request_patterns = [
+        "i need to",
+        "i want to",
+        "i'd like to",
+        "can you",
+        "could you",
+        "please",
+        "help me",
+        "draft",
+        "create",
+        "prepare",
+        "make",
+    ]
+
+    return any(pattern in utterance for pattern in request_patterns)
+
+
 def _is_assertion(state: InformationState) -> bool:
     """Check if utterance is an assertion (catch-all for unmatched utterances)."""
     # Only match if none of the specific patterns match
@@ -209,6 +239,7 @@ def _is_assertion(state: InformationState) -> bool:
         or _is_alt_question(state)
         or _is_yn_answer(state)
         or _is_answer(state)
+        or _is_command_request(state)
     )
 
 
@@ -352,6 +383,21 @@ def _create_answer_move(state: InformationState) -> InformationState:
     move = DialogueMove(
         move_type="answer",
         content=answer,
+        speaker=speaker,
+    )
+    new_state.private.agenda.append(move)
+    return new_state
+
+
+def _create_command_move(state: InformationState) -> InformationState:
+    """Create a command/request dialogue move."""
+    new_state = state.clone()
+    speaker = new_state.private.beliefs.get("_temp_speaker", "user")
+    utterance = new_state.private.beliefs.get("_temp_utterance", "")
+
+    move = DialogueMove(
+        move_type="command",
+        content=utterance.strip(),
         speaker=speaker,
     )
     new_state.private.agenda.append(move)

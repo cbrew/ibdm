@@ -10,7 +10,6 @@ This verifies:
 - Complete multi-turn dialogue
 """
 
-import pytest
 
 from ibdm.core import DialogueMove, InformationState, WhQuestion
 from ibdm.domains.nda_domain import get_nda_domain
@@ -32,9 +31,7 @@ class TestCompleteNDAWorkflow:
         state = InformationState(agent_id="system")
 
         # Create command move (as NLU engine would create)
-        move = DialogueMove(
-            move_type="command", content="I need to draft an NDA", speaker="user"
-        )
+        move = DialogueMove(move_type="command", content="I need to draft an NDA", speaker="user")
 
         # Integrate the move (should trigger form_task_plan rule)
         result_state = engine.integrate(move, state)
@@ -62,9 +59,7 @@ class TestCompleteNDAWorkflow:
         state = InformationState(agent_id="system")
 
         # Create command move
-        move = DialogueMove(
-            move_type="command", content="I need to draft an NDA", speaker="user"
-        )
+        move = DialogueMove(move_type="command", content="I need to draft an NDA", speaker="user")
 
         # Integrate
         result_state = engine.integrate(move, state)
@@ -85,9 +80,9 @@ class TestCompleteNDAWorkflow:
         for i, subplan in enumerate(plan.subplans):
             question = subplan.content
             if isinstance(question, WhQuestion):
-                assert (
-                    question.predicate in domain.predicates
-                ), f"Question {i} predicate '{question.predicate}' not in domain"
+                assert question.predicate in domain.predicates, (
+                    f"Question {i} predicate '{question.predicate}' not in domain"
+                )
 
     def test_domain_validates_answer(self):
         """Test that domain model validates answers."""
@@ -98,15 +93,13 @@ class TestCompleteNDAWorkflow:
         from ibdm.core import Answer
 
         valid_answer = Answer(content="Acme Corp and Beta Inc")
-        assert domain.resolves(
-            valid_answer, question
-        ), "Domain should resolve valid organization answer"
+        assert domain.resolves(valid_answer, question), (
+            "Domain should resolve valid organization answer"
+        )
 
         # Empty answer
         empty_answer = Answer(content="")
-        assert not domain.resolves(
-            empty_answer, question
-        ), "Domain should reject empty answer"
+        assert not domain.resolves(empty_answer, question), "Domain should reject empty answer"
 
     def test_selection_chooses_qud_question(self):
         """Test that selection phase chooses to ask QUD top question."""
@@ -121,9 +114,7 @@ class TestCompleteNDAWorkflow:
         state = InformationState(agent_id="system")
 
         # Create and integrate command move
-        move = DialogueMove(
-            move_type="command", content="I need to draft an NDA", speaker="user"
-        )
+        move = DialogueMove(move_type="command", content="I need to draft an NDA", speaker="user")
         integrated_state = engine.integrate(move, state)
 
         # Select response (should choose to ask QUD question)
@@ -190,9 +181,9 @@ class TestDomainIntegrationEndToEnd:
         for i, (subplan, expected_pred) in enumerate(zip(plan.subplans, expected_predicates)):
             question = subplan.content
             if isinstance(question, WhQuestion):
-                assert (
-                    question.predicate == expected_pred
-                ), f"Subplan {i} should have predicate {expected_pred}"
+                assert question.predicate == expected_pred, (
+                    f"Subplan {i} should have predicate {expected_pred}"
+                )
 
 
 class TestPlanAwareGeneration:

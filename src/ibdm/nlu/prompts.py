@@ -350,7 +350,7 @@ def create_semantic_parsing_template() -> PromptTemplate:
         "    ...\n"
         "  ]\n"
         "}",
-        include_reasoning=False,  # No reasoning to ensure pure JSON output
+        include_reasoning=True,
     )
 
     # Add examples (no reasoning to ensure pure JSON output)

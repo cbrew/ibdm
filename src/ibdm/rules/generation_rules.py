@@ -6,7 +6,6 @@ They implement template-based and context-aware generation strategies.
 Based on Larsson (2002) Issue-based Dialogue Management.
 """
 
-from typing import Union
 
 from ibdm.core import (
     AltQuestion,
@@ -241,7 +240,7 @@ def _generate_question_text(state: InformationState) -> InformationState:
     return new_state
 
 
-def _generate_generic_question(question: Union[WhQuestion, YNQuestion, AltQuestion]) -> str:
+def _generate_generic_question(question: WhQuestion | YNQuestion | AltQuestion) -> str:
     """Generate generic question text (existing logic).
 
     Args:
@@ -283,7 +282,7 @@ def _generate_generic_question(question: Union[WhQuestion, YNQuestion, AltQuesti
 
 
 def _generate_nda_question(
-    question: Union[WhQuestion, YNQuestion, AltQuestion], plan: Plan, state: InformationState
+    question: WhQuestion | YNQuestion | AltQuestion, plan: Plan, state: InformationState
 ) -> str:
     """Generate NDA-specific question with context and progress.
 

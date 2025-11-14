@@ -8,12 +8,13 @@ Based on:
 - py-trindikit: https://github.com/heatherleaf/py-trindikit
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 from ibdm.core.answers import Answer
-from ibdm.core.questions import Question, WhQuestion, YNQuestion
 from ibdm.core.plans import Plan
+from ibdm.core.questions import Question
 
 
 @dataclass

@@ -1,7 +1,6 @@
 """Pytest configuration for IBDM tests."""
 
 
-
 def pytest_addoption(parser):
     """Add custom command line options."""
     parser.addoption(
