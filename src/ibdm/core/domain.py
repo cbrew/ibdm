@@ -268,14 +268,20 @@ class DomainModel:
             True if value is valid for type
 
         Note:
-            Current implementation is permissive - accepts any non-empty value.
-            More sophisticated checking can be added based on domain requirements.
+            Rejects empty values regardless of type.
+            For sorts with enumerated values, could check membership.
         """
+        # Always reject None or empty string values
+        if value is None or str(value).strip() == "":
+            return False
+
         if type_name in self.sorts:
             # For sorts with enumerated values, could check membership
-            # For now, accept any non-empty value for sorts
-            return value is not None and str(value).strip() != ""
-        return True  # Unknown type, accept
+            # For now, we already validated non-empty above
+            return True
+
+        # Unknown type - accept any non-empty value
+        return True
 
     def __repr__(self) -> str:
         """String representation of domain model."""
