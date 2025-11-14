@@ -6,7 +6,6 @@ They implement template-based and context-aware generation strategies.
 Based on Larsson (2002) Issue-based Dialogue Management.
 """
 
-
 from ibdm.core import (
     AltQuestion,
     Answer,
