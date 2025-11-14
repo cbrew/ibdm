@@ -2,8 +2,38 @@
 
 **Author**: Claude
 **Date**: 2025-11-12
-**Status**: Design Phase
+**Updated**: 2025-11-14 (Domain semantic layer implemented)
+**Status**: Design Phase (Phase 0 complete - domain layer added)
 **Related**: Phase 2 Burr Integration (ibdm-zfl)
+
+## Recent Updates (2025-11-14)
+
+**Domain Semantic Layer Implemented** ✅
+
+Before proceeding with the full Burr-centric refactoring, we implemented the domain semantic layer (Phase 0) based on py-trindikit analysis. This was critical infrastructure that was missing from the original design.
+
+**What was added**:
+- `DomainModel` class with predicates, sorts, and plan builders
+- NDA domain definition with 5 predicates and 2 sorts
+- Domain-driven task plan formation in integration phase
+- NLU-to-domain entity mapping
+- Plan-aware NLG with domain descriptions
+
+**Impact on this refactoring**:
+- Domain model will be part of Burr State (stateless, singleton access)
+- Domain provides semantic grounding for predicates
+- Task plan formation now uses `domain.get_plan()` not hardcoded plans
+- Integration rules use domain for plan creation
+
+**Files**:
+- `src/ibdm/core/domain.py` - DomainModel class
+- `src/ibdm/domains/nda_domain.py` - NDA domain
+- `src/ibdm/rules/integration_rules.py` - Updated with form_task_plan rule
+- `src/ibdm/rules/generation_rules.py` - Plan-aware NLG
+
+**See**: `docs/REVISED_REFACTORING_TASKS.md` for full implementation details.
+
+---
 
 ## Executive Summary
 

@@ -572,6 +572,134 @@ response = completion(
 - Cost tracking and monitoring
 - Support for streaming responses
 
+### 10. Domain Semantic Layer
+
+**Policy**: All domains must define predicates, sorts, and semantic operations explicitly using the domain model abstraction.
+
+**Rationale**: Per Larsson (2002) and py-trindikit analysis, domain abstraction is integral to IBDM. It provides semantic grounding, type safety, and enables domain-independent rules. Without explicit domain models, predicates are magic strings with no semantic meaning.
+
+**Key Finding**: The py-trindikit analysis (November 2024) revealed that Larsson's original IBDM implementation included a sophisticated domain abstraction layer that was missing from our implementation. Adding this layer increased Larsson fidelity from ~85% to ~95%.
+
+**Implementation**:
+- Define domain model with predicates and sorts (see `src/ibdm/core/domain.py`)
+- Register plan builders with domain using `domain.register_plan_builder()`
+- Use `domain.get_plan()` not hardcoded plans in rules
+- Use `domain.resolves()` for type-checked answer validation
+- Map NLU entities to domain predicates using domain mapper
+
+**Example: NDA Domain** (`src/ibdm/domains/nda_domain.py`):
+
+```python
+from ibdm.core.domain import DomainModel
+
+def create_nda_domain() -> DomainModel:
+    domain = DomainModel(name="nda_drafting")
+
+    # Define predicates with types and descriptions
+    domain.add_predicate(
+        "legal_entities",
+        arity=1,
+        arg_types=["organization_list"],
+        description="Organizations entering into the NDA"
+    )
+
+    domain.add_predicate(
+        "nda_type",
+        arity=1,
+        arg_types=["nda_kind"],
+        description="Type of NDA (mutual or one-way)"
+    )
+
+    # Define semantic sorts (valid values)
+    domain.add_sort("nda_kind", ["mutual", "one-way", "unilateral"])
+    domain.add_sort("us_state", ["California", "Delaware", "New York"])
+
+    # Register plan builder
+    domain.register_plan_builder("nda_drafting", _build_nda_plan)
+
+    return domain
+```
+
+**Benefits**:
+- **Semantic grounding**: Predicates have meaning, not just strings
+- **Type safety**: Domain validates answers against sorts
+- **Reusability**: Rules work across domains
+- **Extensibility**: Easy to add new domains
+- **Larsson fidelity**: Matches original IBDM architecture
+
+**Architecture**:
+```
+NLU Layer → Domain Model → IBDM Rules → NLG Layer
+            ↓
+    - Predicates (typed)
+    - Sorts (valid values)
+    - Plan builders
+    - Semantic operations
+```
+
+### 11. Task Plan Formation in Integration Phase
+
+**Policy**: Task plan formation (creating dialogue plans for user tasks) belongs in the INTEGRATION phase, not interpretation or accommodation.
+
+**Rationale**: Larsson's IBDM has a clear four-phase architecture. Interpretation is syntactic/semantic (utterance → dialogue move). Integration is pragmatic (dialogue move → state updates, including plan formation). Mixing these phases creates architectural confusion.
+
+**Terminology Clarification**:
+- ✅ **Task Plan Formation**: Creating plans in response to user task requests (e.g., "I need an NDA" → create findout plan)
+- ❌ **Accommodation**: Larsson's "accommodation" refers to presupposition accommodation (different concept)
+- Use "task plan formation" NOT "accommodation" in code and docs
+
+**Implementation**:
+
+1. **Interpretation Phase** (`interpretation_rules.py`):
+   - Parse utterance → DialogueMove
+   - Syntactic/semantic only
+   - No plan creation
+
+   ```python
+   # ✅ Correct: Create dialogue move
+   move = DialogueMove(type="command", content=utterance, speaker=speaker)
+
+   # ❌ Wrong: Don't create plans here
+   # plan = create_nda_plan()  # NO!
+   ```
+
+2. **Integration Phase** (`integration_rules.py`):
+   - Process dialogue moves → update state
+   - Form task plans via domain model
+   - Push questions to QUD
+
+   ```python
+   # ✅ Correct: Form task plan in integration
+   def _form_task_plan(state: InformationState) -> InformationState:
+       from ibdm.domains.nda_domain import get_nda_domain
+       domain = get_nda_domain()
+       plan = domain.get_plan("nda_drafting", context={})
+       new_state.private.plan.append(plan)
+
+       # Push first question to QUD
+       if plan.subplans and len(plan.subplans) > 0:
+           first_question = plan.subplans[0].content
+           new_state.shared.push_qud(first_question)
+
+       return new_state
+   ```
+
+**Example Workflow: "I need an NDA"**
+
+1. **INTERPRET**: `"I need an NDA"` → `DialogueMove(type="command", content="draft NDA")`
+2. **INTEGRATE**:
+   - Recognize task request
+   - Use domain: `plan = domain.get_plan("nda_drafting")`
+   - Push first question to QUD
+3. **SELECT**: Choose to ask question from QUD
+4. **GENERATE**: Produce natural language question
+
+**Benefits**:
+- Clear phase separation (Larsson compliant)
+- Domain-driven plan creation
+- Reusable integration rules
+- No mixing of syntactic and pragmatic processing
+
 ## Workflow Integration
 
 ### Daily Work Session

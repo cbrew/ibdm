@@ -380,6 +380,7 @@ def main():
             RuleSet,
             create_generation_rules,
             create_integration_rules,
+            create_interpretation_rules,
             create_selection_rules,
         )
 
@@ -388,6 +389,8 @@ def main():
 
         # Create rule set with IBDM rules for proper QUD management
         rules = RuleSet()
+        for rule in create_interpretation_rules():
+            rules.add_rule(rule)
         for rule in create_integration_rules():
             rules.add_rule(rule)
         for rule in create_selection_rules():
