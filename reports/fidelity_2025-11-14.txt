@@ -1,6 +1,6 @@
 ================================================================================
 IBDM LARSSON FIDELITY REPORT
-Generated: 2025-11-14 16:48:26
+Generated: 2025-11-14 12:10:33
 ================================================================================
 
 ======================================================================
@@ -34,21 +34,21 @@ Issues Found:
 
 Recommendations:
 ----------------------------------------------------------------------
-  • QUD must be LIFO stack (list with push/pop semantics)
-  • Move all domain-specific knowledge to DomainModel
   • Review single_rule_per_cycle implementation against Algorithm 2.2
-  • Implement combines() in DomainModel
-  • No hardcoded predicate strings in rules
-  • Implement IBiS1 update rules: IntegrateAsk, IntegrateAnswer, DowndateQUD
-  • Review four_phase_architecture implementation against Algorithm 2.2
   • Review turn_taking_principle implementation against Algorithm 2.2
-  • Add depends() for dependent questions (IBiS3)
-  • No hidden state in engine classes
   • Consider IBiS3 accommodation rules for advanced features
+  • Review four_phase_architecture implementation against Algorithm 2.2
+  • Move all domain-specific knowledge to DomainModel
   • Implement IBiS1 selection rules: SelectFromPlan, SelectAsk, SelectAnswer
   • Rules should use domain.resolves(), domain.get_plan(), etc.
-  • Ensure InformationState follows Larsson's IBiS1/3/4 structure
+  • No hardcoded predicate strings in rules
+  • No hidden state in engine classes
+  • Implement combines() in DomainModel
+  • Implement IBiS1 update rules: IntegrateAsk, IntegrateAnswer, DowndateQUD
   • Implement resolves() in Question classes
+  • Add depends() for dependent questions (IBiS3)
+  • QUD must be LIFO stack (list with push/pop semantics)
+  • Ensure InformationState follows Larsson's IBiS1/3/4 structure
   • Review control_flow_order implementation against Algorithm 2.2
 
 ======================================================================

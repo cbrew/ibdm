@@ -44,6 +44,11 @@ storage = [
     "redis>=4.5",
 ]
 
+visualization = [
+    "matplotlib>=3.8",
+    "numpy>=1.24",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
