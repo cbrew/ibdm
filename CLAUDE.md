@@ -1,473 +1,258 @@
-# Claude Development Policies for IBDM
+# Claude Development Guide for IBDM
 
-This document defines the development policies and workflows for AI agents working on the Issue-Based Dialogue Management (IBDM) project.
+Quick reference for AI agents working on the Issue-Based Dialogue Management (IBDM) project.
 
-## Environment
+## Table of Contents
 
-### Container Environment
+- [Quick Start](#quick-start)
+- [Architecture Principles](#architecture-principles)
+- [Development Tooling](#development-tooling)
+- [Development Process](#development-process)
+- [IBDM-Specific Policies](#ibdm-specific-policies)
+- [Workflow Cheatsheet](#workflow-cheatsheet)
 
-This project runs in a containerized environment where:
-- Environment variables are set at container startup
-- API keys are pre-configured and available via environment variables
-- No manual key configuration is needed during development
+## Quick Start
 
-### Environment Variables
-
-The following environment variables are available:
-- `IBDM_API_KEY` - Anthropic Claude API key (primary, used for all LLM operations)
-- `GEMINI_API_KEY` - Google/Gemini API key (available but not actively used)
-- `OPENAI_API_KEY` - OpenAI API key (available but not actively used)
-
-**Note**: This project primarily uses `IBDM_API_KEY` for Claude models. The other keys are available for compatibility but not recommended per Policy #9.
-
-### .env File
-
-A `.env` file exists in the project root containing these API keys:
 ```bash
-IBDM_API_KEY=<key>
-GEMINI_API_KEY=<key>
-OPENAI_API_KEY=<key>
+# 1. Verify environment
+python -c "import os; assert os.getenv('IBDM_API_KEY'), 'IBDM_API_KEY missing'"
+
+# 2. Install dependencies
+uv pip install --system -e ".[dev]"
+
+# 3. Check ready tasks
+.claude/beads-helpers.sh ready
+
+# 4. Before every commit
+ruff format src/ tests/ && ruff check --fix src/ tests/ && pyright src/ && pytest
+
+# 5. Make small commits
+git commit -m "feat(scope): description"
 ```
 
-**Important Notes**:
-- The `.env` file is automatically gitignored
-- Keys are already available in the environment; the `.env` file is for reference
-- Never commit API keys to version control
-- Python code can access keys directly via `os.getenv()` without python-dotenv
-
-### Verifying Environment
-
-```python
-import os
-
-# Verify primary API key is available
-ibdm_api_key = os.getenv("IBDM_API_KEY")
-
-assert ibdm_api_key, "IBDM_API_KEY not found"
-
-# Optional: Verify other keys if needed
-# gemini_key = os.getenv("GEMINI_API_KEY")
-# openai_key = os.getenv("OPENAI_API_KEY")
-```
-
-## Core Policies
+## Architecture Principles
 
 ### 0. Architectural Clarity and Simplicity (HIGHEST PRIORITY)
 
-**Policy**: Clarity and simplicity are paramount in the IBDM architecture. Avoid unnecessary complexity, fallback strategies, conditional logic, and defensive programming.
+**Policy**: Prioritize clarity over cleverness. Avoid complexity, fallbacks, and defensive programming.
 
-**Rationale**: Complex systems are harder to understand, debug, and maintain. The IBDM project prioritizes clean, understandable code over "clever" solutions or over-engineered resilience.
+**Five Core Principles**:
+1. **Assume Resource Availability** - No fallback logic for missing API keys/models
+2. **Single Path Execution** - Direct model selection, no cascading (Sonnet for complexity, Haiku for speed)
+3. **Explicit State Management** - All state in Burr State, engines are pure functions
+4. **Minimal Error Handling** - Fail fast, log clearly, don't retry
+5. **Direct Configuration** - Simple config objects, no feature flags
 
-**Principles**:
+**📖 Details**: See [`docs/architecture_principles.md`](docs/architecture_principles.md)
 
-1. **Assume Resource Availability**
-   - Assume API keys (IBDM_API_KEY) are configured and available
-   - Assume models (Claude Sonnet 4.5, Claude Haiku 4.5) are accessible
-   - Assume imports and dependencies are installed
-   - Do NOT add fallback logic for missing resources
+### 10. Domain Semantic Layer
 
-2. **Single Path Execution**
-   - Avoid hybrid fallback strategies (rules → Haiku → Sonnet cascading)
-   - Use direct model selection based on task type:
-     - Claude Sonnet 4.5 for complex reasoning, generation, multi-step tasks
-     - Claude Haiku 4.5 for quick classification, control flow, structured data
-   - No automatic cascading between models
+**Policy**: Define predicates, sorts, and semantic operations explicitly using domain models.
 
-3. **Explicit State Management**
-   - All dialogue state visible in Burr State (not hidden in engine internals)
-   - Engine methods are pure functions accepting and returning state
-   - No hidden mutations, no internal state
-   - State transitions are explicit and traceable
+**Key Points**:
+- Use `src/ibdm/core/domain.py` for domain definitions
+- Register plan builders with `domain.register_plan_builder()`
+- Use `domain.get_plan()` not hardcoded plans
+- Map NLU entities to domain predicates
 
-4. **Minimal Error Handling**
-   - Let errors propagate (fail fast)
-   - Use basic logging, not complex retry/circuit breaker patterns
-   - Trust that resources are available
+**Why**: Domain abstraction increased Larsson fidelity from ~85% to ~95%.
 
-5. **Direct Configuration**
-   - Simple, flat configuration objects
-   - No conditional initialization based on feature flags
-   - No "use_nlu", "use_llm", "fallback_to_rules" toggles
-   - Clear defaults, minimal options
+**Example**: See `src/ibdm/domains/nda_domain.py`
 
-**Examples**:
+### 11. Task Plan Formation in Integration Phase
 
-❌ **Avoid** (Complex fallback):
-```python
-if self.fallback_strategy:
-    strategy = self.fallback_strategy.select_strategy(utterance, available)
-    moves, confidence = self._try_strategy(strategy, utterance, speaker)
-    next_strategy = self.fallback_strategy.should_cascade(strategy, ...)
-    if next_strategy:
-        cascade_moves, cascade_conf = self._try_strategy(next_strategy, ...)
-        if cascade_conf > confidence:
-            moves = cascade_moves
-elif self.config.use_nlu and self.config.use_llm and self.context_interpreter:
-    try:
-        moves = self._interpret_with_nlu(utterance, speaker)
-    except Exception as e:
-        if self.config.fallback_to_rules:
-            moves = super().interpret(utterance, speaker)
-else:
-    moves = super().interpret(utterance, speaker)
-```
+**Policy**: Create dialogue plans in INTEGRATION phase, not interpretation.
 
-✅ **Prefer** (Simple direct):
-```python
-# Select model based on task complexity
-if is_complex_task(utterance):
-    interpreter = self.sonnet_interpreter
-else:
-    interpreter = self.haiku_interpreter
+**Phases**:
+1. **INTERPRET**: Utterance → DialogueMove (syntactic/semantic only)
+2. **INTEGRATE**: DialogueMove → State updates + plan formation
+3. **SELECT**: Choose next system move
+4. **GENERATE**: Produce natural language
 
-interpretation = interpreter.interpret(utterance, state)
-moves = self._create_moves_from_interpretation(interpretation)
-```
+**📖 Details**: See CLAUDE.md lines 640-701 (original)
 
-❌ **Avoid** (Hidden state):
-```python
-class DialogueMoveEngine:
-    def __init__(self, agent_id: str):
-        self.state = InformationState(agent_id=agent_id)  # Hidden!
+### 12. Larsson Algorithmic Principles (Source of Truth)
 
-    def interpret(self, utterance: str, speaker: str) -> list[DialogueMove]:
-        temp_state = self.state.clone()  # Mutates self.state
-        return moves
-```
+**Policy**: Implementation MUST follow Larsson (2002) algorithms.
 
-✅ **Prefer** (Explicit state):
-```python
-class DialogueMoveEngine:
-    def __init__(self, agent_id: str):
-        self.agent_id = agent_id
-        # No internal state!
+**Critical Rules**:
+- QUD is a stack (LIFO), not a set
+- Single rule application per update cycle
+- Explicit state passing (no hidden state)
+- Questions accommodated (`private.issues`) before raised (`shared.qud`)
+- Domain-independent rules (domain knowledge in resources)
 
-    def interpret(
-        self, utterance: str, speaker: str, state: InformationState
-    ) -> list[DialogueMove]:
-        # State passed explicitly, no hidden mutations
-        temp_state = state.clone()
-        return moves
-```
+**📖 Details**: See [`docs/LARSSON_ALGORITHMS.md`](docs/LARSSON_ALGORITHMS.md)
 
-❌ **Avoid** (Conditional complexity):
-```python
-@dataclass
-class NLUEngineConfig:
-    use_nlu: bool = True
-    use_llm: bool = True
-    llm_model: ModelType = ModelType.HAIKU
-    confidence_threshold: float = 0.5
-    fallback_to_rules: bool = True
-    enable_hybrid_fallback: bool = True
-    fallback_config: FallbackConfig | None = None
-```
+**Verification Checklist**:
+- [ ] Control flow matches Algorithm 2.2
+- [ ] Information State structure matches Larsson figures
+- [ ] Update/Select rules match specifications
+- [ ] No hidden state in engines
+- [ ] QUD is stack (LIFO)
+- [ ] Plans formed in integration, not interpretation
 
-✅ **Prefer** (Simple config):
-```python
-@dataclass
-class NLUEngineConfig:
-    """Assumes IBDM_API_KEY is available."""
-    model: ModelType = ModelType.SONNET
-    temperature: float = 0.3
-    max_tokens: int = 2000
-```
+## Development Tooling
 
-**Architecture Guidelines**:
+### 1. Dependency Management: uv
 
-- **Burr State**: Single source of truth for all dialogue state
-- **Engine**: Stateless transformation functions
-- **NLU Components**: Accept context, return results (no internal state)
-- **Configuration**: Simple, assume resources available
-- **Error Handling**: Fail fast, log clearly, don't retry
-
-**See Also**:
-- `docs/burr_state_refactoring.md` - Complete refactoring design
-- Policy #9 (LLM Provider) - Model selection guidelines
-- Policy #8 (Work Step by Step) - Incremental development
-
-### 1. Dependency Management: Use uv
-
-**Policy**: All Python dependency management must use [uv](https://github.com/astral-sh/uv).
-
-**Rationale**: uv provides fast, reliable dependency resolution and is designed for modern Python development.
-
-**Commands**:
 ```bash
-# Install dependencies from pyproject.toml
+# Install dependencies
 uv pip install --system -e ".[dev]"
 
-# Add new dependency
+# Add new package
 uv pip install --system <package>
 # Then add to pyproject.toml dependencies
-
-# Reinstall to sync after pyproject.toml changes
-uv pip install --system -e ".[dev]"
 ```
 
-**Note**: Use `--system` flag when not in a virtual environment.
+**Why uv**: Fast, reliable, modern Python dependency management.
 
-### 2. Formatting and Basic Type Checking: Use ruff
+### 2. Formatting: ruff
 
-**Policy**: Use [ruff](https://github.com/astral-sh/ruff) for code formatting and basic type checking.
-
-**Rationale**: ruff is extremely fast and replaces multiple tools (black, isort, flake8, etc.).
-
-**Commands**:
 ```bash
 # Format code
 ruff format src/ tests/
 
-# Check for issues
-ruff check src/ tests/
-
-# Fix auto-fixable issues
+# Check and fix issues
 ruff check --fix src/ tests/
 
-# Run before every commit
+# Before every commit
 ruff format src/ tests/ && ruff check --fix src/ tests/
 ```
 
-**Configuration**: Settings in `pyproject.toml`:
-```toml
-[tool.ruff]
-line-length = 100
-target-version = "py310"
+**Why ruff**: Extremely fast, replaces black/isort/flake8.
 
-[tool.ruff.lint]
-select = ["E", "F", "I", "N", "W", "UP"]
-ignore = []
-```
+### 3. Type Checking: pyright
 
-### 3. Heavy Type Checking: Use pyright
-
-**Policy**: Use [pyright](https://github.com/microsoft/pyright) for comprehensive static type checking.
-
-**Rationale**: pyright provides strict type checking with excellent performance and IDE integration.
-
-**Commands**:
 ```bash
 # Type check entire project
 pyright
 
 # Type check specific module
 pyright src/ibdm/core/
-
-# Run in strict mode
-pyright --pythonversion 3.10
 ```
 
-**Configuration**: Settings in `pyproject.toml`:
-```toml
-[tool.pyright]
-pythonVersion = "3.10"
-typeCheckingMode = "strict"
-reportMissingTypeStubs = false
+**Why pyright**: Strict type checking, excellent performance.
+
+**Config**: `pyproject.toml` sets `typeCheckingMode = "strict"`
+
+### 9. LLM Provider: LiteLLM
+
+**Policy**: Use LiteLLM for all LLM calls. Primary models: Claude Sonnet 4.5 / Haiku 4.5.
+
+```python
+import os
+from litellm import completion
+
+api_key = os.getenv("IBDM_API_KEY")
+
+# Complex tasks: Sonnet 4.5
+response = completion(
+    model="claude-sonnet-4-5-20250929",
+    messages=[{"role": "user", "content": "..."}],
+    api_key=api_key
+)
+
+# Quick tasks: Haiku 4.5
+response = completion(
+    model="claude-haiku-4-5-20251001",
+    messages=[{"role": "user", "content": "..."}],
+    api_key=api_key
+)
 ```
+
+**Key Points**:
+- **Always pass `api_key=os.getenv("IBDM_API_KEY")`** - Prevents billing conflicts
+- Use Sonnet for: complex reasoning, generation, multi-step tasks
+- Use Haiku for: classification, control flow, structured data
+- No fallbacks to Gemini/OpenAI
+
+**📖 Details**: See [`docs/llm_configuration.md`](docs/llm_configuration.md) and [`docs/environment_setup.md`](docs/environment_setup.md)
+
+## Development Process
 
 ### 4. Make Small Commits
 
-**Policy**: Commits should be small, focused, and single-purpose.
+**Policy**: One logical change per commit (~300 lines max).
 
-**Guidelines**:
-- One logical change per commit
-- Commits should compile and pass tests
-- Maximum ~300 lines changed per commit (guideline, not hard rule)
-- Use conventional commit messages
-
-**Good Examples**:
-```
-feat(core): add WhQuestion class with tests
-fix(rules): correct QUD pop logic in answer integration
-refactor(engine): extract interpretation to separate method
-test(core): add property tests for Question resolution
-docs(api): document InformationState structure
-```
-
-**Bad Examples**:
-```
-WIP
-fix stuff
-updates
-Implemented everything for phase 1
-```
-
-**Commit Message Format**:
+**Commit Format**:
 ```
 <type>(<scope>): <description>
 
 [optional body]
-
-[optional footer]
 ```
 
-Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`, `ci`
+**Types**: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`, `ci`
+
+**Good Examples**:
+- `feat(core): add WhQuestion class with tests`
+- `fix(rules): correct QUD pop logic in answer integration`
+- `refactor(engine): extract interpretation to separate method`
+
+**Bad Examples**:
+- `WIP`
+- `fix stuff`
+- `Implemented everything for phase 1`
 
 ### 5. Test After Every Commit
 
-**Policy**: Run tests after every commit before pushing.
+**Policy**: Run tests before committing.
 
-**Workflow**:
 ```bash
-# Make changes
-vim src/ibdm/core/questions.py
-
 # Run relevant tests
 pytest tests/unit/test_questions.py -v
 
-# Run full test suite
+# Full test suite
 pytest
 
-# Format and check
+# Quality checks
 ruff format src/ tests/
 ruff check --fix src/ tests/
-
-# Type check
 pyright src/
 
 # Commit only if all pass
-git add src/ibdm/core/questions.py tests/unit/test_questions.py
-git commit -m "feat(core): add WhQuestion class with tests"
-
-# Run tests again to ensure commit is clean
-pytest
+git add <files>
+git commit -m "feat(core): ..."
 ```
 
-**Test Requirements**:
-- Unit tests must pass
-- Type checking must pass
-- Formatting must be clean
-- No ruff violations
+### 6. Document via Beads
 
-### 6. Document Every Decision via Beads
+**Policy**: Track design decisions and tasks in beads.
 
-**Policy**: All design decisions, bugs discovered, and future work must be tracked in beads.
+```bash
+# Check ready tasks
+.claude/beads-helpers.sh ready
 
-**Note**: The beads CLI (`bd`) may not be installed. Use the helper script `.claude/beads-helpers.sh` or read `.beads/issues.jsonl` directly.
+# Start task
+.claude/beads-helpers.sh start ibdm-brm.1
+
+# Complete task
+.claude/beads-helpers.sh done ibdm-brm.1 "Implemented with tests"
+```
 
 **When to Create Beads Issues**:
-
-1. **Before Starting Work**: Check beads for ready tasks
-   ```bash
-   .claude/beads-helpers.sh ready
-   # Or: grep '"status":"open"' .beads/issues.jsonl
-   ```
-
-2. **When Starting a Task**: Mark as in_progress
-   ```bash
-   .claude/beads-helpers.sh start ibdm-brm.1
-   # Or manually update .beads/issues.jsonl
-   ```
-
-3. **Discovered Issues**: Document in task comments or commit messages
-   - Add detailed notes in commit messages
-   - Reference related task IDs
-   - Document decision rationale
-
-4. **Design Decisions**: Document in commit messages and code comments
-   ```bash
-   git commit -m "feat(core): use ABC for Question base class
-
-   Decision: Using ABC to enforce resolves_with implementation across
-   all Question subclasses. This provides compile-time safety.
-
-   Related to ibdm-brm.1"
-   ```
-
-5. **Future Work**: Document in TODO comments with task references
-   ```python
-   # TODO(ibdm-brm.3): Optimize Question matching for large QUD stacks
-   # Current O(n) scan is sufficient for <100 questions but may need
-   # indexing for larger applications.
-   ```
-
-6. **Completing Work**: Use helper script
-   ```bash
-   .claude/beads-helpers.sh done ibdm-brm.1 "Implemented with full test coverage"
-   ```
-
-**Benefits**:
-- Creates audit trail of decisions
-- Enables long-term planning
-- Allows context recovery after interruptions
-- Facilitates collaboration between agents/developers
+- Before starting work (check ready tasks)
+- When starting a task (mark in_progress)
+- Discovered issues (document in commit messages)
+- Design decisions (commit messages + code comments)
+- Future work (TODO comments with task references)
 
 ### 7. Own All Code Quality Issues
 
-**Policy**: Take responsibility for all code quality issues in files you touch, regardless of when they were introduced.
+**Policy**: Fix all quality issues in files you touch, regardless of when introduced.
 
-**Guidelines**:
-- **Never** dismiss errors as "pre-existing issues"
-- If you modify a file, you own fixing any issues in that file
-- Run full type checking and linting on all modified files
-- Fix issues incrementally, don't let them accumulate
-- If an issue is truly out of scope, create a beads task for it
+**Never say**: "The type errors are pre-existing issues."
 
-**Rationale**: Dismissing issues as "pre-existing" leads to technical debt accumulation and erodes code quality over time. Every change is an opportunity to improve the codebase.
-
-**Examples**:
-
-❌ **Bad**:
-```
-"The type errors are mostly pre-existing issues. Let me just commit my changes."
-```
-
-✅ **Good**:
-```
-"I see type errors in the file I modified. Let me fix them:
-1. Fix the immediate issues in my changes
+**Always do**:
+1. Fix immediate issues in your changes
 2. Fix other issues in the same function
-3. If there are many issues, create a beads task for systematic cleanup"
-```
+3. If too many, create a beads task for systematic cleanup
+
+**Rationale**: Every change is an opportunity to improve the codebase.
 
 ### 8. Work Step by Step
 
-**Policy**: Break work into small, verifiable steps with frequent validation.
-
-**Step-by-Step Workflow**:
-
-1. **Plan**: Review beads task and break into subtasks if needed
-   ```bash
-   # Check task details
-   grep 'ibdm-brm.1' .beads/issues.jsonl | jq '.'
-
-   # Document subtasks in commit messages or TODO comments
-   # Large tasks should be broken down into smaller, focused commits
-   ```
-
-2. **Implement**: Write minimal code for one step
-   ```python
-   # Step 1: Just the class structure
-   class WhQuestion(Question):
-       variable: str
-       predicate: str
-   ```
-
-3. **Test**: Write test for that step
-   ```python
-   def test_wh_question_creation():
-       q = WhQuestion(variable="x", predicate="weather")
-       assert q.variable == "x"
-   ```
-
-4. **Verify**: Run tests
-   ```bash
-   pytest tests/unit/test_questions.py::test_wh_question_creation -v
-   ```
-
-5. **Commit**: Small, focused commit
-   ```bash
-   git add src/ibdm/core/questions.py tests/unit/test_questions.py
-   git commit -m "feat(core): add WhQuestion class structure"
-   ```
-
-6. **Repeat**: Next step (add methods, validation, etc.)
-
-7. **Update Progress**: Record in commit messages
-   ```bash
-   # Progress is tracked via commit messages and git history
-   git log --oneline --grep="ibdm-brm.1"
-   ```
+**Policy**: Break work into small, verifiable steps.
 
 **Red-Green-Refactor Pattern**:
 1. **Red**: Write failing test
@@ -475,535 +260,77 @@ pytest
 3. **Refactor**: Improve code quality
 4. **Commit**: Each step separately
 
-### 9. LLM Provider Configuration: Use LiteLLM
+**Example Workflow**:
+```bash
+# 1. Write test
+vim tests/unit/test_questions.py
 
-**Policy**: All LLM integrations must use [LiteLLM](https://github.com/BerriAI/litellm) as the unified interface.
+# 2. Run test (should fail)
+pytest tests/unit/test_questions.py::test_wh_question_creation -v
 
-**Rationale**: LiteLLM provides a consistent API across multiple providers, simplifies switching between models, and handles rate limiting and error handling.
+# 3. Implement minimal code
+vim src/ibdm/core/questions.py
 
-**Model Selection**:
-1. **Primary Models**: Anthropic Claude 4.5 series
-   - `claude-sonnet-4-5-20250929` - For large-scale generation tasks, complex reasoning, and extended responses
-   - `claude-haiku-4-5-20251001` - For control flow, analytics, quick classification, and structured data tasks
-2. **No Fallback**: Do not use Google Gemini or OpenAI as fallbacks
+# 4. Run test (should pass)
+pytest tests/unit/test_questions.py::test_wh_question_creation -v
 
-**Usage Guidelines**:
-- Use `claude-sonnet-4-5-20250929` for:
-  - Content generation (essays, reports, creative writing)
-  - Complex reasoning and problem-solving
-  - Multi-step analysis
-  - Summarization of long documents
-  - Complex agents and coding tasks
-- Use `claude-haiku-4-5-20251001` for:
-  - Classification and categorization
-  - Control flow decisions
-  - Analytics and metrics
-  - Quick question answering
-  - Structured data extraction
-  - Cost-sensitive applications (fastest model with near-frontier intelligence)
+# 5. Commit
+git add src/ibdm/core/questions.py tests/unit/test_questions.py
+git commit -m "feat(core): add WhQuestion class structure"
 
-**API Keys**:
-- API keys are provided via environment variables
-- `IBDM_API_KEY` for Anthropic Claude models (primary)
-  - Must be passed explicitly as `api_key` parameter to LiteLLM calls
-  - This separate env var prevents billing conflicts with Claude Code's own Claude usage
-- Keys are available in the runtime environment (container startup)
-- A `.env` file is available in the project root for local development
-- The `.env` file is gitignored and should never be committed
-
-**Environment Setup**:
-```python
-import os
-
-# API keys are automatically available in the container environment
-# They can also be loaded from .env file for local development
-# Note: python-dotenv is optional; keys are already in the environment
-
-# Verify keys are available
-assert os.getenv("IBDM_API_KEY"), "IBDM_API_KEY not found in environment"
+# 6. Repeat for next step
 ```
 
-**Configuration**:
-```python
-import os
-import litellm
-from litellm import completion
+## IBDM-Specific Policies
 
-# Set default provider
-litellm.set_verbose = False  # Set to True for debugging
+### Environment
 
-# Get API key from environment
-api_key = os.getenv("IBDM_API_KEY")
+- **Container**: Podman (not Docker)
+- **API Keys**: Available via `IBDM_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY`
+- **Primary Key**: `IBDM_API_KEY` for Anthropic Claude
+- **Config**: `.env` file in project root (gitignored)
 
-# Example usage - Large-scale generation
-response = completion(
-    model="claude-sonnet-4-5-20250929",
-    messages=[{"role": "user", "content": "Write a detailed analysis..."}],
-    api_key=api_key,  # Explicitly pass API key
-    temperature=0.7,
-    max_tokens=8000
-)
+**📖 Details**: See [`docs/environment_setup.md`](docs/environment_setup.md)
 
-# Example usage - Control and analytics
-response = completion(
-    model="claude-haiku-4-5-20251001",
-    messages=[{"role": "user", "content": "Classify this text..."}],
-    api_key=api_key,  # Explicitly pass API key
-    temperature=0.3,
-    max_tokens=500
-)
-```
+### Code Style
 
-**Implementation Guidelines**:
-- Use LiteLLM's unified interface for all LLM calls
-- **Always** pass `api_key=os.getenv("IBDM_API_KEY")` explicitly to avoid env var conflicts
-- Select the appropriate Claude model based on task type (see Usage Guidelines above)
-- Use `claude-sonnet-4-5-20250929` as the default for most tasks
-- Use `claude-haiku-4-5-20251001` for quick, structured tasks to optimize cost and latency
-- Use async operations where possible: `await acompletion(..., api_key=api_key)`
-- Configure timeouts and retries through LiteLLM
-- Monitor token usage and costs
-- Pricing: Sonnet 4.5 ($3/$15 per million tokens), Haiku 4.5 ($1/$5 per million tokens)
+- **No `sys.path` manipulations** - Use `uv` and `pyproject.toml`
+- **No dynamic imports** - Use proper package structure
+- **Small commits** - Run quality checks after each commit
+- **Avoid fallback options** - Get it right the first time (see Policy #0)
 
-**Benefits**:
-- Single interface for multiple providers
-- Easy model switching without code changes
-- Built-in retry logic and error handling
-- Cost tracking and monitoring
-- Support for streaming responses
+### Textual Applications
 
-### 10. Domain Semantic Layer
+- **Don't run Textual apps** - They make a mess in the terminal
+- **Use `compose` heavily** - Avoid manual mounting/unmounting
 
-**Policy**: All domains must define predicates, sorts, and semantic operations explicitly using the domain model abstraction.
-
-**Rationale**: Per Larsson (2002) and py-trindikit analysis, domain abstraction is integral to IBDM. It provides semantic grounding, type safety, and enables domain-independent rules. Without explicit domain models, predicates are magic strings with no semantic meaning.
-
-**Key Finding**: The py-trindikit analysis (November 2024) revealed that Larsson's original IBDM implementation included a sophisticated domain abstraction layer that was missing from our implementation. Adding this layer increased Larsson fidelity from ~85% to ~95%.
-
-**Implementation**:
-- Define domain model with predicates and sorts (see `src/ibdm/core/domain.py`)
-- Register plan builders with domain using `domain.register_plan_builder()`
-- Use `domain.get_plan()` not hardcoded plans in rules
-- Use `domain.resolves()` for type-checked answer validation
-- Map NLU entities to domain predicates using domain mapper
-
-**Example: NDA Domain** (`src/ibdm/domains/nda_domain.py`):
-
-```python
-from ibdm.core.domain import DomainModel
-
-def create_nda_domain() -> DomainModel:
-    domain = DomainModel(name="nda_drafting")
-
-    # Define predicates with types and descriptions
-    domain.add_predicate(
-        "legal_entities",
-        arity=1,
-        arg_types=["organization_list"],
-        description="Organizations entering into the NDA"
-    )
-
-    domain.add_predicate(
-        "nda_type",
-        arity=1,
-        arg_types=["nda_kind"],
-        description="Type of NDA (mutual or one-way)"
-    )
-
-    # Define semantic sorts (valid values)
-    domain.add_sort("nda_kind", ["mutual", "one-way", "unilateral"])
-    domain.add_sort("us_state", ["California", "Delaware", "New York"])
-
-    # Register plan builder
-    domain.register_plan_builder("nda_drafting", _build_nda_plan)
-
-    return domain
-```
-
-**Benefits**:
-- **Semantic grounding**: Predicates have meaning, not just strings
-- **Type safety**: Domain validates answers against sorts
-- **Reusability**: Rules work across domains
-- **Extensibility**: Easy to add new domains
-- **Larsson fidelity**: Matches original IBDM architecture
-
-**Architecture**:
-```
-NLU Layer → Domain Model → IBDM Rules → NLG Layer
-            ↓
-    - Predicates (typed)
-    - Sorts (valid values)
-    - Plan builders
-    - Semantic operations
-```
-
-### 11. Task Plan Formation in Integration Phase
-
-**Policy**: Task plan formation (creating dialogue plans for user tasks) belongs in the INTEGRATION phase, not interpretation or accommodation.
-
-**Rationale**: Larsson's IBDM has a clear four-phase architecture. Interpretation is syntactic/semantic (utterance → dialogue move). Integration is pragmatic (dialogue move → state updates, including plan formation). Mixing these phases creates architectural confusion.
-
-**Terminology Clarification**:
-- ✅ **Task Plan Formation**: Creating plans in response to user task requests (e.g., "I need an NDA" → create findout plan)
-- ❌ **Accommodation**: Larsson's "accommodation" refers to presupposition accommodation (different concept)
-- Use "task plan formation" NOT "accommodation" in code and docs
-
-**Implementation**:
-
-1. **Interpretation Phase** (`interpretation_rules.py`):
-   - Parse utterance → DialogueMove
-   - Syntactic/semantic only
-   - No plan creation
-
-   ```python
-   # ✅ Correct: Create dialogue move
-   move = DialogueMove(type="command", content=utterance, speaker=speaker)
-
-   # ❌ Wrong: Don't create plans here
-   # plan = create_nda_plan()  # NO!
-   ```
-
-2. **Integration Phase** (`integration_rules.py`):
-   - Process dialogue moves → update state
-   - Form task plans via domain model
-   - Push questions to QUD
-
-   ```python
-   # ✅ Correct: Form task plan in integration
-   def _form_task_plan(state: InformationState) -> InformationState:
-       from ibdm.domains.nda_domain import get_nda_domain
-       domain = get_nda_domain()
-       plan = domain.get_plan("nda_drafting", context={})
-       new_state.private.plan.append(plan)
-
-       # Push first question to QUD
-       if plan.subplans and len(plan.subplans) > 0:
-           first_question = plan.subplans[0].content
-           new_state.shared.push_qud(first_question)
-
-       return new_state
-   ```
-
-**Example Workflow: "I need an NDA"**
-
-1. **INTERPRET**: `"I need an NDA"` → `DialogueMove(type="command", content="draft NDA")`
-2. **INTEGRATE**:
-   - Recognize task request
-   - Use domain: `plan = domain.get_plan("nda_drafting")`
-   - Push first question to QUD
-3. **SELECT**: Choose to ask question from QUD
-4. **GENERATE**: Produce natural language question
-
-**Benefits**:
-- Clear phase separation (Larsson compliant)
-- Domain-driven plan creation
-- Reusable integration rules
-- No mixing of syntactic and pragmatic processing
-
-### 12. Larsson Algorithmic Principles (Source of Truth)
-
-**Policy**: Implementation MUST follow the algorithmic principles from Larsson (2002) as documented in `docs/LARSSON_ALGORITHMS.md`.
-
-**Rationale**: Larsson's thesis provides the theoretical foundation and proven algorithms for IBDM. Deviation from these principles without justification leads to non-Larsson-compliant implementations that may introduce subtle bugs or architectural inconsistencies.
-
-**Authoritative Reference**: `docs/LARSSON_ALGORITHMS.md` (extracted from `docs/larsson_thesis/`)
-
-#### Core Algorithmic Principles
-
-**1. Control Flow: Algorithm 2.2**
-```
-repeat {
-    select                    // Choose next system move(s)
-    if not isEmpty($nextMoves) {
-        generate              // Convert moves to strings
-        output                // Output to user
-        update                // Update state after output
-    }
-    test($programState == run)
-    input                     // Get user input
-    interpret                 // Parse to moves
-    update                    // Integrate user moves
-}
-```
-
-**Key Rules**:
-- Select runs BEFORE system output
-- Update runs AFTER each output and input
-- Single rule application per update cycle
-- First-applicable-rule selection
-
-**2. Information State Structure**
-
-All dialogue state must be explicitly represented in the Information State. No hidden state in engines.
-
-**IBiS1 (Basic)**:
-```python
-InformationState(
-    private=Private(
-        plan=[],      # Task plans (list of Plan)
-        bel=set(),    # Beliefs (set of Proposition)
-        agenda=[]     # Action agenda (ordered set)
-    ),
-    shared=Shared(
-        qud=[],       # Questions Under Discussion (stack, LIFO)
-        com=set(),    # Common ground (set of Proposition)
-        lu=None       # Latest utterance/move
-    )
-)
-```
-
-**IBiS3 Extensions (Accommodation)**:
-```python
-private.issues = []   # Accommodated questions (not yet raised to QUD)
-```
-
-**IBiS4 Extensions (Actions)**:
-```python
-private.actions = []  # Pending device actions
-private.iun = set()   # Issues Under Negotiation
-```
-
-**3. Semantic Operations**
-
-All semantic operations must be implemented:
-
-- **resolves(Answer, Question)**: Answer resolves Question
-- **combines(Question, Answer)**: Combine to form Proposition
-- **relevant(Answer, Question)**: Answer is relevant to Question
-- **depends(Q1, Q2)**: Q1 depends on Q2 (Q2 must be answered first)
-- **postcond(Action)**: Postcondition (effect) of Action
-- **dominates(P1, P2)**: P1 dominates P2 in negotiation
-
-See `docs/LARSSON_ALGORITHMS.md` Section "Semantic Operations" for detailed specifications.
-
-**4. QUD as Stack (LIFO)**
-
-QUD MUST be a stack with LIFO semantics:
-
-```python
-# ✅ Correct
-def push_qud(state: InformationState, question: Question):
-    state.shared.qud.append(question)  # Push to top
-
-def top_qud(state: InformationState) -> Question | None:
-    return state.shared.qud[-1] if state.shared.qud else None
-
-def pop_qud(state: InformationState):
-    if state.shared.qud:
-        state.shared.qud.pop()
-
-# ❌ Wrong: QUD as unordered set
-# state.shared.qud = set()  # NO!
-```
-
-**Rationale**: Top of QUD is the maximal question (highest priority). Stack ensures proper question resolution order.
-
-**5. Task Plan Formation in Integration**
-
-Plans are formed in the INTEGRATION phase, NOT interpretation:
-
-```python
-# ✅ Correct (Integration phase)
-def integrate_task_request(state: InformationState, move: DialogueMove):
-    if move.type == "request_task":
-        domain = get_domain()
-        plan = domain.get_plan(move.content)
-        state.private.plan.append(plan)
-        # Accommodate first question
-        if plan.subplans:
-            state.private.issues.append(plan.subplans[0].content)
-    return state
-
-# ❌ Wrong (Interpretation phase)
-def interpret(utterance: str):
-    # DON'T create plans here!
-    # plan = create_plan(...)  # NO!
-    return DialogueMove(type="request_task", content=task_type)
-```
-
-**6. Accommodation Before Raising**
-
-Questions follow two-stage process (IBiS3+):
-
-1. **Accommodation**: Question enters `private.issues`
-2. **Raising**: Question moves to `shared.qud`
-
-```python
-# ✅ Correct: Two-stage process
-def accommodate_question(state: InformationState, q: Question):
-    state.private.issues.append(q)  # Stage 1: Accommodate
-
-def raise_question(state: InformationState):
-    if state.private.issues:
-        q = state.private.issues.pop(0)
-        state.shared.qud.append(q)  # Stage 2: Raise to QUD
-```
-
-**Rationale**: Enables incremental questioning, clarification, and dependent question handling.
-
-**7. Single Rule Application Per Cycle**
-
-Update rules apply ONE AT A TIME:
-
-```python
-# ✅ Correct
-def update_state(state: InformationState, moves: list[DialogueMove]):
-    for rule in update_rules:
-        if rule.preconditions_met(state, moves):
-            state = rule.apply(state, moves)
-            return state  # Stop after first rule
-    return state
-
-# ❌ Wrong: Multiple rules per cycle
-def update_state(state: InformationState, moves: list[DialogueMove]):
-    for rule in update_rules:
-        if rule.preconditions_met(state, moves):
-            state = rule.apply(state, moves)  # NO! Don't continue
-    return state
-```
-
-**Rationale**: Ensures predictable state transitions, easier debugging, Larsson compliance.
-
-**8. Explicit State, Pure Functions**
-
-Engine methods are PURE FUNCTIONS - no hidden state:
-
-```python
-# ✅ Correct: Pure function
-class DialogueMoveEngine:
-    def interpret(self, utterance: str, state: InformationState) -> list[DialogueMove]:
-        # State passed explicitly
-        return parse_utterance(utterance, state)
-
-# ❌ Wrong: Hidden state
-class DialogueMoveEngine:
-    def __init__(self):
-        self.state = InformationState()  # Hidden!
-
-    def interpret(self, utterance: str) -> list[DialogueMove]:
-        # Where does state come from?
-        return parse_utterance(utterance)
-```
-
-**9. Domain Independence**
-
-Rules are DOMAIN-INDEPENDENT. Domain knowledge in RESOURCES:
-
-```python
-# ✅ Correct: Domain-independent rule
-def integrate_answer_rule(state: InformationState, move: DialogueMove) -> InformationState:
-    if move.type == "answer":
-        answer = move.content
-        question = top_qud(state)
-        if domain.resolves(answer, question):  # Domain resource
-            prop = domain.combines(question, answer)  # Domain resource
-            state.shared.com.add(prop)
-            pop_qud(state)
-    return state
-
-# ❌ Wrong: Domain-specific rule
-def integrate_nda_answer(state: InformationState, move: DialogueMove):
-    if move.content == "mutual":  # Hardcoded domain knowledge!
-        state.shared.com.add("nda_type(mutual)")
-```
-
-**10. Questions as First-Class Objects**
-
-Questions are IRREDUCIBLE objects, not reduced to knowledge preconditions:
-
-```python
-# ✅ Correct: Questions are objects
-@dataclass
-class WhQuestion(Question):
-    variable: str
-    predicate: str
-
-    def resolves_with(self, answer: Answer) -> bool:
-        return isinstance(answer, ShortAnswer) and answer.predicate == self.predicate
-
-# ❌ Wrong: Questions reduced to preconditions
-class KnowledgePrecondition:
-    def __init__(self, prop: str):
-        self.required_knowledge = prop  # Question is just missing knowledge
-```
-
-**Rationale**: Questions have structure, resolution semantics, and pragmatic effects beyond knowledge gaps.
-
-#### Implementation Checklists
-
-**IBiS1 (Basic System)**:
-- [ ] Four-phase architecture (Interpret → Update → Select → Generate)
-- [ ] Information State with private/shared separation
-- [ ] QUD as stack (LIFO)
-- [ ] Control loop (Algorithm 2.2)
-- [ ] Update rules: IntegrateAsk, IntegrateAnswer, DowndateQUD, FindPlan, ExecFindout
-- [ ] Selection rules: SelectFromPlan, SelectAsk, SelectAnswer
-- [ ] Semantic operations: resolves, combines
-- [ ] Domain model with predicates, sorts, plan builders
-- [ ] Single rule per cycle
-- [ ] Pure functions (explicit state passing)
-
-**IBiS3 Extensions (Accommodation)**:
-- [ ] `private.issues` field
-- [ ] Two-stage accommodation (issues → QUD)
-- [ ] Update rules: IssueAccommodation, LocalQuestionAccommodation
-- [ ] DependentIssueAccommodation with `depends()` relation
-- [ ] IssueClarification, QuestionReaccommodation
-
-**IBiS4 Extensions (Actions)**:
-- [ ] `private.actions` and `private.iun` fields
-- [ ] Update rules: IntegrateRequest, ExecuteAction, ActionAccommodation
-- [ ] Selection rules: SelectConfirmAction, SelectProposeAlternative
-- [ ] `postcond()` semantic operation
-- [ ] Device interface with action execution
-
-#### Verification Against Larsson
-
-When implementing or reviewing code, verify:
-
-1. ✅ Control flow matches Algorithm 2.2
-2. ✅ Information State structure matches Figures 2.2, 3.1, 4.1, or 5.1
-3. ✅ Update/Select rules match Chapter 2-5 specifications
-4. ✅ Semantic operations implemented correctly
-5. ✅ No hidden state in engines (explicit state passing)
-6. ✅ QUD is stack (LIFO), not set or list
-7. ✅ Task plan formation in integration, not interpretation
-8. ✅ Questions accommodated before raised (IBiS3+)
-9. ✅ Single rule application per cycle
-10. ✅ Domain independence (rules don't hardcode domain knowledge)
-
-**Reference Document**: See `docs/LARSSON_ALGORITHMS.md` for complete algorithmic specifications, rule definitions, and cross-system evolution table.
-
-**Thesis Source**: `docs/larsson_thesis/` contains the original thesis split into chapters (Larsson, 2002).
-
-## Workflow Integration
+## Workflow Cheatsheet
 
 ### Daily Work Session
 
 ```bash
-# 1. Start of session - check ready work
+# 1. Check ready tasks
 .claude/beads-helpers.sh ready
 
-# 2. Select highest priority task
+# 2. Start highest priority task
 .claude/beads-helpers.sh start ibdm-brm.1
 
-# 3. Work step-by-step
-# - Write test
-# - Implement
-# - Run tests: pytest tests/unit/test_questions.py -v
-# - Format: ruff format src/ tests/
-# - Check: ruff check --fix src/ tests/
-# - Type check: pyright src/ibdm/core/
-# - Commit: git commit -m "feat(core): ..."
+# 3. Work step-by-step (see Policy #8)
+# - Write test → Implement → Test → Commit
 
-# 4. Complete task
+# 4. Before each commit
+ruff format src/ tests/ && ruff check --fix src/ tests/
+pyright src/
+pytest
+
+# 5. Commit
+git commit -m "feat(scope): description"
+
+# 6. Complete task
 .claude/beads-helpers.sh done ibdm-brm.1 "Implemented with tests"
-
-# 5. Check what's newly ready
-.claude/beads-helpers.sh ready
 ```
 
-### Before Pushing to Remote
+### Before Pushing
 
 ```bash
 # Full validation
@@ -1012,7 +339,7 @@ ruff format src/ tests/         # Format
 ruff check src/ tests/          # Lint
 pyright src/                    # Type check
 
-# If all pass
+# Push
 git push -u origin <branch>
 ```
 
@@ -1022,39 +349,25 @@ git push -u origin <branch>
 # Check phase progress
 .claude/beads-helpers.sh progress 1
 
-# Review completed tasks via git log
+# Review completed tasks
 git log --oneline --since="1 week ago" --grep="feat\\|fix"
 
-# Check current task status
+# Check current status
 grep '"status":"open"' .beads/issues.jsonl | jq -r '"\(.id): \(.title)"'
-
-# Plan next priorities
-.claude/beads-helpers.sh ready
 ```
 
-## Tool Configuration
+### Tool Configuration
 
-### pyproject.toml
-
-Ensure these sections exist:
+Ensure `pyproject.toml` contains:
 
 ```toml
 [tool.ruff]
 line-length = 100
 target-version = "py310"
 
-[tool.ruff.lint]
-select = ["E", "F", "I", "N", "W", "UP"]
-ignore = []
-
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-
 [tool.pyright]
 pythonVersion = "3.10"
 typeCheckingMode = "strict"
-reportMissingTypeStubs = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -1062,62 +375,25 @@ pythonpath = ["src"]
 addopts = "-v --cov=ibdm --cov-report=term-missing"
 ```
 
-### Pre-commit Checklist
-
-Before every commit:
-- [ ] Tests pass: `pytest`
-- [ ] Code formatted: `ruff format src/ tests/`
-- [ ] No lint errors: `ruff check src/ tests/`
-- [ ] Types check: `pyright src/`
-- [ ] Commit message follows convention
-- [ ] Beads task updated
-
-### Git Hooks (Optional)
-
-Consider adding pre-commit hook:
-
-```bash
-#!/bin/bash
-# .git/hooks/pre-commit
-
-echo "Running pre-commit checks..."
-
-# Format
-ruff format src/ tests/
-
-# Lint
-if ! ruff check src/ tests/; then
-    echo "❌ Ruff check failed"
-    exit 1
-fi
-
-# Type check
-if ! pyright src/; then
-    echo "❌ Type check failed"
-    exit 1
-fi
-
-# Tests
-if ! pytest; then
-    echo "❌ Tests failed"
-    exit 1
-fi
-
-echo "✓ All checks passed"
-```
-
 ## References
+
+- **Architecture**: [`docs/architecture_principles.md`](docs/architecture_principles.md)
+- **Environment**: [`docs/environment_setup.md`](docs/environment_setup.md)
+- **LLM Config**: [`docs/llm_configuration.md`](docs/llm_configuration.md)
+- **Larsson Algorithms**: [`docs/LARSSON_ALGORITHMS.md`](docs/LARSSON_ALGORITHMS.md)
+- **Burr State Refactoring**: [`docs/burr_state_refactoring.md`](docs/burr_state_refactoring.md)
+
+### External Links
 
 - [uv Documentation](https://github.com/astral-sh/uv)
 - [ruff Documentation](https://docs.astral.sh/ruff/)
 - [pyright Documentation](https://github.com/microsoft/pyright)
-- [beads Documentation](https://github.com/steveyegge/beads)
 - [LiteLLM Documentation](https://docs.litellm.ai/)
 - [Conventional Commits](https://www.conventionalcommits.org/)
 
 ## Questions or Updates
 
-If these policies need updating or you have questions:
+If these policies need updating:
 1. Create a beads task: `bd create "Policy question: ..."`
 2. Discuss in task comments
 3. Update this document with decision

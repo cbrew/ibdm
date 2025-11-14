@@ -8,31 +8,32 @@ from pathlib import Path
 
 # Common OCR error corrections
 OCR_FIXES = {
-    'managemen t': 'management',
-    'implemen tation': 'implementation',
-    'represen ting': 'representing',
-    'orien ted': 'oriented',
-    'accommo dation': 'accommodation',
-    'participan t': 'participant',
-    'requiremen ts': 'requirements',
-    'Departmen t': 'Department',
-    'GÄoteborg': 'Göteborg',
-    'Sta®an': 'Staffan',
-    '¯': 'fi',
-    '°': 'fl',
-    '®': 'ff',
-    'di®erent': 'different',
-    'di®erences': 'differences',
-    'º': 'Å',
-    'Ä': 'ö',
-    'lev el': 'level',
-    'taxonom y': 'taxonomy',
-    'clari¯cation': 'clarification',
-    'classi¯cation': 'classification',
-    'successiv e': 'successive',
-    'negotiativ e': 'negotiative',
-    'alternativ es': 'alternatives',
+    "managemen t": "management",
+    "implemen tation": "implementation",
+    "represen ting": "representing",
+    "orien ted": "oriented",
+    "accommo dation": "accommodation",
+    "participan t": "participant",
+    "requiremen ts": "requirements",
+    "Departmen t": "Department",
+    "GÄoteborg": "Göteborg",
+    "Sta®an": "Staffan",
+    "¯": "fi",
+    "°": "fl",
+    "®": "ff",
+    "di®erent": "different",
+    "di®erences": "differences",
+    "º": "Å",
+    "Ä": "ö",
+    "lev el": "level",
+    "taxonom y": "taxonomy",
+    "clari¯cation": "clarification",
+    "classi¯cation": "classification",
+    "successiv e": "successive",
+    "negotiativ e": "negotiative",
+    "alternativ es": "alternatives",
 }
+
 
 def fix_ocr_errors(text: str) -> str:
     """Fix common OCR errors in text."""
@@ -40,11 +41,12 @@ def fix_ocr_errors(text: str) -> str:
         text = text.replace(error, fix)
     return text
 
+
 def find_chapter_boundaries(lines: list[str]) -> list[tuple[int, str]]:
     """Find line numbers where chapters and major sections start."""
     boundaries = []
-    chapter_pattern = re.compile(r'^Chapter (\d+)')
-    appendix_pattern = re.compile(r'^(A|B)\.?\d*\s+')
+    chapter_pattern = re.compile(r"^Chapter (\d+)")
+    appendix_pattern = re.compile(r"^(A|B)\.?\d*\s+")
 
     for i, line in enumerate(lines):
         line = line.strip()
@@ -64,12 +66,13 @@ def find_chapter_boundaries(lines: list[str]) -> list[tuple[int, str]]:
 
     return boundaries
 
+
 def split_thesis(input_file: Path, output_dir: Path):
     """Split thesis into separate chapter files."""
 
     # Read the entire file, handling potential encoding issues
     try:
-        with open(input_file, 'r', encoding='utf-8', errors='ignore') as f:
+        with open(input_file, "r", encoding="utf-8", errors="ignore") as f:
             lines = f.readlines()
     except Exception as e:
         print(f"Error reading file: {e}")
@@ -91,17 +94,18 @@ def split_thesis(input_file: Path, output_dir: Path):
 
         # Get section content
         section_lines = lines[start_line:end_line]
-        section_text = ''.join(section_lines)
+        section_text = "".join(section_lines)
 
         # Fix OCR errors
         section_text = fix_ocr_errors(section_text)
 
         # Write to file
         output_file = output_dir / f"{section_name}.md"
-        with open(output_file, 'w', encoding='utf-8') as f:
+        with open(output_file, "w", encoding="utf-8") as f:
             f.write(section_text)
 
         print(f"Wrote {section_name}.md ({len(section_lines)} lines)")
+
 
 def create_index(output_dir: Path):
     """Create an index document for navigation."""
@@ -198,10 +202,11 @@ Department of Linguistics, Göteborg University, Sweden. ISBN 91-628-5301-5.
 """
 
     index_file = output_dir / "README.md"
-    with open(index_file, 'w', encoding='utf-8') as f:
+    with open(index_file, "w", encoding="utf-8") as f:
         f.write(index_content)
 
     print(f"Created index: README.md")
+
 
 if __name__ == "__main__":
     input_file = Path("/Users/brewc/PycharmProjects/ibdm/docs/Larsson_Tesis_nopages.md")
