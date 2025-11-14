@@ -196,8 +196,34 @@ class TestIntegrationRules:
 class TestSelectionRules:
     """Test selection rule implementations."""
 
+    def test_select_from_plan_findout(self):
+        """Test SelectFromPlan rule with findout plan (IBiS1 Section 2.9.1)."""
+        from ibdm.core import Plan
+
+        rules = create_selection_rules()
+        ruleset = RuleSet()
+        for rule in rules:
+            ruleset.add_rule(rule)
+
+        state = InformationState(agent_id="system")
+        # Add a findout plan at head
+        question = WhQuestion(variable="x", predicate="departure_city")
+        plan = Plan(plan_type="findout", content=question, status="active")
+        state.private.plan.append(plan)
+
+        new_state, matched_rule = ruleset.apply_first_matching("selection", state)
+
+        assert matched_rule is not None
+        assert matched_rule.name == "select_from_plan"
+        assert len(new_state.private.agenda) == 1
+        move = new_state.private.agenda[0]
+        assert move.move_type == "ask"
+        assert move.content == question
+        # Check the plan in the new state is completed
+        assert new_state.private.plan[0].status == "completed"
+
     def test_select_answer_qud(self):
-        """Test selection answers QUD when knowledge available."""
+        """Test SelectAnswer rule (IBiS1 Section 2.9.4)."""
         rules = create_selection_rules()
         ruleset = RuleSet()
         for rule in rules:
@@ -211,12 +237,36 @@ class TestSelectionRules:
         new_state, matched_rule = ruleset.apply_first_matching("selection", state)
 
         assert matched_rule is not None
+        assert matched_rule.name == "select_answer"
         assert len(new_state.private.agenda) == 1
         move = new_state.private.agenda[0]
         assert move.move_type == "answer"
+        assert isinstance(move.content, Answer)
+        assert move.content.content == "sunny"
 
-    def test_select_generic_response(self):
-        """Test generic response is selected when nothing else applies."""
+    def test_select_ask_qud(self):
+        """Test SelectAsk rule (IBiS1 Section 2.9.2)."""
+        rules = create_selection_rules()
+        ruleset = RuleSet()
+        for rule in rules:
+            ruleset.add_rule(rule)
+
+        state = InformationState(agent_id="system")
+        question = WhQuestion(variable="x", predicate="weather")
+        state.shared.push_qud(question)
+        # No beliefs to answer - should ask instead
+
+        new_state, matched_rule = ruleset.apply_first_matching("selection", state)
+
+        assert matched_rule is not None
+        assert matched_rule.name == "select_ask"
+        assert len(new_state.private.agenda) == 1
+        move = new_state.private.agenda[0]
+        assert move.move_type == "ask"
+        assert move.content == question
+
+    def test_select_greet_at_start(self):
+        """Test SelectGreet rule at dialogue start (IBiS1 Section 2.9)."""
         rules = create_selection_rules()
         ruleset = RuleSet()
         for rule in rules:
@@ -224,11 +274,102 @@ class TestSelectionRules:
 
         state = InformationState(agent_id="system")
         state.control.dialogue_state = "active"
+        # No moves yet - system should greet
 
         new_state, matched_rule = ruleset.apply_first_matching("selection", state)
 
         assert matched_rule is not None
-        # At least one rule should match (generic response at minimum)
+        assert matched_rule.name == "select_greet"
+        assert len(new_state.private.agenda) == 1
+        move = new_state.private.agenda[0]
+        assert move.move_type == "greet"
+
+    def test_select_greet_responds_to_user(self):
+        """Test SelectGreet responds to user greeting."""
+        rules = create_selection_rules()
+        ruleset = RuleSet()
+        for rule in rules:
+            ruleset.add_rule(rule)
+
+        state = InformationState(agent_id="system")
+        state.control.dialogue_state = "active"
+        # User greeted
+        user_greet = DialogueMove(move_type="greet", content="Hello", speaker="user")
+        state.shared.last_moves.append(user_greet)
+
+        new_state, matched_rule = ruleset.apply_first_matching("selection", state)
+
+        assert matched_rule is not None
+        assert matched_rule.name == "select_greet"
+        assert len(new_state.private.agenda) == 1
+        move = new_state.private.agenda[0]
+        assert move.move_type == "greet"
+
+    def test_select_priority_plan_over_qud(self):
+        """Test that SelectFromPlan has higher priority than SelectAnswer."""
+        from ibdm.core import Plan
+
+        rules = create_selection_rules()
+        ruleset = RuleSet()
+        for rule in rules:
+            ruleset.add_rule(rule)
+
+        state = InformationState(agent_id="system")
+        # Add both a plan and a QUD with answer
+        question = WhQuestion(variable="x", predicate="weather")
+        plan = Plan(plan_type="findout", content=question, status="active")
+        state.private.plan.append(plan)
+        state.shared.push_qud(question)
+        state.private.beliefs["weather"] = "sunny"
+
+        new_state, matched_rule = ruleset.apply_first_matching("selection", state)
+
+        # Plan should take precedence
+        assert matched_rule is not None
+        assert matched_rule.name == "select_from_plan"
+
+    def test_select_answer_over_ask(self):
+        """Test that SelectAnswer has higher priority than SelectAsk."""
+        rules = create_selection_rules()
+        ruleset = RuleSet()
+        for rule in rules:
+            ruleset.add_rule(rule)
+
+        state = InformationState(agent_id="system")
+        question = WhQuestion(variable="x", predicate="weather")
+        state.shared.push_qud(question)
+        state.private.beliefs["weather"] = "sunny"
+
+        new_state, matched_rule = ruleset.apply_first_matching("selection", state)
+
+        # Should answer, not ask
+        assert matched_rule is not None
+        assert matched_rule.name == "select_answer"
+        move = new_state.private.agenda[0]
+        assert move.move_type == "answer"
+
+    def test_select_fallback_response(self):
+        """Test fallback response is selected when nothing else applies."""
+        rules = create_selection_rules()
+        ruleset = RuleSet()
+        for rule in rules:
+            ruleset.add_rule(rule)
+
+        state = InformationState(agent_id="system")
+        state.control.dialogue_state = "active"
+        # Add some moves so greet doesn't fire
+        # System has already greeted
+        sys_greet = DialogueMove(move_type="greet", content="Hello", speaker="system")
+        state.shared.last_moves.append(sys_greet)
+        # No plans, no QUD - should fallback
+
+        new_state, matched_rule = ruleset.apply_first_matching("selection", state)
+
+        assert matched_rule is not None
+        assert matched_rule.name == "select_fallback"
+        assert len(new_state.private.agenda) == 1
+        move = new_state.private.agenda[0]
+        assert move.move_type == "assert"
 
 
 class TestGenerationRules:
