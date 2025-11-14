@@ -10,7 +10,6 @@ This verifies:
 - Complete multi-turn dialogue
 """
 
-
 from ibdm.core import DialogueMove, InformationState, WhQuestion
 from ibdm.domains.nda_domain import get_nda_domain
 from ibdm.engine import DialogueMoveEngine

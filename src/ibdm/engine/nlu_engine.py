@@ -456,14 +456,6 @@ class NLUDialogueEngine(DialogueMoveEngine):
             metadata={"intended_as_answer": True},
         )
 
-    def reset(self) -> None:
-        """Reset the engine.
-
-        Note: NLU context (entities, references) is now managed by Burr State,
-        not by the engine. Callers should reset NLUContext separately if needed.
-        """
-        super().reset()
-
     def __str__(self) -> str:
         """Return string representation."""
         return (

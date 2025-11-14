@@ -14,7 +14,6 @@ Chain of Causation:
 NO MOCKING - everything uses real implementations.
 """
 
-
 from ibdm.core import InformationState, WhQuestion
 from ibdm.engine import DialogueMoveEngine
 from ibdm.rules import (

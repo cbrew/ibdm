@@ -7,7 +7,6 @@ Tests that the complete NDA workflow uses the domain model correctly:
 - Domain validates answers (type checking)
 """
 
-
 from ibdm.core.information_state import InformationState
 from ibdm.core.moves import DialogueMove
 from ibdm.core.questions import WhQuestion
