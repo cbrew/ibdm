@@ -116,6 +116,14 @@ def main():
     parser = argparse.ArgumentParser(description="Generate Larsson fidelity report")
     parser.add_argument("--output", "-o", help="Output file path (default: stdout)", default=None)
     parser.add_argument("--json", "-j", action="store_true", help="Output in JSON format")
+    parser.add_argument(
+        "--plot",
+        "-p",
+        help="Generate visualization charts (requires matplotlib). "
+        "Specify output directory for charts",
+        metavar="DIR",
+        default=None,
+    )
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
 
     args = parser.parse_args()
@@ -150,6 +158,24 @@ def main():
         print(f"Report written to: {output_path}")
     else:
         print(report)
+
+    # Generate visualizations if requested
+    if args.plot:
+        if args.verbose:
+            print(f"Generating visualizations in {args.plot}...")
+
+        try:
+            from ibdm.metrics.visualization import create_visualizations
+
+            charts = create_visualizations(score, args.plot)
+
+            print("\nVisualizations created:")
+            for chart_type, chart_path in charts.items():
+                print(f"  • {chart_type}: {chart_path}")
+
+        except ImportError as e:
+            print(f"\n⚠ Warning: Could not generate visualizations: {e}")
+            print("  Install matplotlib: pip install matplotlib")
 
     # Exit with status code based on pass/fail
     return 0 if score.passed else 1

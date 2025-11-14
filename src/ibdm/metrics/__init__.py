@@ -11,6 +11,11 @@ Key metrics:
 - Domain independence
 - Overall Larsson fidelity score
 
+Visualization:
+- Dashboard with all metrics
+- Component score charts
+- Detailed breakdowns
+
 Reference: docs/LARSSON_ALGORITHMS.md
 """
 
@@ -24,12 +29,28 @@ from .larsson_fidelity import (
     SemanticOperationsMetrics,
 )
 
-__all__ = [
-    "ArchitecturalComplianceMetrics",
-    "InformationStateMetrics",
-    "SemanticOperationsMetrics",
-    "RulesCoverageMetrics",
-    "DomainIndependenceMetrics",
-    "LarsonFidelityScore",
-    "MetricResult",
-]
+# Import visualization if matplotlib available
+try:
+    from .visualization import MetricsVisualizer, create_visualizations
+
+    __all__ = [
+        "ArchitecturalComplianceMetrics",
+        "InformationStateMetrics",
+        "SemanticOperationsMetrics",
+        "RulesCoverageMetrics",
+        "DomainIndependenceMetrics",
+        "LarsonFidelityScore",
+        "MetricResult",
+        "MetricsVisualizer",
+        "create_visualizations",
+    ]
+except ImportError:
+    __all__ = [
+        "ArchitecturalComplianceMetrics",
+        "InformationStateMetrics",
+        "SemanticOperationsMetrics",
+        "RulesCoverageMetrics",
+        "DomainIndependenceMetrics",
+        "LarsonFidelityScore",
+        "MetricResult",
+    ]
