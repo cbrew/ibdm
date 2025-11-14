@@ -323,9 +323,14 @@ def _integrate_answer(state: InformationState) -> InformationState:
     """Integrate an 'answer' move by resolving QUD and updating commitments.
 
     When an answer is provided:
-    1. Check if it resolves the top QUD
+    1. Check if it resolves the top QUD (using domain validation)
     2. If so, pop the question from QUD
     3. Add the answer as a shared commitment
+
+    Note:
+        Uses domain.resolves() for semantic validation (Larsson Section 2.4.3)
+        instead of just Question.resolves_with() to enable domain-level
+        type checking and validation.
     """
     new_state = state.clone()
     move = new_state.private.beliefs.get("_temp_move")
@@ -336,15 +341,23 @@ def _integrate_answer(state: InformationState) -> InformationState:
     if isinstance(move.content, Answer):
         answer = move.content
 
-        # Check if this answer resolves the top QUD
+        # Check if this answer resolves the top QUD using domain validation
         top_question = new_state.shared.top_qud()
-        if top_question and top_question.resolves_with(answer):
-            # Pop the resolved question
-            new_state.shared.pop_qud()
+        if top_question:
+            # Get domain for semantic validation
+            from ibdm.domains.nda_domain import get_nda_domain
 
-            # Add answer as a commitment (convert to string for simplicity)
-            commitment = f"{top_question}: {answer.content}"
-            new_state.shared.commitments.add(commitment)
+            domain = get_nda_domain()
+
+            # Use domain.resolves() for type checking and validation
+            # This implements Larsson (2002) Section 2.4.3 semantic operation
+            if domain.resolves(answer, top_question):
+                # Pop the resolved question
+                new_state.shared.pop_qud()
+
+                # Add answer as a commitment (convert to string for simplicity)
+                commitment = f"{top_question}: {answer.content}"
+                new_state.shared.commitments.add(commitment)
 
         # Add to last_moves
         new_state.shared.last_moves.append(move)
