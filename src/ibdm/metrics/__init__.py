@@ -27,6 +27,7 @@ from .larsson_fidelity import (
     MetricResult,
     RulesCoverageMetrics,
     SemanticOperationsMetrics,
+    evaluate_larsson_fidelity,
 )
 
 # Import visualization if matplotlib available
@@ -41,6 +42,7 @@ try:
         "DomainIndependenceMetrics",
         "LarsonFidelityScore",
         "MetricResult",
+        "evaluate_larsson_fidelity",
         "MetricsVisualizer",
         "create_visualizations",
     ]
@@ -53,4 +55,5 @@ except ImportError:
         "DomainIndependenceMetrics",
         "LarsonFidelityScore",
         "MetricResult",
+        "evaluate_larsson_fidelity",
     ]
