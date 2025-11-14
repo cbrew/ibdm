@@ -160,6 +160,43 @@ class TestIntegrationRules:
         assert len(new_state.shared.qud) == 0  # QUD should be popped
         assert len(new_state.shared.commitments) > 0
 
+    def test_integrate_answer_completes_subplan(self):
+        """Test answer integration marks corresponding subplan as completed."""
+        from ibdm.core import Plan
+
+        rules = create_integration_rules()
+        ruleset = RuleSet()
+        for rule in rules:
+            ruleset.add_rule(rule)
+
+        state = InformationState(agent_id="system")
+
+        # Create a question and corresponding findout subplan
+        question = WhQuestion(variable="x", predicate="departure_city")
+        subplan = Plan(plan_type="findout", content=question, status="active")
+
+        # Create a parent plan with the subplan
+        parent_plan = Plan(
+            plan_type="nda_drafting", content="draft_nda", status="active", subplans=[subplan]
+        )
+        state.private.plan.append(parent_plan)
+
+        # Push question to QUD
+        state.shared.push_qud(question)
+
+        # Create answer move
+        answer = Answer(content="New York", question_ref=question)
+        move = DialogueMove(move_type="answer", content=answer, speaker="user")
+        state.private.beliefs["_temp_move"] = move
+
+        new_state = ruleset.apply_rules("integration", state)
+
+        # Check that QUD was popped
+        assert len(new_state.shared.qud) == 0
+
+        # Check that subplan was marked as completed
+        assert new_state.private.plan[0].subplans[0].status == "completed"
+
     def test_integrate_greet_adds_response(self):
         """Test greeting integration adds response to agenda."""
         rules = create_integration_rules()

@@ -249,6 +249,38 @@ def _extract_context(move: DialogueMove, state: InformationState) -> dict:
     return {}
 
 
+def _complete_subplan_for_question(state: InformationState, question: Question) -> None:
+    """Mark the subplan corresponding to a question as completed.
+
+    When an answer resolves a question, find the findout subplan that
+    contains that question and mark it as completed. This allows plan
+    progression.
+
+    Args:
+        state: Information state containing plans
+        question: The question that was resolved
+
+    Note:
+        Implements Larsson (2002) Section 2.6 plan execution mechanism.
+        Modifies state in-place.
+    """
+    # Iterate through active plans
+    for plan in state.private.plan:
+        if not plan.is_active():
+            continue
+
+        # Check subplans for matching findout
+        for subplan in plan.subplans:
+            if not subplan.is_active():
+                continue
+
+            # Check if this is a findout subplan with matching question
+            if subplan.plan_type == "findout" and subplan.content == question:
+                # Mark subplan as completed
+                subplan.complete()
+                return  # Found and completed, done
+
+
 def _integrate_command(state: InformationState) -> InformationState:
     """Integrate a 'command' move by treating it like a request.
 
@@ -358,6 +390,10 @@ def _integrate_answer(state: InformationState) -> InformationState:
                 # Add answer as a commitment (convert to string for simplicity)
                 commitment = f"{top_question}: {answer.content}"
                 new_state.shared.commitments.add(commitment)
+
+                # Mark corresponding subplan as completed (Larsson Section 2.6)
+                # Find and complete the findout subplan for this question
+                _complete_subplan_for_question(new_state, top_question)
 
         # Add to last_moves
         new_state.shared.last_moves.append(move)
