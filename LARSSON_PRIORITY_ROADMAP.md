@@ -17,17 +17,11 @@ Tasks are prioritized based on:
 
 ---
 
-## TIER 0: CRITICAL BLOCKERS (Do First)
+## TIER 0: INFRASTRUCTURE (Resolved)
 
-### 1. ibdm-zfl.9 - Configure IBDM_API_KEY ⚠️ INFRASTRUCTURE
-**Priority**: P0 → **CRITICAL**
-**Why**: Blocks ALL LLM functionality (NLU, NLG)
-**Status**: IBDM_API_KEY not in environment
-**Larsson Impact**: Required for modern NLU/NLG integration
-**Action**: Configure in container environment, verify with test script
-
-**Dependencies**: None
-**Blocks**: All NLU (ibdm-64.*), all demos (ibdm-dem.*), all loop tests requiring API
+### ~~1. ibdm-zfl.9 - Configure IBDM_API_KEY~~ ✅ RESOLVED
+**Status**: CLOSED - IBDM_API_KEY is available in container environment
+**Note**: Per CLAUDE.md, IBDM_API_KEY is configured and accessible via `os.getenv("IBDM_API_KEY")`
 
 ---
 
@@ -319,76 +313,68 @@ These are lower priority - focus on getting Tier 1-3 working first.
 
 ## EXECUTION STRATEGY
 
-### Phase A: Critical Infrastructure (Week 1)
-**Goal**: Unblock development
-
-1. **ibdm-zfl.9** - Configure IBDM_API_KEY
-   - Verify API key in environment
-   - Test with examples/simple_llm_demo.py
-   - Confirm both Sonnet and Haiku models work
-
-### Phase B: Core Dialogue Loop (Week 1-2)
+### Phase A: Core Dialogue Loop (Week 1)
 **Goal**: Larsson-compliant dialogue management
 
-2. **ibdm-loop.2-5** - Domain validation and QUD management
+1. **ibdm-loop.2-5** - Domain validation and QUD management
    - Add domain.resolves() to answer integration
    - Handle invalid answers
    - Mark subplans complete
    - Push next question to QUD
    - Test with simple scenarios
 
-3. **ibdm-loop.11-12** - Verification
+2. **ibdm-loop.11-12** - Verification
    - Verify QUD stack behavior across turns
    - Verify plan progress tracking
    - Create multi-turn integration tests
 
-### Phase C: Architectural Cleanup (Week 2)
+### Phase B: Architectural Cleanup (Week 2)
 **Goal**: Fix phase separation violations
 
-4. **ibdm-accom.1-2** - Move accommodation to integration
+3. **ibdm-accom.1-2** - Move accommodation to integration
    - Add accommodate_command rule in integration
    - Remove accommodation from interpretation
    - Update tests
    - Verify both rule-based and NLU paths work
 
-### Phase D: Stateless Engine (Week 2-3)
+### Phase C: Stateless Engine (Week 2-3)
 **Goal**: Pure functions, explicit state
 
-5. **ibdm-bsr.1-7** - Burr-centric refactoring
+4. **ibdm-bsr.1-7** - Burr-centric refactoring
    - Extract InformationState to Burr (Phase 1)
    - Convert all engine methods to pure functions (Phase 2)
    - Update Burr actions (Phase 3)
    - Update tests
    - Verify state persistence/rollback
 
-### Phase E: LLM Integration (Week 3-4)
+### Phase D: LLM Integration (Week 3-4)
 **Goal**: Modern NLU with Larsson structures
 
-6. **ibdm-64.1-2** - LLM adapter foundation
+5. **ibdm-64.1-2** - LLM adapter foundation
    - Design adapter interface
    - Implement prompt templates
    - Test with Claude 4.5 Haiku/Sonnet
 
-7. **ibdm-64.4-8** - Core NLU pipeline
+6. **ibdm-64.4-8** - Core NLU pipeline
    - Semantic parsing (utterance → DialogueMove)
    - Dialogue act classification
    - Question understanding
    - Answer parsing
    - Entity extraction
 
-8. **ibdm-64.17** - Integration
+7. **ibdm-64.17** - Integration
    - Connect NLU pipeline to IBDM engine
    - Test end-to-end
 
-### Phase F: Validation & Demo (Week 4-5)
+### Phase E: Validation & Demo (Week 4-5)
 **Goal**: Prove it works
 
-9. **ibdm-metrics.1** - Larsson fidelity metrics
+8. **ibdm-metrics.1** - Larsson fidelity metrics
    - Define all metric categories
    - Implement measurement
    - Generate compliance report
 
-10. **ibdm-dem.1** - Foundation demo
+9. **ibdm-dem.1** - Foundation demo
     - Setup and visualization
     - Pre-scripted NDA dialogue
     - Metrics dashboard
@@ -451,15 +437,15 @@ Focus: Get core Larsson IBDM working with basic LLM NLU/NLG first!
 
 ## SUMMARY: TOP 10 TASKS IN ORDER
 
-1. **ibdm-zfl.9** - Configure IBDM_API_KEY ⚠️
-2. **ibdm-loop.2** - Add domain validation to answer integration
-3. **ibdm-loop.3** - Handle invalid answers with clarification
-4. **ibdm-loop.4** - Mark subplan complete after valid answer
-5. **ibdm-loop.5** - Push next question to QUD after answer
+1. **ibdm-loop.2** - Add domain validation to answer integration
+2. **ibdm-loop.3** - Handle invalid answers with clarification
+3. **ibdm-loop.4** - Mark subplan complete after valid answer
+4. **ibdm-loop.5** - Push next question to QUD after answer
+5. **ibdm-loop.11** - Verify QUD management across turns
 6. **ibdm-accom.1.1** - Add accommodate_command integration rule
 7. **ibdm-accom.2.1** - Remove accommodate_nda_task from interpretation
 8. **ibdm-bsr.1** - Extract InformationState from engine to Burr State
 9. **ibdm-bsr.3-6** - Convert engine methods to pure functions
 10. **ibdm-64.1-2** - LLM adapter and prompt templates
 
-**Start Here**: ibdm-zfl.9 (API key), then ibdm-loop.2-5 (core loop), then ibdm-accom (phase separation).
+**Start Here**: ibdm-loop.2-5 (core dialogue loop), then ibdm-accom (phase separation), then ibdm-bsr (stateless engine).
