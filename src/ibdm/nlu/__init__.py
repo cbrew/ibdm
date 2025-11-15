@@ -57,6 +57,7 @@ from ibdm.nlu.llm_adapter import (
     ModelType,
     create_adapter,
 )
+from ibdm.nlu.nlu_result import NLUResult
 from ibdm.nlu.prompts import (
     Example,
     PromptTemplate,
@@ -165,4 +166,6 @@ __all__ = [
     "ReferenceResolverConfig",
     "ReferenceType",
     "create_resolver",
+    # NLU Result
+    "NLUResult",
 ]
