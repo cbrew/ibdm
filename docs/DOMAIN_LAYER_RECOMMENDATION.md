@@ -236,6 +236,22 @@ def create_nda_domain() -> DomainModel:
     return domain
 ```
 
+### Travel Domain (Larsson 2002) – Implemented
+
+`src/ibdm/domains/travel_domain.py` mirrors the classic travel agency dialogues
+from Larsson's thesis:
+
+- Predicates: `transport_mode`, `depart_city`, `dest_city`, `depart_day`, `return_day`,
+  `travel_class`, `price_quote`, `return_trip`
+- Sorts: transport means (`plane`, `train`), city inventory (`paris`, `london`, `berlin`, `stockholm`),
+  travel days, cabin classes, and price bands
+- Plan builder: `travel_booking` plan that collects itinerary slots, handles optional
+  return trips, then performs a price lookup (mirrors the Findout/If/ConsultDB
+  sequence described in Chapter 5 of Larsson 2002)
+
+This sits alongside the NDA domain to prove the domain layer supports Larsson's
+original travel task as well as modern legal drafting workflows.
+
 ---
 
 ## Integration with Rules
