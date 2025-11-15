@@ -17,7 +17,7 @@ from ibdm.engine import DialogueMoveEngine
     reads=["utterance", "speaker", "information_state", "engine", "nlu_context"],
     writes=["moves", "nlu_context"],
 )
-def interpret(state: State) -> tuple[dict[str, Any], State]:
+def interpret(state: "State[Any]") -> tuple[dict[str, Any], "State[Any]"]:
     """Interpret utterance into dialogue moves.
 
     Args:
@@ -38,17 +38,21 @@ def interpret(state: State) -> tuple[dict[str, Any], State]:
     # Check if engine supports NLU context (Phase 4: NLU state integration)
     if hasattr(engine, "interpret_with_nlu_context"):
         # Get NLU context from state (or create empty if not present)
-        nlu_context_dict = state.get("nlu_context", NLUContext.create_empty().to_dict())
+        nlu_context_dict: dict[str, Any] = state.get(
+            "nlu_context", NLUContext.create_empty().to_dict()
+        )  # type: ignore[assignment, attr-defined]
         nlu_context = NLUContext.from_dict(nlu_context_dict)
 
         # Use NLU-aware interpretation
-        moves, updated_nlu_context = engine.interpret_with_nlu_context(
+        moves: list[DialogueMove]
+        updated_nlu_context: NLUContext
+        moves, updated_nlu_context = engine.interpret_with_nlu_context(  # type: ignore[attr-defined]
             utterance, speaker, info_state, nlu_context
         )
 
         # Convert moves and NLU context to dicts for storage
-        moves_dicts = [m.to_dict() for m in moves]
-        updated_nlu_context_dict = updated_nlu_context.to_dict()
+        moves_dicts: list[dict[str, Any]] = [m.to_dict() for m in moves]
+        updated_nlu_context_dict: dict[str, Any] = updated_nlu_context.to_dict()
 
         # Update state with moves and NLU context
         result = {"moves": moves_dicts, "move_count": len(moves)}
@@ -66,7 +70,7 @@ def interpret(state: State) -> tuple[dict[str, Any], State]:
 
 
 @action(reads=["moves", "information_state", "engine"], writes=["information_state", "integrated"])
-def integrate(state: State) -> tuple[dict[str, Any], State]:
+def integrate(state: "State[Any]") -> tuple[dict[str, Any], "State[Any]"]:
     """Integrate dialogue moves into information state.
 
     Args:
@@ -100,7 +104,7 @@ def integrate(state: State) -> tuple[dict[str, Any], State]:
     reads=["information_state", "engine"],
     writes=["information_state", "response_move", "has_response"],
 )
-def select(state: State) -> tuple[dict[str, Any], State]:
+def select(state: "State[Any]") -> tuple[dict[str, Any], "State[Any]"]:
     """Select next dialogue action.
 
     Args:
@@ -141,7 +145,7 @@ def select(state: State) -> tuple[dict[str, Any], State]:
     reads=["response_move", "information_state", "engine"],
     writes=["information_state", "utterance_text"],
 )
-def generate(state: State) -> tuple[dict[str, Any], State]:
+def generate(state: "State[Any]") -> tuple[dict[str, Any], "State[Any]"]:
     """Generate utterance from dialogue move.
 
     Args:
@@ -179,7 +183,7 @@ def generate(state: State) -> tuple[dict[str, Any], State]:
 
 
 @action(reads=[], writes=["information_state", "engine", "nlu_context", "ready"])
-def initialize(state: State) -> tuple[dict[str, Any], State]:
+def initialize(state: "State[Any]") -> tuple[dict[str, Any], "State[Any]"]:
     """Initialize the dialogue engine, information state, and NLU context.
 
     Args:
@@ -220,7 +224,9 @@ def initialize(state: State) -> tuple[dict[str, Any], State]:
 
 
 @action(reads=[], writes=["utterance", "speaker"])
-def receive_input(state: State, utterance: str, speaker: str) -> tuple[dict[str, Any], State]:
+def receive_input(
+    state: "State[Any]", utterance: str, speaker: str
+) -> tuple[dict[str, Any], "State[Any]"]:
     """Receive user input.
 
     Args:
@@ -236,7 +242,7 @@ def receive_input(state: State, utterance: str, speaker: str) -> tuple[dict[str,
 
 
 @action(reads=[], writes=[])
-def idle(state: State) -> tuple[dict[str, Any], State]:
+def idle(state: "State[Any]") -> tuple[dict[str, Any], "State[Any]"]:
     """Idle state - waiting for input.
 
     Args:
