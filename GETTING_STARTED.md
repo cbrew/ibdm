@@ -293,6 +293,10 @@ response = engine.process_input(
 
 ## Multi-Agent Example
 
+**Note**: Multi-agent system is planned but not yet implemented. See [LARSSON_PRIORITY_ROADMAP.md](LARSSON_PRIORITY_ROADMAP.md) for status (ibdm-tty epic).
+
+**Planned API** (conceptual):
+
 ```python
 from ibdm.multi_agent import MultiAgentDialogueSystem, Agent, AgentRole
 
@@ -353,11 +357,19 @@ Keep track of what's been mutually agreed upon. This prevents redundant question
 
 ## Next Steps
 
-1. Read the full [Development Plan](DEVELOPMENT_PLAN.md)
-2. Explore the [Project Structure](PROJECT_STRUCTURE.md)
-3. Start implementing core data structures in `src/ibdm/core/`
-4. Write tests as you go in `tests/unit/`
-5. Build simple examples in `examples/`
+**For Understanding the System**:
+1. Run the demos in `demos/` to see IBDM in action:
+   - `demos/01_core_concepts.py` - See concepts in practice
+   - `demos/03_nlu_integration_interactive.py` - Try interactive dialogue
+2. Read [SYSTEM_ACHIEVEMENTS.md](SYSTEM_ACHIEVEMENTS.md) for current status
+3. Review [docs/LARSSON_ALGORITHMS.md](docs/LARSSON_ALGORITHMS.md) for algorithm details
+
+**For Development**:
+1. Read [CLAUDE.md](CLAUDE.md) - Development workflow and policies
+2. Check [LARSSON_PRIORITY_ROADMAP.md](LARSSON_PRIORITY_ROADMAP.md) for current priorities
+3. Explore implemented code in `src/ibdm/`
+4. Run tests: `pytest tests/`
+5. See [docs/INDEX.md](docs/INDEX.md) for complete documentation
 
 ## Further Reading
 
