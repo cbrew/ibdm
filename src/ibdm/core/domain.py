@@ -40,7 +40,7 @@ class PredicateSpec:
 
     name: str
     arity: int
-    arg_types: list[str] = field(default_factory=list)
+    arg_types: list[str] = field(default_factory=lambda: [])
     description: str = ""
 
 
@@ -85,7 +85,7 @@ class DomainModel:
         self.name = name
         self.predicates: dict[str, PredicateSpec] = {}
         self.sorts: dict[str, list[str]] = {}
-        self._plan_builders: dict[str, Callable[[dict], Plan]] = {}
+        self._plan_builders: dict[str, Callable[[dict[str, Any]], Plan]] = {}
 
     def add_predicate(
         self,
@@ -132,7 +132,7 @@ class DomainModel:
         """
         self.sorts[name] = individuals
 
-    def register_plan_builder(self, task: str, builder: Callable[[dict], Plan]):
+    def register_plan_builder(self, task: str, builder: Callable[[dict[str, Any]], Plan]):
         """Register plan builder function for task.
 
         Plan builders create dialogue plans for specific tasks.
@@ -142,7 +142,7 @@ class DomainModel:
             builder: Function that takes context dict and returns Plan
 
         Example:
-            >>> def build_nda_plan(context: dict) -> Plan:
+            >>> def build_nda_plan(context: dict[str, Any]) -> Plan:
             ...     return Plan(plan_type="nda_drafting", subplans=[...])
             >>> domain.register_plan_builder("nda_drafting", build_nda_plan)
         """
@@ -200,10 +200,10 @@ class DomainModel:
             >>> domain.relevant(prop, question)  # True (same predicate)
         """
         if hasattr(prop, "predicate") and hasattr(question, "predicate"):
-            return prop.predicate == question.predicate
+            return getattr(prop, "predicate") == getattr(question, "predicate")
         return False
 
-    def get_plan(self, task: str, context: dict | None = None) -> Plan:
+    def get_plan(self, task: str, context: dict[str, Any] | None = None) -> Plan:
         """Get dialogue plan for task.
 
         Dispatches to registered plan builder. This replaces hardcoded
@@ -245,7 +245,8 @@ class DomainModel:
         if not hasattr(question, "predicate"):
             return True
 
-        pred_spec = self.predicates.get(question.predicate)
+        predicate_name = getattr(question, "predicate")
+        pred_spec = self.predicates.get(predicate_name)
         if not pred_spec:
             return True  # No spec, accept
 

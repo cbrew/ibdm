@@ -27,10 +27,10 @@ def interpret(state: State) -> tuple[dict[str, Any], State]:
     Returns:
         Tuple of (result dict, updated state)
     """
-    utterance: str = state["utterance"]
-    speaker: str = state["speaker"]
-    info_state_dict: dict = state["information_state"]
-    engine: DialogueMoveEngine = state["engine"]
+    utterance: str = state["utterance"]  # type: ignore[index]
+    speaker: str = state["speaker"]  # type: ignore[index]
+    info_state_dict: dict[str, Any] = state["information_state"]  # type: ignore[index]
+    engine: DialogueMoveEngine = state["engine"]  # type: ignore[index]
 
     # Convert dict to InformationState object
     info_state = InformationState.from_dict(info_state_dict)
@@ -75,9 +75,9 @@ def integrate(state: State) -> tuple[dict[str, Any], State]:
     Returns:
         Tuple of (result dict, updated state with updated information_state)
     """
-    moves_dicts: list[dict] = state["moves"]
-    info_state_dict: dict = state["information_state"]
-    engine: DialogueMoveEngine = state["engine"]
+    moves_dicts: list[dict[str, Any]] = state["moves"]  # type: ignore[index]
+    info_state_dict: dict[str, Any] = state["information_state"]  # type: ignore[index]
+    engine: DialogueMoveEngine = state["engine"]  # type: ignore[index]
 
     # Convert from dicts to objects
     moves = [DialogueMove.from_dict(m) for m in moves_dicts]
@@ -109,8 +109,8 @@ def select(state: State) -> tuple[dict[str, Any], State]:
     Returns:
         Tuple of (result dict, updated state)
     """
-    info_state_dict: dict = state["information_state"]
-    engine: DialogueMoveEngine = state["engine"]
+    info_state_dict: dict[str, Any] = state["information_state"]  # type: ignore[index]
+    engine: DialogueMoveEngine = state["engine"]  # type: ignore[index]
 
     # Convert from dict to object
     info_state = InformationState.from_dict(info_state_dict)
@@ -150,9 +150,9 @@ def generate(state: State) -> tuple[dict[str, Any], State]:
     Returns:
         Tuple of (result dict, updated state with updated information_state)
     """
-    response_move_dict: dict | None = state["response_move"]
-    info_state_dict: dict = state["information_state"]
-    engine: DialogueMoveEngine = state["engine"]
+    response_move_dict: dict[str, Any] | None = state["response_move"]  # type: ignore[index]
+    info_state_dict: dict[str, Any] = state["information_state"]  # type: ignore[index]
+    engine: DialogueMoveEngine = state["engine"]  # type: ignore[index]
 
     if response_move_dict is None:
         result = {"utterance_text": ""}
@@ -189,10 +189,10 @@ def initialize(state: State) -> tuple[dict[str, Any], State]:
         Tuple of (result dict, updated state with engine, information_state, and nlu_context)
     """
     # Get initialization parameters from state if available
-    agent_id = state.get("agent_id", "system")
-    rules = state.get("rules", None)
-    engine_class = state.get("engine_class", DialogueMoveEngine)
-    engine_config = state.get("engine_config", None)
+    agent_id: str = state.get("agent_id", "system")  # type: ignore[assignment]
+    rules = state.get("rules", None)  # type: ignore[attr-defined]
+    engine_class = state.get("engine_class", DialogueMoveEngine)  # type: ignore[attr-defined]
+    engine_config = state.get("engine_config", None)  # type: ignore[attr-defined]
 
     # Create initial InformationState and convert to dict for Burr State
     information_state = InformationState(agent_id=agent_id)

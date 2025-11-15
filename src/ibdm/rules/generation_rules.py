@@ -176,7 +176,7 @@ def _generate_greeting_text(state: InformationState) -> InformationState:
     move = new_state.private.beliefs.get("_temp_generate_move")
 
     # Context-aware greeting
-    if move.content == "greeting_response":
+    if move is not None and move.content == "greeting_response":
         # Responding to a greeting
         text = "Hello! How can I help you today?"
     else:
@@ -192,7 +192,7 @@ def _generate_quit_text(state: InformationState) -> InformationState:
     new_state = state.clone()
     move = new_state.private.beliefs.get("_temp_generate_move")
 
-    if move.content == "quit_response":
+    if move is not None and move.content == "quit_response":
         # Responding to quit
         text = "Goodbye! Have a great day!"
     else:
@@ -209,7 +209,10 @@ def _generate_command_text(state: InformationState) -> InformationState:
     move = new_state.private.beliefs.get("_temp_generate_move")
 
     # Acknowledge the command
-    text = f"I understand: {move.content}"
+    if move is not None:
+        text = f"I understand: {move.content}"
+    else:
+        text = "I understand."
 
     new_state.private.beliefs["_temp_generated_text"] = text
     return new_state
@@ -219,6 +222,11 @@ def _generate_question_text(state: InformationState) -> InformationState:
     """Generate text for a question move with plan awareness."""
     new_state = state.clone()
     move = new_state.private.beliefs.get("_temp_generate_move")
+
+    if move is None:
+        new_state.private.beliefs["_temp_generated_text"] = "What?"
+        return new_state
+
     question = move.content
 
     # Check for active plan
@@ -267,17 +275,13 @@ def _generate_generic_question(question: WhQuestion | YNQuestion | AltQuestion) 
         proposition = question.proposition.replace("_", " ")
         return f"{proposition.capitalize()}?"
 
-    elif isinstance(question, AltQuestion):
+    else:  # AltQuestion
         # Generate alternative question text
         if len(question.alternatives) == 2:
             return f"{question.alternatives[0].capitalize()} or {question.alternatives[1]}?"
         else:
             alt_list = ", ".join(question.alternatives[:-1])
             return f"{alt_list.capitalize()}, or {question.alternatives[-1]}?"
-
-    else:
-        # Fallback to string representation
-        return str(question)
 
 
 def _generate_nda_question(
@@ -344,12 +348,8 @@ def _generate_nda_question(
             # Generic alternative question
             text = _generate_generic_question(question)
 
-    elif isinstance(question, YNQuestion):
+    else:  # YNQuestion
         # Yes/no questions
-        text = _generate_generic_question(question)
-
-    else:
-        # Fallback
         text = _generate_generic_question(question)
 
     # Add progress indicator if not first question
@@ -363,6 +363,10 @@ def _generate_answer_text(state: InformationState) -> InformationState:
     """Generate text for an answer move."""
     new_state = state.clone()
     move = new_state.private.beliefs.get("_temp_generate_move")
+
+    if move is None:
+        new_state.private.beliefs["_temp_generated_text"] = "I don't have an answer."
+        return new_state
 
     answer = move.content
 
@@ -400,6 +404,10 @@ def _generate_assertion_text(state: InformationState) -> InformationState:
     """Generate text for an assertion move."""
     new_state = state.clone()
     move = new_state.private.beliefs.get("_temp_generate_move")
+
+    if move is None:
+        new_state.private.beliefs["_temp_generated_text"] = "OK."
+        return new_state
 
     content = move.content
 
