@@ -30,13 +30,14 @@ Inspired by @heatherleaf's PyTrindikit
 ### Installation
 
 ```bash
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # or `venv\Scripts\activate` on Windows
+# Install dependencies using uv (recommended)
+uv pip install --system -e ".[dev]"
 
-# Install in development mode
+# Or using regular pip
 pip install -e ".[dev]"
 ```
+
+See [docs/environment_setup.md](docs/environment_setup.md) for API key configuration.
 
 ### Basic Example
 
@@ -90,45 +91,51 @@ The system follows the IBDM control loop:
 
 ### Multi-Agent System
 
-```python
-from ibdm.multi_agent import MultiAgentDialogueSystem, Agent, AgentRole
+**Note**: Multi-agent system is planned but not yet implemented. See [LARSSON_PRIORITY_ROADMAP.md](LARSSON_PRIORITY_ROADMAP.md) for status.
 
-# Create multi-agent system
-system = MultiAgentDialogueSystem()
-
-# Add specialized agents
-info_agent = Agent("info_provider", role=AgentRole.INFO_PROVIDER)
-seeker_agent = Agent("info_seeker", role=AgentRole.INFO_SEEKER)
-
-system.add_agent(info_agent)
-system.add_agent(seeker_agent)
-
-# Agents coordinate through shared QUD and commitments
-```
+Planned features:
+- Specialized agents with different roles
+- Shared QUD and commitment tracking
+- Turn-taking and arbitration
+- Agent coordination protocols
 
 ## Documentation
 
-- [Development Plan](DEVELOPMENT_PLAN.md) - Comprehensive implementation roadmap
-- [Project Structure](PROJECT_STRUCTURE.md) - Code organization and architecture
-- [Theory Guide](docs/theory.md) - Theoretical background and concepts (coming soon)
-- [API Documentation](docs/api.md) - Detailed API reference (coming soon)
-- [Tutorial](docs/tutorial.md) - Step-by-step tutorial (coming soon)
+**Quick Reference**:
+- [CLAUDE.md](CLAUDE.md) - **Development guide** (start here for development)
+- [GETTING_STARTED.md](GETTING_STARTED.md) - Tutorial and concepts
+- [docs/INDEX.md](docs/INDEX.md) - Complete documentation index
+
+**Status & Planning**:
+- [SYSTEM_ACHIEVEMENTS.md](SYSTEM_ACHIEVEMENTS.md) - Current implementation status
+- [LARSSON_PRIORITY_ROADMAP.md](LARSSON_PRIORITY_ROADMAP.md) - Active roadmap
+
+**Architecture**:
+- [docs/architecture_principles.md](docs/architecture_principles.md) - Design principles
+- [docs/LARSSON_ALGORITHMS.md](docs/LARSSON_ALGORITHMS.md) - Authoritative algorithms reference
+
+**Historical**:
+- [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) - Original 8-phase plan (historical)
+- [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) - Ideal structure (historical)
 
 ## Development Status
 
-**Current Phase**: Foundation (Phase 1)
+**Current Phase**: Phase 3.5 Complete (LLM-NLU Integration)
 
-- [x] Project structure
-- [x] Development plan
-- [ ] Core data structures
-- [ ] Update rule system
-- [ ] Dialogue Move Engine
-- [ ] Burr integration
-- [ ] Multi-agent system
-- [ ] Accommodation mechanisms
-- [ ] Grounding and ICM
+- [x] Project structure and core data structures
+- [x] Update rule system (interpretation, integration, selection, generation)
+- [x] Dialogue Move Engine with Burr integration
+- [x] Domain semantic layer (NDA domain)
+- [x] LLM-based NLU with Claude 4.5 Sonnet/Haiku
+- [x] Entity extraction and reference resolution
+- [x] Task plan formation and accommodation
+- [ ] Stateless engine refactoring (in progress)
+- [ ] Multi-agent system (planned)
+- [ ] Grounding and ICM (planned)
 
-See [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) for the complete roadmap.
+**Stats**: 10,893 LOC, 527 tests, 88% test coverage
+
+See [SYSTEM_ACHIEVEMENTS.md](SYSTEM_ACHIEVEMENTS.md) for detailed status and [LARSSON_PRIORITY_ROADMAP.md](LARSSON_PRIORITY_ROADMAP.md) for current priorities.
 
 ## Testing
 
@@ -145,14 +152,26 @@ pytest tests/integration
 pytest tests/property
 ```
 
-## Examples
+## Demos & Examples
 
-See the `examples/` directory for complete examples:
+### Interactive Demos (`demos/`)
 
-- `simple_qa.py` - Basic question-answering dialogue
-- `task_oriented.py` - Task-oriented dialogue with plans
-- `multi_agent_travel.py` - Multi-agent travel booking scenario
-- `accommodation_demo.py` - Question and task accommodation
+Comprehensive demonstrations of IBDM features:
+
+- `01_core_concepts.py` - Fundamental IBDM concepts (no API key needed)
+- `02_cost_analysis.py` - LLM cost comparison (no API key needed)
+- `03_nlu_integration_interactive.py` - Interactive NDA dialogue (requires IBDM_API_KEY)
+- `03_nlu_integration_basic.py` - Pre-scripted NDA demo (requires IBDM_API_KEY)
+
+See [demos/README.md](demos/README.md) for detailed usage instructions.
+
+### LLM Examples (`examples/`)
+
+Simple examples of LiteLLM integration:
+
+- `simple_llm_demo.py` - Claude 4.5 Sonnet/Haiku usage (requires IBDM_API_KEY)
+
+See [examples/README.md](examples/README.md) for configuration details.
 
 ## Contributing
 
