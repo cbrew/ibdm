@@ -95,6 +95,7 @@ from ibdm.nlu.semantic_parser import (
 from ibdm.nlu.semantic_parser import (
     create_parser as create_semantic_parser,
 )
+from ibdm.nlu.nlu_engine import NLUEngine, NLUEngineConfig, create_nlu_engine
 
 __all__ = [
     # LLM Adapter
@@ -168,4 +169,8 @@ __all__ = [
     "create_resolver",
     # NLU Result
     "NLUResult",
+    # NLU Engine
+    "NLUEngine",
+    "NLUEngineConfig",
+    "create_nlu_engine",
 ]
