@@ -93,12 +93,26 @@ ruff check --fix src/ tests/                 # Check and fix issues
 
 ### 3. Type Checking: pyright
 
+**Policy**: Type errors are indicators of bad code and MUST be fixed. Zero tolerance for type errors in code you write or modify.
+
 ```bash
 pyright                                      # Type check entire project
 pyright src/ibdm/core/                       # Type check specific module
 ```
 
 **Config**: `pyproject.toml` sets `typeCheckingMode = "strict"`
+
+**Requirements**:
+- ALL new code must pass pyright with zero errors
+- When modifying existing code, fix ALL type errors in functions/classes you touch
+- Type errors indicate design problems: incomplete error handling, missing None checks, unclear types
+- Never suppress type errors with `# type: ignore` without understanding and documenting why
+
+**Common Issues & Fixes**:
+- `reportOptionalMemberAccess`: Check for None before accessing attributes (`if obj is not None: obj.attr`)
+- `reportUnknownVariableType`: Add proper type annotations to variables and function parameters
+- `reportUnnecessaryIsInstance`: Remove redundant type checks after earlier isinstance() calls
+- `reportUnknownArgumentType`: Ensure function parameters have proper type annotations
 
 ### 9. LLM Provider: LiteLLM
 
