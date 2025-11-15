@@ -1,0 +1,518 @@
+{
+  "issues": [
+    {
+      "id": "ibdm-burr-nlu-nlg",
+      "content_hash": "55fe29223404a81c7be944f5b8d6bf2aa38e405ca0c21b37f6ab167f96900aae",
+      "title": "Refactor: Move NLU/NLG to Explicit Burr Actions",
+      "description": "Architectural refactoring to make NLU and NLG explicit stages in the Burr control loop.\n\nCurrent problem:\n- NLU processing hidden inside engine.interpret()\n- NLG processing hidden inside engine.generate()\n- Can't inspect intermediate results in Burr State\n- Can't swap NLU/NLG strategies easily\n- Violates architectural clarity principle (Policy #0)\n\nGoal:\n- Phase 1: 6-stage pipeline (nlu \u2192 interpret \u2192 integrate \u2192 select \u2192 nlg \u2192 output)\n- Phase 2: 8-stage pipeline (nlu_classify \u2192 nlu_enrich \u2192 interpret \u2192 integrate \u2192 select \u2192 nlg_plan \u2192 nlg_realize \u2192 output)\n- Improve debuggability, testability, flexibility\n- Strengthen Larsson fidelity (93% \u2192 95%)\n\nSee:\n- docs/NLU_NLG_BURR_REFACTORING.md (6-stage proposal)\n- docs/FINE_GRAINED_BURR_PIPELINE.md (8-stage exploration)\n- docs/SYSTEM_DESIGN_AND_LARSSON_ALIGNMENT.md (current architecture)",
+      "status": "open",
+      "priority": 0,
+      "issue_type": "epic",
+      "created_at": "2025-11-15T10:51:26.213721+00:00",
+      "updated_at": "2025-11-15T10:51:26.213721+00:00",
+      "source_repo": ".",
+      "labels": [
+        "architecture",
+        "refactoring",
+        "burr",
+        "nlu",
+        "nlg",
+        "clarity"
+      ]
+    },
+    {
+      "id": "ibdm-burr-nlu-nlg.1",
+      "content_hash": "767133f95b386005cba196964625dbb661388728be4fddc5d206eca8694eb079",
+      "title": "Phase 1: Implement 6-stage pipeline (NLU/NLG explicit)",
+      "description": "Move NLU and NLG from hidden engine internals to explicit Burr actions.\n\nPipeline: utterance \u2192 nlu \u2192 interpret \u2192 integrate \u2192 select \u2192 nlg \u2192 output\n\nSteps:\n1. Create NLUEngine and NLGEngine components\n2. Create nlu() and nlg() Burr actions\n3. Simplify DialogueMoveEngine (remove NLU/NLG logic)\n4. Update Burr action graph\n5. Add integration tests\n\nDeliverable: 6-stage pipeline working with same behavior as current 4-stage\n\nSuccess criteria:\n- NLU results visible in Burr State (nlu_result field)\n- NLG results visible in Burr State (nlg_result field)\n- DialogueMoveEngine simplified (~50% code reduction)\n- All existing tests pass\n- Burr UI shows 6 distinct stages\n\nSee: docs/NLU_NLG_BURR_REFACTORING.md",
+      "status": "open",
+      "priority": 0,
+      "issue_type": "task",
+      "created_at": "2025-11-15T10:51:26.213786+00:00",
+      "updated_at": "2025-11-15T10:51:26.213786+00:00",
+      "source_repo": ".",
+      "labels": [
+        "architecture",
+        "refactoring",
+        "burr",
+        "nlu",
+        "nlg",
+        "phase-1"
+      ],
+      "parent": "ibdm-burr-nlu-nlg"
+    },
+    {
+      "id": "ibdm-burr-nlu-nlg.1.1",
+      "content_hash": "391ab5976476a58a789d25c15c3558ea0b51bf4881b25e1fbd1e71fc258e7f1d",
+      "title": "Create NLUResult and NLGResult dataclasses",
+      "description": "Create structured result types for NLU and NLG processing.\n\nFiles to create:\n- src/ibdm/nlu/nlu_result.py\n\nClasses:\n- NLUResult: dialogue_act, confidence, entities, intent, question_details, answer_content\n- Methods: to_dict(), from_dict() for Burr State serialization\n\nTesting:\n- tests/unit/test_nlu_result.py\n- Test serialization round-trip\n- Test field validation\n\nAcceptance:\n- NLUResult can be serialized to/from dict\n- All fields properly typed\n- Unit tests pass",
+      "status": "open",
+      "priority": 1,
+      "issue_type": "task",
+      "created_at": "2025-11-15T10:51:26.213794+00:00",
+      "updated_at": "2025-11-15T10:51:26.213794+00:00",
+      "source_repo": ".",
+      "labels": [
+        "nlu",
+        "nlg",
+        "dataclass",
+        "phase-1"
+      ],
+      "parent": "ibdm-burr-nlu-nlg.1"
+    },
+    {
+      "id": "ibdm-burr-nlu-nlg.1.2",
+      "content_hash": "5f69fe531084d2fea8a1c3bf8da0baa866d03d3cfe608717fc2cee4153e8b1b9",
+      "title": "Create NLUEngine component (extract from NLUDialogueEngine)",
+      "description": "Extract NLU processing from NLUDialogueEngine into standalone component.\n\nFiles to create:\n- src/ibdm/nlu/nlu_engine.py\n\nClass NLUEngine:\n- __init__(config: NLUEngineConfig)\n- process(utterance, speaker, context) -> NLUResult\n- update_context(nlu_result, context) -> NLUContext\n\nExtract from NLUDialogueEngine:\n- Dialogue act classification\n- Entity extraction\n- Question analysis\n- Answer parsing\n- Intent classification\n- Reference resolution\n\nTesting:\n- tests/unit/test_nlu_engine.py\n- Test each dialogue act type (ask, answer, command, greet, quit)\n- Test entity extraction\n- Test context updates\n\nAcceptance:\n- NLUEngine produces same results as NLUDialogueEngine.interpret()\n- All NLU tests pass\n- No dependencies on DialogueMoveEngine",
+      "status": "open",
+      "priority": 1,
+      "issue_type": "task",
+      "created_at": "2025-11-15T10:51:26.213800+00:00",
+      "updated_at": "2025-11-15T10:51:26.213800+00:00",
+      "source_repo": ".",
+      "labels": [
+        "nlu",
+        "extraction",
+        "phase-1"
+      ],
+      "parent": "ibdm-burr-nlu-nlg.1"
+    },
+    {
+      "id": "ibdm-burr-nlu-nlg.1.3",
+      "content_hash": "f3ee45e04cc26cd4799de8015eb3923da507429b72d1a393213cbef6e3aecac3",
+      "title": "Create NLGEngine component (extract from generation rules)",
+      "description": "Extract NLG processing from generation rules into standalone component.\n\nFiles to create:\n- src/ibdm/nlg/nlg_engine.py\n- src/ibdm/nlg/nlg_result.py\n\nClass NLGEngine:\n- __init__(config: NLGEngineConfig)\n- generate(move, state) -> NLGResult\n\nClass NLGResult:\n- utterance_text: str\n- strategy: str (template | plan_aware | llm)\n- generation_rule: str | None\n- tokens_used: int\n- latency: float\n\nExtract from generation rules:\n- Template-based generation\n- Plan-aware generation\n- LLM-based generation\n- Strategy selection logic\n\nTesting:\n- tests/unit/test_nlg_engine.py\n- Test each generation strategy\n- Test move types (ask, answer, greet, etc.)\n- Test performance tracking (tokens, latency)\n\nAcceptance:\n- NLGEngine produces same text as current generation rules\n- Strategy selection visible in NLGResult\n- Performance metrics captured\n- All NLG tests pass",
+      "status": "open",
+      "priority": 1,
+      "issue_type": "task",
+      "created_at": "2025-11-15T10:51:26.213806+00:00",
+      "updated_at": "2025-11-15T10:51:26.213806+00:00",
+      "source_repo": ".",
+      "labels": [
+        "nlg",
+        "extraction",
+        "phase-1"
+      ],
+      "parent": "ibdm-burr-nlu-nlg.1"
+    },
+    {
+      "id": "ibdm-burr-nlu-nlg.1.4",
+      "content_hash": "bc353cdcd5aacc72a81f4d3acfd7ccd1ac2f38ef85c71a7da354b75551e9ca53",
+      "title": "Create nlu() Burr action",
+      "description": "Create explicit NLU stage as Burr action.\n\nFile: src/ibdm/burr_integration/actions.py\n\n@action(reads=[\"utterance\", \"speaker\", \"nlu_context\", \"nlu_engine\"],\n        writes=[\"nlu_result\", \"nlu_context\"])\ndef nlu(state: State) -> tuple[dict, State]:\n    - Get NLUEngine from state\n    - Call engine.process(utterance, speaker, context)\n    - Return NLUResult and updated NLUContext\n    - Store in Burr State\n\nTesting:\n- tests/integration/test_burr_nlu_action.py\n- Test NLU action with various dialogue acts\n- Test state updates (nlu_result, nlu_context)\n- Test error handling\n\nAcceptance:\n- NLU action callable from Burr\n- nlu_result appears in Burr State\n- nlu_context updated correctly\n- Integration tests pass",
+      "status": "open",
+      "priority": 2,
+      "issue_type": "task",
+      "created_at": "2025-11-15T10:51:26.213811+00:00",
+      "updated_at": "2025-11-15T10:51:26.213811+00:00",
+      "source_repo": ".",
+      "labels": [
+        "burr",
+        "nlu",
+        "action",
+        "phase-1"
+      ],
+      "parent": "ibdm-burr-nlu-nlg.1"
+    },
+    {
+      "id": "ibdm-burr-nlu-nlg.1.5",
+      "content_hash": "83fa055a9b0921b4b2eb33eeaaa496f2b2b531733bd93fa5afcac241ffcb4dee",
+      "title": "Create nlg() Burr action",
+      "description": "Create explicit NLG stage as Burr action.\n\nFile: src/ibdm/burr_integration/actions.py\n\n@action(reads=[\"response_move\", \"information_state\", \"nlg_engine\"],\n        writes=[\"utterance_text\", \"nlg_result\"])\ndef nlg(state: State) -> tuple[dict, State]:\n    - Get NLGEngine from state\n    - Call engine.generate(move, state)\n    - Return NLGResult\n    - Store utterance_text and nlg_result in Burr State\n\nTesting:\n- tests/integration/test_burr_nlg_action.py\n- Test NLG action with various move types\n- Test strategy selection visible in state\n- Test performance metrics captured\n\nAcceptance:\n- NLG action callable from Burr\n- utterance_text generated correctly\n- nlg_result appears in Burr State (strategy, tokens, latency)\n- Integration tests pass",
+      "status": "open",
+      "priority": 2,
+      "issue_type": "task",
+      "created_at": "2025-11-15T10:51:26.213815+00:00",
+      "updated_at": "2025-11-15T10:51:26.213815+00:00",
+      "source_repo": ".",
+      "labels": [
+        "burr",
+        "nlg",
+        "action",
+        "phase-1"
+      ],
+      "parent": "ibdm-burr-nlu-nlg.1"
+    },
+    {
+      "id": "ibdm-burr-nlu-nlg.1.6",
+      "content_hash": "6e111baea942abeafa5aceee8d257c82cd39e955232c88cd24ad97c9af9b81ab",
+      "title": "Simplify DialogueMoveEngine (remove NLU/NLG logic)",
+      "description": "Remove NLU and NLG logic from DialogueMoveEngine, make it pure rule processor.\n\nFile: src/ibdm/engine/dialogue_engine.py\n\nChanges:\n- Remove all NLU components (dialogue_act_classifier, entity_extractor, etc.)\n- Remove generate() method (now in NLG action)\n- Add interpret_from_nlu(nlu_result, state) -> moves\n- Keep integrate(), select_action() unchanged\n\nNew signature:\nclass DialogueMoveEngine:\n    def __init__(self, agent_id: str, rules: RuleSet):\n        self.agent_id = agent_id\n        self.rules = rules\n        # No NLU components!\n        # No NLG components!\n\n    def interpret_from_nlu(self, nlu_result: NLUResult, state: InformationState) -> list[DialogueMove]:\n        # Create moves from NLU results using interpretation rules\n        ...\n\nTesting:\n- tests/unit/test_dialogue_engine.py (update)\n- Test interpret_from_nlu() with various NLU results\n- Verify no NLU/NLG code remains\n- All engine tests pass\n\nAcceptance:\n- DialogueMoveEngine ~50% smaller (LOC reduction)\n- No NLU/NLG imports in dialogue_engine.py\n- All tests pass\n- Engine is now pure rule processor",
+      "status": "open",
+      "priority": 2,
+      "issue_type": "task",
+      "created_at": "2025-11-15T10:51:26.213825+00:00",
+      "updated_at": "2025-11-15T10:51:26.213825+00:00",
+      "source_repo": ".",
+      "labels": [
+        "engine",
+        "simplification",
+        "phase-1"
+      ],
+      "parent": "ibdm-burr-nlu-nlg.1"
+    },
+    {
+      "id": "ibdm-burr-nlu-nlg.1.7",
+      "content_hash": "46ed3cc92b33893d04be10b5ee924184c89dd1f6fb28ccc441deea5f94257c0f",
+      "title": "Update interpret() Burr action to use NLU results",
+      "description": "Simplify interpret() action to just apply interpretation rules to NLU results.\n\nFile: src/ibdm/burr_integration/actions.py\n\n@action(reads=[\"nlu_result\", \"information_state\", \"engine\"],\n        writes=[\"moves\"])\ndef interpret(state: State) -> tuple[dict, State]:\n    - Get nlu_result from state (not utterance!)\n    - Call engine.interpret_from_nlu(nlu_result, info_state)\n    - Return moves\n\nRemove:\n- Direct utterance processing\n- NLU logic (now in nlu() action)\n\nTesting:\n- tests/integration/test_burr_interpret_action.py (update)\n- Test interpret() reads from nlu_result\n- Test various dialogue acts\n- Verify no NLU processing in interpret()\n\nAcceptance:\n- interpret() action simplified (no NLU calls)\n- Reads nlu_result from state\n- Produces same moves as before\n- Integration tests pass",
+      "status": "open",
+      "priority": 3,
+      "issue_type": "task",
+      "created_at": "2025-11-15T10:51:26.213833+00:00",
+      "updated_at": "2025-11-15T10:51:26.213833+00:00",
+      "source_repo": ".",
+      "labels": [
+        "burr",
+        "interpret",
+        "action",
+        "phase-1"
+      ],
+      "parent": "ibdm-burr-nlu-nlg.1"
+    },
+    {
+      "id": "ibdm-burr-nlu-nlg.1.8",
+      "content_hash": "1f617f6b03fd98f242500b2e520812677211cf6fb0e737160d5bc189930671fc",
+      "title": "Update generate() Burr action to call NLG action",
+      "description": "Simplify generate() action to just integrate system move (NLG done in nlg() action).\n\nFile: src/ibdm/burr_integration/actions.py\n\n@action(reads=[\"utterance_text\", \"response_move\", \"information_state\", \"engine\"],\n        writes=[\"information_state\"])\ndef integrate_system_move(state: State) -> tuple[dict, State]:\n    - Get utterance_text from state (generated by nlg() action)\n    - Update response_move.content with utterance_text\n    - Integrate system's own move into information_state\n    - Return updated information_state\n\nRemove:\n- NLG logic (now in nlg() action)\n- Text generation (now in nlg() action)\n\nTesting:\n- tests/integration/test_burr_generate_action.py (update)\n- Test integration of system move\n- Verify no NLG processing\n\nAcceptance:\n- generate() action simplified (no NLG calls)\n- Uses utterance_text from nlg() action\n- Integrates system move correctly\n- Integration tests pass",
+      "status": "open",
+      "priority": 3,
+      "issue_type": "task",
+      "created_at": "2025-11-15T10:51:26.213839+00:00",
+      "updated_at": "2025-11-15T10:51:26.213839+00:00",
+      "source_repo": ".",
+      "labels": [
+        "burr",
+        "generate",
+        "action",
+        "phase-1"
+      ],
+      "parent": "ibdm-burr-nlu-nlg.1"
+    },
+    {
+      "id": "ibdm-burr-nlu-nlg.1.9",
+      "content_hash": "ddd9157749f4bddeb393def77418093d74f3b680a111672ddda630332a5ea472",
+      "title": "Update Burr state machine graph (6-stage pipeline)",
+      "description": "Update Burr application graph to use new 6-stage pipeline.\n\nFile: src/ibdm/burr_integration/state_machine.py\n\nOld graph (4 stages):\n  interpret \u2192 integrate \u2192 select \u2192 generate\n\nNew graph (6 stages):\n  nlu \u2192 interpret \u2192 integrate \u2192 select \u2192 nlg \u2192 integrate_system_move\n\nChanges:\n- Add nlu() action before interpret()\n- Add nlg() action before integrate_system_move()\n- Update transitions\n- Add nlu_engine and nlg_engine to initial state\n\nTesting:\n- tests/integration/test_burr_state_machine.py\n- Test complete dialogue flow through 6 stages\n- Verify state at each stage\n- Test Burr UI visualization\n\nAcceptance:\n- Burr app runs with 6 stages\n- All stages visible in Burr UI\n- State correctly passed between stages\n- Complete dialogue flows work",
+      "status": "open",
+      "priority": 4,
+      "issue_type": "task",
+      "created_at": "2025-11-15T10:51:26.213844+00:00",
+      "updated_at": "2025-11-15T10:51:26.213844+00:00",
+      "source_repo": ".",
+      "labels": [
+        "burr",
+        "graph",
+        "state-machine",
+        "phase-1"
+      ],
+      "parent": "ibdm-burr-nlu-nlg.1"
+    },
+    {
+      "id": "ibdm-burr-nlu-nlg.1.10",
+      "content_hash": "d233274790d19b3a35a604615fb70f18e5a7d93f9e2a84a07e2b88ac4a046477",
+      "title": "Add feature flag for backward compatibility",
+      "description": "Add feature flag to enable gradual migration from 4-stage to 6-stage pipeline.\n\nFile: src/ibdm/burr_integration/state_machine.py\n\ndef create_dialogue_application(\n    agent_id: str = \"system\",\n    rules: RuleSet | None = None,\n    use_explicit_nlu_nlg: bool = False,  # NEW: Feature flag\n    nlu_engine: NLUEngine | None = None,\n    nlg_engine: NLGEngine | None = None,\n    **kwargs\n) -> Application:\n    if use_explicit_nlu_nlg:\n        return _create_6_stage_pipeline(...)  # New pipeline\n    else:\n        return _create_4_stage_pipeline(...)  # Legacy pipeline\n\nTesting:\n- tests/integration/test_backward_compatibility.py\n- Test both pipelines produce same results\n- Test feature flag toggle\n\nAcceptance:\n- Feature flag works\n- Both pipelines coexist\n- Parity tests pass (same dialogue behavior)\n- Can migrate incrementally",
+      "status": "open",
+      "priority": 4,
+      "issue_type": "task",
+      "created_at": "2025-11-15T10:51:26.213850+00:00",
+      "updated_at": "2025-11-15T10:51:26.213850+00:00",
+      "source_repo": ".",
+      "labels": [
+        "burr",
+        "migration",
+        "compatibility",
+        "phase-1"
+      ],
+      "parent": "ibdm-burr-nlu-nlg.1"
+    },
+    {
+      "id": "ibdm-burr-nlu-nlg.1.11",
+      "content_hash": "fc9ed6d6ef8b3713feb8739cefff8699a0b1cfedb60c3f4163c8c7c3fe8b9b9b",
+      "title": "Update integration tests for 6-stage pipeline",
+      "description": "Update all integration tests to work with both 4-stage and 6-stage pipelines.\n\nFiles:\n- tests/integration/test_burr_integration.py (update)\n- tests/integration/test_dialogue_flow.py (update)\n- tests/integration/test_nlu_nlg_pipeline.py (new)\n\nNew tests:\n- Test NLU results visible in state\n- Test NLG results visible in state\n- Test state evolution through 6 stages\n- Test debugging workflow (inspect nlu_result)\n- Test performance tracking (NLU/NLG latency)\n\nParity tests:\n- Verify 6-stage produces same responses as 4-stage\n- Verify dialogue flows unchanged\n\nAcceptance:\n- All integration tests pass\n- Parity tests pass (same behavior)\n- New tests demonstrate visibility improvements\n- Test coverage maintained",
+      "status": "open",
+      "priority": 5,
+      "issue_type": "task",
+      "created_at": "2025-11-15T10:51:26.213854+00:00",
+      "updated_at": "2025-11-15T10:51:26.213854+00:00",
+      "source_repo": ".",
+      "labels": [
+        "testing",
+        "integration",
+        "phase-1"
+      ],
+      "parent": "ibdm-burr-nlu-nlg.1"
+    },
+    {
+      "id": "ibdm-burr-nlu-nlg.1.12",
+      "content_hash": "9675727e88600bb4a588f226127097b1a50013a1ff925f73d3d10035f2ad1d4a",
+      "title": "Update documentation for 6-stage pipeline",
+      "description": "Update documentation to reflect new 6-stage architecture.\n\nFiles to update:\n- docs/SYSTEM_DESIGN_AND_LARSSON_ALIGNMENT.md (update section 4)\n- README.md (update architecture diagram)\n- CLAUDE.md (add migration notes)\n\nNew sections:\n- Architecture diagram showing 6 stages\n- NLU/NLG visibility benefits\n- Debugging guide using Burr State inspection\n- Performance tracking guide\n\nExamples:\n- Inspecting nlu_result in Burr State\n- Swapping NLU/NLG engines\n- Debugging NLU failures\n\nAcceptance:\n- Documentation updated\n- Architecture diagram shows 6 stages\n- Examples working\n- Migration guide clear",
+      "status": "open",
+      "priority": 5,
+      "issue_type": "task",
+      "created_at": "2025-11-15T10:51:26.213860+00:00",
+      "updated_at": "2025-11-15T10:51:26.213860+00:00",
+      "source_repo": ".",
+      "labels": [
+        "documentation",
+        "phase-1"
+      ],
+      "parent": "ibdm-burr-nlu-nlg.1"
+    },
+    {
+      "id": "ibdm-burr-nlu-nlg.2",
+      "content_hash": "8947b969f6c4907489b6d1b311073e646b467475f5ae158aeed320045909cffb",
+      "title": "Phase 2: Implement 8-stage pipeline (NLU/NLG substages)",
+      "description": "Further decompose NLU and NLG into substages for conditional execution and targeted debugging.\n\nPipeline: nlu_classify \u2192 nlu_enrich \u2192 interpret \u2192 integrate \u2192 select \u2192 nlg_plan \u2192 nlg_realize \u2192 output\n\nBenefits:\n- Conditional execution: Skip expensive enrichment for simple dialogue acts (40% faster for greet/quit)\n- Targeted debugging: Pinpoint exact failure location (classification vs enrichment)\n- Component swapping: Replace individual substages\n- Performance tracking: Measure each substage separately\n\nPrerequisites:\n- Phase 1 complete (6-stage pipeline working)\n- Team feedback on 6-stage pipeline positive\n\nSee: docs/FINE_GRAINED_BURR_PIPELINE.md",
+      "status": "open",
+      "priority": 1,
+      "issue_type": "task",
+      "created_at": "2025-11-15T10:51:26.213866+00:00",
+      "updated_at": "2025-11-15T10:51:26.213866+00:00",
+      "source_repo": ".",
+      "labels": [
+        "architecture",
+        "refactoring",
+        "burr",
+        "nlu",
+        "nlg",
+        "phase-2"
+      ],
+      "parent": "ibdm-burr-nlu-nlg"
+    },
+    {
+      "id": "ibdm-burr-nlu-nlg.2.1",
+      "content_hash": "b82d43a0f96da82679fb72d89ca1d026106ff9d8e7244aea3a89f642ad14e98c",
+      "title": "Create NLUClassifier component (fast classification)",
+      "description": "Split NLUEngine into NLUClassifier (fast) and NLUEnricher (conditional).\n\nFile: src/ibdm/nlu/nlu_classifier.py\n\nClass NLUClassifier:\n- classify(utterance) -> (dialogue_act, confidence, raw_scores)\n- extract_entities(utterance) -> list[Entity]\n\nFast operations (~200-350ms):\n- Dialogue act classification\n- Basic entity extraction\n- Confidence scoring\n\nTesting:\n- tests/unit/test_nlu_classifier.py\n- Test all dialogue act types\n- Test entity extraction\n- Test performance (<400ms)\n\nAcceptance:\n- NLUClassifier extracts classification and entities\n- Fast (<400ms)\n- Same results as NLUEngine.process() classification\n- Unit tests pass",
+      "status": "open",
+      "priority": 1,
+      "issue_type": "task",
+      "created_at": "2025-11-15T10:51:26.213871+00:00",
+      "updated_at": "2025-11-15T10:51:26.213871+00:00",
+      "source_repo": ".",
+      "labels": [
+        "nlu",
+        "classification",
+        "phase-2"
+      ],
+      "parent": "ibdm-burr-nlu-nlg.2"
+    },
+    {
+      "id": "ibdm-burr-nlu-nlg.2.2",
+      "content_hash": "6efe86fd81eed93ed6d0efece34d79456bf24b4e940d77274ce4ff74820014ca",
+      "title": "Create NLUEnricher component (conditional enrichment)",
+      "description": "Create NLUEnricher for dialogue-act-specific processing.\n\nFile: src/ibdm/nlu/nlu_enricher.py\n\nClass NLUEnricher:\n- analyze_question(utterance, context) -> (type, details)  # if ask\n- parse_answer(utterance, context) -> content              # if answer\n- classify_intent(utterance) -> intent                     # if command/request\n- resolve_references(entities, context) -> resolved        # always\n\nConditional operations:\n- Question analysis: ~500ms (only for ask)\n- Answer parsing: ~250ms (only for answer)\n- Intent classification: ~200ms (only for command/request)\n- Reference resolution: ~100ms (always)\n\nTesting:\n- tests/unit/test_nlu_enricher.py\n- Test conditional execution per dialogue act\n- Test skip logic for greet/quit\n- Test performance metrics\n\nAcceptance:\n- NLUEnricher provides dialogue-act-specific enrichment\n- Conditional execution working\n- Performance measured per dialogue act\n- Unit tests pass",
+      "status": "open",
+      "priority": 1,
+      "issue_type": "task",
+      "created_at": "2025-11-15T10:51:26.213876+00:00",
+      "updated_at": "2025-11-15T10:51:26.213876+00:00",
+      "source_repo": ".",
+      "labels": [
+        "nlu",
+        "enrichment",
+        "phase-2"
+      ],
+      "parent": "ibdm-burr-nlu-nlg.2"
+    },
+    {
+      "id": "ibdm-burr-nlu-nlg.2.3",
+      "content_hash": "d93904493c8864f06b77a4a0ac41f3e8073680f86cd2444ae7552867466609c6",
+      "title": "Create nlu_classify() Burr action",
+      "description": "Create first NLU substage for fast classification.\n\nFile: src/ibdm/burr_integration/actions.py\n\n@action(reads=[\"utterance\", \"speaker\", \"nlu_classifier\"],\n        writes=[\"nlu_classify_result\"])\ndef nlu_classify(state: State) -> tuple[dict, State]:\n    - Call nlu_classifier.classify(utterance)\n    - Call nlu_classifier.extract_entities(utterance)\n    - Store NLUClassifyResult in state\n\nState:\n{\n    \"nlu_classify_result\": {\n        \"dialogue_act\": \"command\",\n        \"confidence\": 0.87,\n        \"entities\": [...],\n        \"raw_scores\": {\"ask\": 0.13, \"command\": 0.87, ...}\n    }\n}\n\nTesting:\n- tests/integration/test_nlu_classify_action.py\n- Test classification visible in state\n- Test performance (<400ms)\n\nAcceptance:\n- nlu_classify() action works\n- Classification results in Burr State\n- Fast (<400ms)\n- Integration tests pass",
+      "status": "open",
+      "priority": 2,
+      "issue_type": "task",
+      "created_at": "2025-11-15T10:51:26.213883+00:00",
+      "updated_at": "2025-11-15T10:51:26.213883+00:00",
+      "source_repo": ".",
+      "labels": [
+        "burr",
+        "nlu",
+        "action",
+        "phase-2"
+      ],
+      "parent": "ibdm-burr-nlu-nlg.2"
+    },
+    {
+      "id": "ibdm-burr-nlu-nlg.2.4",
+      "content_hash": "e2a4415b48f14733e4428b0134e3bbd1e42e79787692ebb4989840a16e80ea10",
+      "title": "Create nlu_enrich() Burr action (conditional enrichment)",
+      "description": "Create second NLU substage for conditional enrichment.\n\nFile: src/ibdm/burr_integration/actions.py\n\n@action(reads=[\"utterance\", \"nlu_classify_result\", \"nlu_context\", \"nlu_enricher\"],\n        writes=[\"nlu_result\", \"nlu_context\"])\ndef nlu_enrich(state: State) -> tuple[dict, State]:\n    - Get dialogue_act from nlu_classify_result\n    - Conditionally call enricher methods based on dialogue_act\n    - If ask: analyze_question()\n    - If answer: parse_answer()\n    - If command/request: classify_intent()\n    - Always: resolve_references()\n    - Store complete NLUResult in state\n\nTesting:\n- tests/integration/test_nlu_enrich_action.py\n- Test conditional execution per dialogue act\n- Test fast path (greet/quit skip enrichment)\n- Test slow path (ask runs question analysis)\n- Test performance varies by dialogue act\n\nAcceptance:\n- nlu_enrich() action works\n- Conditional execution implemented\n- Performance varies correctly:\n  * Greet/quit: ~100ms\n  * Ask: ~500ms\n  * Answer: ~250ms\n  * Command: ~200ms\n- Integration tests pass",
+      "status": "open",
+      "priority": 2,
+      "issue_type": "task",
+      "created_at": "2025-11-15T10:51:26.213888+00:00",
+      "updated_at": "2025-11-15T10:51:26.213888+00:00",
+      "source_repo": ".",
+      "labels": [
+        "burr",
+        "nlu",
+        "action",
+        "conditional",
+        "phase-2"
+      ],
+      "parent": "ibdm-burr-nlu-nlg.2"
+    },
+    {
+      "id": "ibdm-burr-nlu-nlg.2.5",
+      "content_hash": "c3cec31df279da8382bce900e605d1a6b90ca03cf1983bf1c51443dff06eaaca",
+      "title": "Create NLGPlanner component (strategy selection)",
+      "description": "Split NLGEngine into NLGPlanner (strategy) and NLGRealizer (text generation).\n\nFile: src/ibdm/nlg/nlg_planner.py\n\nClass NLGPlanner:\n- select_strategy(move, state) -> str  # template | plan_aware | llm\n- plan_content(move, state) -> list[ContentItem]\n- select_template(move) -> str | None\n- build_prompt(move, content) -> str | None\n\nFast operations (~10-50ms):\n- Strategy selection\n- Content planning\n- Template selection\n- Prompt building\n\nTesting:\n- tests/unit/test_nlg_planner.py\n- Test strategy selection logic\n- Test content planning\n- Test each strategy path\n\nAcceptance:\n- NLGPlanner selects generation strategy\n- Content planning works\n- Fast (<50ms)\n- Unit tests pass",
+      "status": "open",
+      "priority": 1,
+      "issue_type": "task",
+      "created_at": "2025-11-15T10:51:26.213892+00:00",
+      "updated_at": "2025-11-15T10:51:26.213892+00:00",
+      "source_repo": ".",
+      "labels": [
+        "nlg",
+        "planning",
+        "phase-2"
+      ],
+      "parent": "ibdm-burr-nlu-nlg.2"
+    },
+    {
+      "id": "ibdm-burr-nlu-nlg.2.6",
+      "content_hash": "c5ee230634b877a0a4c1f735ef5af34258d66f26fe28b8076d5827509ccf6ee1",
+      "title": "Create NLGRealizer component (text generation)",
+      "description": "Create NLGRealizer for strategy-specific text generation.\n\nFile: src/ibdm/nlg/nlg_realizer.py\n\nClass NLGRealizer:\n- fill_template(template, content) -> str        # ~10ms\n- generate_from_plan(content, state) -> str      # ~50ms\n- llm_generate(prompt) -> (str, tokens)          # ~500ms\n- apply_formatting(text) -> str                  # ~5ms\n\nPerformance varies by strategy:\n- Template: ~15ms\n- Plan-aware: ~55ms\n- LLM: ~505ms\n\nTesting:\n- tests/unit/test_nlg_realizer.py\n- Test each realization strategy\n- Test performance per strategy\n- Test post-processing\n\nAcceptance:\n- NLGRealizer generates text from plans\n- Performance varies by strategy\n- Same output as current NLGEngine\n- Unit tests pass",
+      "status": "open",
+      "priority": 1,
+      "issue_type": "task",
+      "created_at": "2025-11-15T10:51:26.213896+00:00",
+      "updated_at": "2025-11-15T10:51:26.213896+00:00",
+      "source_repo": ".",
+      "labels": [
+        "nlg",
+        "realization",
+        "phase-2"
+      ],
+      "parent": "ibdm-burr-nlu-nlg.2"
+    },
+    {
+      "id": "ibdm-burr-nlu-nlg.2.7",
+      "content_hash": "fe09d81f24e2e54efb33e603be6e1ede9607a8d3c9f5859b0c2945b295d3d788",
+      "title": "Create nlg_plan() Burr action",
+      "description": "Create first NLG substage for generation planning.\n\nFile: src/ibdm/burr_integration/actions.py\n\n@action(reads=[\"response_move\", \"information_state\", \"nlg_planner\"],\n        writes=[\"nlg_plan_result\"])\ndef nlg_plan(state: State) -> tuple[dict, State]:\n    - Call planner.select_strategy(move, state)\n    - Call planner.plan_content(move, state)\n    - Prepare strategy-specific plan details\n    - Store NLGPlan in state\n\nState:\n{\n    \"nlg_plan_result\": {\n        \"strategy\": \"plan_aware\",\n        \"content_items\": [...],\n        \"template_name\": null,\n        \"llm_prompt\": null\n    }\n}\n\nTesting:\n- tests/integration/test_nlg_plan_action.py\n- Test strategy selection visible\n- Test content planning\n- Test performance (<50ms)\n\nAcceptance:\n- nlg_plan() action works\n- Strategy visible in Burr State\n- Content plan visible\n- Fast (<50ms)\n- Integration tests pass",
+      "status": "open",
+      "priority": 2,
+      "issue_type": "task",
+      "created_at": "2025-11-15T10:51:26.213900+00:00",
+      "updated_at": "2025-11-15T10:51:26.213900+00:00",
+      "source_repo": ".",
+      "labels": [
+        "burr",
+        "nlg",
+        "action",
+        "phase-2"
+      ],
+      "parent": "ibdm-burr-nlu-nlg.2"
+    },
+    {
+      "id": "ibdm-burr-nlu-nlg.2.8",
+      "content_hash": "9ce36e13a782d1f196875749734c03571f16c4e3b4625622a00a13c9bb958725",
+      "title": "Create nlg_realize() Burr action (conditional realization)",
+      "description": "Create second NLG substage for strategy-specific text generation.\n\nFile: src/ibdm/burr_integration/actions.py\n\n@action(reads=[\"nlg_plan_result\", \"nlg_realizer\"],\n        writes=[\"utterance_text\", \"nlg_result\"])\ndef nlg_realize(state: State) -> tuple[dict, State]:\n    - Get strategy from nlg_plan_result\n    - Conditionally call realizer methods:\n      * If template: fill_template()\n      * If plan_aware: generate_from_plan()\n      * If llm: llm_generate()\n    - Apply post-processing\n    - Track performance (tokens, latency)\n    - Store NLGResult in state\n\nTesting:\n- tests/integration/test_nlg_realize_action.py\n- Test conditional execution per strategy\n- Test performance varies:\n  * Template: ~15ms\n  * Plan-aware: ~55ms\n  * LLM: ~505ms\n- Test metrics captured (tokens, latency)\n\nAcceptance:\n- nlg_realize() action works\n- Conditional realization implemented\n- Performance varies by strategy\n- Metrics captured in nlg_result\n- Integration tests pass",
+      "status": "open",
+      "priority": 2,
+      "issue_type": "task",
+      "created_at": "2025-11-15T10:51:26.213905+00:00",
+      "updated_at": "2025-11-15T10:51:26.213905+00:00",
+      "source_repo": ".",
+      "labels": [
+        "burr",
+        "nlg",
+        "action",
+        "conditional",
+        "phase-2"
+      ],
+      "parent": "ibdm-burr-nlu-nlg.2"
+    },
+    {
+      "id": "ibdm-burr-nlu-nlg.2.9",
+      "content_hash": "217b07e0ae75b40d505e86c61a1698a3759942dd9bfb6634b5edfcd0e480db63",
+      "title": "Update Burr state machine graph (8-stage pipeline)",
+      "description": "Update Burr application graph to use new 8-stage pipeline.\n\nFile: src/ibdm/burr_integration/state_machine.py\n\nOld graph (6 stages):\n  nlu \u2192 interpret \u2192 integrate \u2192 select \u2192 nlg \u2192 output\n\nNew graph (8 stages):\n  nlu_classify \u2192 nlu_enrich \u2192 interpret \u2192 integrate \u2192\n  select \u2192 nlg_plan \u2192 nlg_realize \u2192 integrate_system_move\n\nChanges:\n- Replace nlu() with nlu_classify() + nlu_enrich()\n- Replace nlg() with nlg_plan() + nlg_realize()\n- Update transitions\n- Add components to initial state (nlu_classifier, nlu_enricher, nlg_planner, nlg_realizer)\n\nTesting:\n- tests/integration/test_8_stage_pipeline.py\n- Test complete dialogue flow through 8 stages\n- Test conditional execution paths\n- Test Burr UI visualization (8 nodes)\n\nAcceptance:\n- Burr app runs with 8 stages\n- All stages visible in Burr UI\n- Conditional execution working\n- Complete dialogue flows work",
+      "status": "open",
+      "priority": 3,
+      "issue_type": "task",
+      "created_at": "2025-11-15T10:51:26.213910+00:00",
+      "updated_at": "2025-11-15T10:51:26.213910+00:00",
+      "source_repo": ".",
+      "labels": [
+        "burr",
+        "graph",
+        "state-machine",
+        "phase-2"
+      ],
+      "parent": "ibdm-burr-nlu-nlg.2"
+    },
+    {
+      "id": "ibdm-burr-nlu-nlg.2.10",
+      "content_hash": "9fbd3c6ebd4d9ee27cdf87792a9f4dead76ab10470c73688f23b0bf8494b050e",
+      "title": "Add performance monitoring for each substage",
+      "description": "Add performance tracking to measure time spent in each substage.\n\nFiles:\n- src/ibdm/burr_integration/performance.py (new)\n\nMetrics to track:\n- nlu_classify_latency\n- nlu_enrich_latency (varies by dialogue act)\n- nlg_plan_latency\n- nlg_realize_latency (varies by strategy)\n- Total NLU time\n- Total NLG time\n- Total turn time\n\nAggregations:\n- By dialogue act (greet/quit fast path vs ask/answer slow path)\n- By NLG strategy (template fast vs LLM slow)\n- Percentiles (p50, p95, p99)\n\nDashboard:\n- Grafana dashboard (optional)\n- Simple logging with structured output\n\nTesting:\n- tests/unit/test_performance_monitoring.py\n- Verify metrics captured\n- Verify aggregations correct\n\nAcceptance:\n- Performance metrics captured per substage\n- Can identify bottlenecks\n- Can measure conditional execution benefit\n- Monitoring dashboard or logs available",
+      "status": "open",
+      "priority": 4,
+      "issue_type": "task",
+      "created_at": "2025-11-15T10:51:26.213916+00:00",
+      "updated_at": "2025-11-15T10:51:26.213916+00:00",
+      "source_repo": ".",
+      "labels": [
+        "monitoring",
+        "performance",
+        "phase-2"
+      ],
+      "parent": "ibdm-burr-nlu-nlg.2"
+    },
+    {
+      "id": "ibdm-burr-nlu-nlg.2.11",
+      "content_hash": "a5130be9c20d113f2d6f2d0e9ea6c2a4f4643f6fd29d4a8ac47d6939cfd25b7a",
+      "title": "Update integration tests for 8-stage pipeline",
+      "description": "Update integration tests to work with 8-stage pipeline.\n\nFiles:\n- tests/integration/test_burr_integration.py (update)\n- tests/integration/test_conditional_execution.py (new)\n- tests/integration/test_debugging_workflow.py (new)\n\nNew tests:\n- Test conditional NLU enrichment (fast path vs slow path)\n- Test conditional NLG realization (template vs LLM)\n- Test state inspection at each substage\n- Test debugging workflow examples\n- Test performance tracking\n\nParity tests:\n- Verify 8-stage produces same responses as 6-stage\n- Verify dialogue flows unchanged\n\nAcceptance:\n- All integration tests pass\n- Parity tests pass (same behavior)\n- Conditional execution tests pass\n- Performance tests demonstrate benefit\n- Test coverage maintained",
+      "status": "open",
+      "priority": 5,
+      "issue_type": "task",
+      "created_at": "2025-11-15T10:51:26.213920+00:00",
+      "updated_at": "2025-11-15T10:51:26.213920+00:00",
+      "source_repo": ".",
+      "labels": [
+        "testing",
+        "integration",
+        "phase-2"
+      ],
+      "parent": "ibdm-burr-nlu-nlg.2"
+    },
+    {
+      "id": "ibdm-burr-nlu-nlg.2.12",
+      "content_hash": "8004a7ba066f3c170ba697a82f3bd071d31582c35342d25eb9bbc3409bc3edbc",
+      "title": "Update documentation for 8-stage pipeline",
+      "description": "Update documentation to reflect new 8-stage architecture.\n\nFiles to update:\n- docs/SYSTEM_DESIGN_AND_LARSSON_ALIGNMENT.md (update)\n- docs/FINE_GRAINED_BURR_PIPELINE.md (mark as implemented)\n- README.md (update architecture diagram)\n\nNew content:\n- Architecture diagram showing 8 stages\n- Conditional execution explanation\n- Performance comparison (6-stage vs 8-stage)\n- Debugging guide with substage inspection\n\nExamples:\n- Debugging classification failures (inspect nlu_classify_result)\n- Debugging enrichment failures (inspect nlu_result)\n- Optimizing NLG strategy (inspect nlg_plan_result)\n- Performance monitoring\n\nAcceptance:\n- Documentation updated\n- Architecture diagram shows 8 stages\n- Examples working\n- Performance benefits documented",
+      "status": "open",
+      "priority": 5,
+      "issue_type": "task",
+      "created_at": "2025-11-15T10:51:26.213924+00:00",
+      "updated_at": "2025-11-15T10:51:26.213924+00:00",
+      "source_repo": ".",
+      "labels": [
+        "documentation",
+        "phase-2"
+      ],
+      "parent": "ibdm-burr-nlu-nlg.2"
+    }
+  ],
+  "metadata": {
+    "created_at": "2025-11-15T10:51:26.213932+00:00",
+    "source": "NLU/NLG Burr Integration Refactoring",
+    "epic": "ibdm-burr-nlu-nlg",
+    "total_tasks": 27,
+    "phase_1_tasks": 13,
+    "phase_2_tasks": 13
+  }
+}
