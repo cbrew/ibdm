@@ -6,8 +6,15 @@ Interpret → Integrate → Select → Generate
 Based on Larsson (2002) Issue-based Dialogue Management.
 """
 
-from ibdm.core import DialogueMove, InformationState
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+from ibdm.core import Answer, DialogueMove, InformationState, Question, WhQuestion, YNQuestion
 from ibdm.rules import RuleSet
+
+if TYPE_CHECKING:
+    from ibdm.nlu.nlu_result import NLUResult
 
 
 class DialogueMoveEngine:
@@ -94,6 +101,169 @@ class DialogueMoveEngine:
 
         # If no interpretation rules matched, return empty list
         return moves
+
+    def interpret_from_nlu_result(
+        self, nlu_result: NLUResult, speaker: str, state: InformationState
+    ) -> list[DialogueMove]:
+        """Create dialogue moves from NLU result.
+
+        This method is used in the 6-stage pipeline where NLU processing
+        happens in a separate stage. It creates DialogueMoves based on the
+        structured NLU result rather than interpreting a raw utterance.
+
+        Args:
+            nlu_result: Structured NLU result from NLU engine
+            speaker: ID of the speaker
+            state: Current information state
+
+        Returns:
+            List of dialogue moves
+        """
+        moves: list[DialogueMove] = []
+        dialogue_act = nlu_result.dialogue_act
+
+        # Create move based on dialogue act
+        if dialogue_act == "question" or dialogue_act == "ask":
+            # Create question move
+            if nlu_result.question_details:
+                # Try to create a proper Question object
+                question = self._create_question_from_details(nlu_result.question_details)
+                content = question if question else "question"
+            else:
+                content = "question"
+
+            moves.append(
+                DialogueMove(
+                    move_type="ask",
+                    content=content,
+                    speaker=speaker,
+                    metadata={"nlu_confidence": nlu_result.confidence},
+                )
+            )
+
+        elif dialogue_act == "answer":
+            # Create answer move
+            if nlu_result.answer_content:
+                # Check if there's a question on the QUD to answer
+                top_qud = state.shared.top_qud()
+                content_str = nlu_result.answer_content.get("content", "")
+                answer = Answer(content=content_str, question_ref=top_qud)
+                content = answer
+            else:
+                content = "answer"
+
+            moves.append(
+                DialogueMove(
+                    move_type="answer",
+                    content=content,
+                    speaker=speaker,
+                    metadata={"nlu_confidence": nlu_result.confidence},
+                )
+            )
+
+        elif dialogue_act == "command":
+            moves.append(
+                DialogueMove(
+                    move_type="command",
+                    content=nlu_result.intent if nlu_result.intent else "command",
+                    speaker=speaker,
+                    metadata={"nlu_confidence": nlu_result.confidence},
+                )
+            )
+
+        elif dialogue_act == "assertion" or dialogue_act == "assert":
+            moves.append(
+                DialogueMove(
+                    move_type="assert",
+                    content="assertion",
+                    speaker=speaker,
+                    metadata={"nlu_confidence": nlu_result.confidence},
+                )
+            )
+
+        elif dialogue_act == "acknowledgment" or dialogue_act == "acknowledge":
+            moves.append(
+                DialogueMove(
+                    move_type="acknowledge",
+                    content="acknowledgment",
+                    speaker=speaker,
+                    metadata={"nlu_confidence": nlu_result.confidence},
+                )
+            )
+
+        elif dialogue_act == "clarification" or dialogue_act == "clarify":
+            moves.append(
+                DialogueMove(
+                    move_type="clarify",
+                    content="clarification",
+                    speaker=speaker,
+                    metadata={"nlu_confidence": nlu_result.confidence},
+                )
+            )
+
+        elif dialogue_act == "greeting" or dialogue_act == "greet":
+            moves.append(
+                DialogueMove(
+                    move_type="greet",
+                    content="greeting",
+                    speaker=speaker,
+                    metadata={"nlu_confidence": nlu_result.confidence},
+                )
+            )
+
+        elif dialogue_act == "quit" or dialogue_act == "goodbye":
+            moves.append(
+                DialogueMove(
+                    move_type="quit",
+                    content="quit",
+                    speaker=speaker,
+                    metadata={"nlu_confidence": nlu_result.confidence},
+                )
+            )
+
+        else:
+            # Default: create generic inform move
+            moves.append(
+                DialogueMove(
+                    move_type="inform",
+                    content=dialogue_act,
+                    speaker=speaker,
+                    metadata={"nlu_confidence": nlu_result.confidence},
+                )
+            )
+
+        return moves
+
+    def _create_question_from_details(
+        self, question_details: dict[str, Any]
+    ) -> Question | None:
+        """Create a Question object from NLU question details.
+
+        Args:
+            question_details: Question details from NLU result
+
+        Returns:
+            Question object or None
+        """
+        question_type = str(question_details.get("question_type", "unknown"))
+
+        try:
+            if question_type == "wh":
+                return WhQuestion(
+                    variable=str(question_details.get("variable", "x")),
+                    predicate=str(question_details.get("focus", "unknown")),
+                    constraints={},
+                )
+            elif question_type in ["yes_no", "yn", "yes-no"]:
+                proposition = str(question_details.get("proposition", "unknown"))
+                return YNQuestion(proposition=proposition)
+            # Note: AltQuestion would need alternatives list
+            # We can add that when question_details includes it
+        except Exception:
+            # If we can't create a proper Question object, return None
+            return None
+
+        return None
 
     def integrate(self, move: DialogueMove, state: InformationState) -> InformationState:
         """Apply integration rules to update state based on a move.
