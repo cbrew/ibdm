@@ -21,24 +21,33 @@ Architecture:
 
 Example:
     Basic usage:
-        >>> from ibdm.nlu.task_classifier import create_task_classifier
-        >>> classifier = create_task_classifier()
+        >>> from ibdm.nlu.task_classifier import create_task_classifier, Domain, TaskType
+        >>> # Define domain-specific task classification configuration
+        >>> legal_domain = Domain(
+        ...     name="legal_documents",
+        ...     description="Legal document drafting and review",
+        ...     supported_tasks=[TaskType.DRAFT_DOCUMENT, TaskType.REVIEW_DOCUMENT],
+        ...     task_signatures={
+        ...         TaskType.DRAFT_DOCUMENT: "draft(document_type, parties, terms)"
+        ...     }
+        ... )
+        >>> classifier = create_task_classifier(domains=[legal_domain])
         >>> result = classifier.classify("I need to draft an NDA")
         >>> print(result.task_type, result.parameters)
         'draft_document' {'document_type': 'NDA'}
 
-    With custom domains:
-        >>> from ibdm.nlu.task_classifier import Domain, TaskType
-        >>> restaurant_domain = Domain(
-        ...     name="restaurant_booking",
-        ...     description="Restaurant reservation management",
+    With multiple domains:
+        >>> travel_domain = Domain(
+        ...     name="travel_booking",
+        ...     description="Travel and accommodation booking",
         ...     supported_tasks=[TaskType.BOOK_SERVICE],
-        ...     task_signatures={TaskType.BOOK_SERVICE: "book(restaurant, time, size)"}
+        ...     task_signatures={TaskType.BOOK_SERVICE: "book(service, date, details)"}
         ... )
-        >>> classifier = create_task_classifier(domains=[restaurant_domain])
+        >>> classifier = create_task_classifier(domains=[legal_domain, travel_domain])
 
     Integration with rules:
-        >>> def _is_nda_request(state):
+        >>> # Domain-specific configurations should be defined in domain modules
+        >>> def _is_nda_request(state, classifier):
         ...     result = classifier.classify(state.private.beliefs["_temp_utterance"])
         ...     return (result.task_type == "draft_document"
         ...             and result.domain == "legal_documents"
@@ -75,7 +84,11 @@ class TaskType(str, Enum):
 
 @dataclass
 class Domain:
-    """Semantic representation of a dialogue domain.
+    """Semantic representation of a dialogue domain for task classification.
+
+    NOTE: This is for NLU task classification, distinct from DomainModel in core.domain.
+    DomainModel handles semantic predicates and plan builders, while this Domain
+    handles task classification prompts.
 
     Attributes:
         name: Domain identifier (e.g., "legal_documents", "restaurant_booking")
@@ -88,18 +101,6 @@ class Domain:
     description: str
     supported_tasks: list[TaskType]
     task_signatures: dict[TaskType, str]
-
-
-# Predefined domains
-LEGAL_DOCUMENTS_DOMAIN = Domain(
-    name="legal_documents",
-    description="Legal document drafting and review including NDAs, contracts, agreements",
-    supported_tasks=[TaskType.DRAFT_DOCUMENT, TaskType.REVIEW_DOCUMENT],
-    task_signatures={
-        TaskType.DRAFT_DOCUMENT: "draft(document_type, parties, terms)",
-        TaskType.REVIEW_DOCUMENT: "review(document_type, issues)",
-    },
-)
 
 
 class TaskClassificationResult(BaseModel):
@@ -168,12 +169,20 @@ class TaskClassifier:
 
         Args:
             config: Classifier configuration. Uses defaults if not provided.
+
+        Raises:
+            ValueError: If no domains are provided in config
         """
         self.config = config or TaskClassifierConfig()
 
-        # Set default domains if not provided
+        # Domains must be explicitly provided - no hardcoded defaults
         if not self.config.domains:
-            self.config.domains = [LEGAL_DOCUMENTS_DOMAIN]
+            raise ValueError(
+                "TaskClassifier requires at least one domain. "
+                "Provide domains via TaskClassifierConfig or use create_task_classifier() helper. "
+                "Domain-specific configurations should be defined in domain modules, "
+                "not hardcoded in NLU components."
+            )
 
         # Configure LLM - use Haiku for fast classification
         llm_config = self.config.llm_config or LLMConfig(
@@ -294,27 +303,48 @@ class TaskClassifier:
 
 
 def create_task_classifier(
-    domains: list[Domain] | None = None,
+    domains: list[Domain],
     use_fast_model: bool = True,
     confidence_threshold: float = 0.7,
 ) -> TaskClassifier:
     """Convenience function to create a task classifier.
 
     Args:
-        domains: List of domains to support. Uses legal documents domain if None.
+        domains: List of domains to support (required - no default)
         use_fast_model: Whether to use Haiku (fast) instead of Sonnet
         confidence_threshold: Minimum confidence for classification
 
     Returns:
         Configured TaskClassifier instance
 
+    Raises:
+        ValueError: If domains list is empty
+
     Example:
-        >>> # For legal documents domain
-        >>> classifier = create_task_classifier()
+        >>> from ibdm.nlu.task_classifier import Domain, TaskType
+        >>> # Define domain-specific task classification domains
+        >>> legal_domain = Domain(
+        ...     name="legal_documents",
+        ...     description="Legal document drafting and review",
+        ...     supported_tasks=[TaskType.DRAFT_DOCUMENT, TaskType.REVIEW_DOCUMENT],
+        ...     task_signatures={
+        ...         TaskType.DRAFT_DOCUMENT: "draft(document_type, parties, terms)"
+        ...     }
+        ... )
+        >>> classifier = create_task_classifier(domains=[legal_domain])
         >>>
         >>> # For multiple domains
+        >>> booking_domain = Domain(
+        ...     name="travel_booking",
+        ...     description="Travel and accommodation booking",
+        ...     supported_tasks=[TaskType.BOOK_SERVICE],
+        ...     task_signatures={TaskType.BOOK_SERVICE: "book(service, date, details)"}
+        ... )
         >>> classifier = create_task_classifier(domains=[legal_domain, booking_domain])
     """
+    if not domains:
+        raise ValueError("At least one domain is required for task classification")
+
     config = TaskClassifierConfig(
         domains=domains, use_fast_model=use_fast_model, confidence_threshold=confidence_threshold
     )

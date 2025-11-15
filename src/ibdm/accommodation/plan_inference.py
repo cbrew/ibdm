@@ -2,38 +2,64 @@
 
 Plan inference attempts to identify the speaker's goals and plans
 based on their questions and requests, enabling proactive assistance.
+
+ARCHITECTURAL NOTE (Policy #10, #11):
+- Plan formation should happen in INTEGRATION phase, not interpretation
+- Domain-specific plans should use DomainModel.get_plan() not hardcoded logic
+- This module provides generic plan inference when domain is not available
+- For domain-specific plan building, register plan builders with the domain
 """
 
 from ibdm.core import DialogueMove, InformationState, Plan, Question, WhQuestion, YNQuestion
+from ibdm.core.domain import DomainModel
 
 
-def infer_plan(move: DialogueMove, state: InformationState) -> Plan | None:
+def infer_plan(
+    move: DialogueMove, state: InformationState, domain: DomainModel | None = None
+) -> Plan | None:
     """Infer a dialogue plan from a user's move.
 
     This function analyzes questions and requests to infer higher-level
     goals and create corresponding plans.
 
+    For domain-specific plan building, use domain.get_plan() with registered
+    plan builders instead of this generic inference.
+
     Args:
         move: The dialogue move to analyze
         state: Current information state
+        domain: Optional domain model for domain-specific plan building
 
     Returns:
         Inferred Plan or None if no plan can be inferred
     """
     if move.move_type == "ask":
-        return _infer_plan_from_question(move.content, state)
+        return _infer_plan_from_question(move.content, state, domain)
     elif move.move_type == "request":
-        return _infer_plan_from_request(move.content, state)
+        return _infer_plan_from_request(move.content, state, domain)
     else:
         return None
 
 
-def _infer_plan_from_question(question: Question, state: InformationState) -> Plan | None:
+def _infer_plan_from_question(
+    question: Question, state: InformationState, domain: DomainModel | None = None
+) -> Plan | None:
     """Infer a plan from a question.
+
+    Creates generic information-seeking plans from questions.
+    Domain-specific plan building should use domain.get_plan() instead.
 
     Questions often reveal user goals. For example:
     - "When is the meeting?" → FINDOUT(meeting_time)
     - "Can you book a table?" → PERFORM(book_table)
+
+    Args:
+        question: Question object
+        state: Information state
+        domain: Optional domain model (currently unused, for future extension)
+
+    Returns:
+        Generic plan or None
     """
     if not isinstance(question, (WhQuestion, YNQuestion)):
         return None
@@ -47,181 +73,107 @@ def _infer_plan_from_question(question: Question, state: InformationState) -> Pl
 def _infer_from_wh_question(question: WhQuestion, state: InformationState) -> Plan | None:
     """Infer plan from wh-question.
 
-    Wh-questions typically indicate information-seeking goals.
-    """
-    predicate = question.predicate.lower()
-    wh_word = question.constraints.get("wh_word", "").lower()
+    Creates a generic information-seeking plan based on the question's predicate.
+    Domain-independent implementation - no hardcoded domain logic.
 
-    # Extract key terms from predicate
-    if "weather" in predicate:
-        return Plan(
-            plan_type="findout",
-            content="findout_weather",
-            status="active",
-        )
-    elif "time" in predicate or "when" in wh_word:
-        return Plan(
-            plan_type="findout",
-            content=f"findout_time({predicate})",
-            status="active",
-        )
-    elif "location" in predicate or "where" in wh_word:
-        return Plan(
-            plan_type="findout",
-            content=f"findout_location({predicate})",
-            status="active",
-        )
-    elif "price" in predicate or "cost" in predicate:
-        return Plan(
-            plan_type="findout",
-            content=f"findout_cost({predicate})",
-            status="active",
-        )
-    else:
-        # Generic information seeking
-        return Plan(
-            plan_type="findout",
-            content=f"findout({predicate})",
-            status="active",
-        )
+    Wh-questions typically indicate information-seeking goals.
+
+    Args:
+        question: WhQuestion object
+        state: Information state
+
+    Returns:
+        Generic FINDOUT plan
+    """
+    # Create generic information-seeking plan using the predicate
+    # No domain-specific logic - just use the predicate directly
+    return Plan(
+        plan_type="findout",
+        content=question,  # Store the question itself as content
+        status="active",
+    )
 
 
 def _infer_from_yn_question(question: YNQuestion, state: InformationState) -> Plan | None:
     """Infer plan from yes/no question.
 
-    Y/N questions starting with "can you" or "could you" often indicate
-    requests for action rather than pure information seeking.
+    Creates a generic verification plan.
+    Domain-independent implementation - no hardcoded domain logic.
+
+    Y/N questions typically indicate verification goals.
+
+    Args:
+        question: YNQuestion object
+        state: Information state
+
+    Returns:
+        Generic FINDOUT plan for verification
     """
-    proposition = question.proposition.lower()
-
-    # Check for polite requests
-    if proposition.startswith(("can you", "could you", "would you")):
-        # This is really a request
-        # Extract the action
-        for prefix in ["can you", "could you", "would you"]:
-            if proposition.startswith(prefix):
-                action = proposition[len(prefix) :].strip()
-                return Plan(
-                    plan_type="perform",
-                    content=f"perform({action})",
-                    status="active",
-                )
-
-    # Check for capability questions ("can I...", "am I able to...")
-    if proposition.startswith(("can i", "may i", "am i")):
-        return Plan(
-            plan_type="findout",
-            content=f"check_capability({proposition})",
-            status="active",
-        )
-
-    # Generic yes/no question - checking a fact
+    # Create generic verification plan using the question itself
+    # No domain-specific logic - just store the question as content
     return Plan(
         plan_type="findout",
-        content=f"verify({proposition})",
+        content=question,  # Store the question itself as content
         status="active",
     )
 
 
-def _infer_plan_from_request(request: str, state: InformationState) -> Plan | None:
+def _infer_plan_from_request(
+    request: str, state: InformationState, domain: DomainModel | None = None
+) -> Plan | None:
     """Infer a plan from a request/command.
 
+    Creates a generic action plan.
+    Domain-independent implementation - no hardcoded domain logic.
+
     Direct requests clearly indicate performance goals.
+
+    Args:
+        request: Request string
+        state: Information state
+        domain: Optional domain model (currently unused, for future extension)
+
+    Returns:
+        Generic PERFORM plan
     """
-    request_lower = request.lower().strip()
-
-    # Identify action verbs
-    action_verbs = {
-        "book": "book",
-        "reserve": "reserve",
-        "cancel": "cancel",
-        "change": "modify",
-        "show": "display",
-        "tell": "inform",
-        "find": "search",
-        "search": "search",
-        "get": "retrieve",
-    }
-
-    for verb, action_type in action_verbs.items():
-        if request_lower.startswith(verb):
-            return Plan(
-                plan_type="perform",
-                content=f"{action_type}({request})",
-                status="active",
-            )
-
-    # Generic action request
+    # Create generic action plan
+    # No domain-specific logic - just store the request as content
     return Plan(
         plan_type="perform",
-        content=f"perform({request})",
+        content=request,
         status="active",
     )
 
 
-def decompose_plan(plan: Plan, state: InformationState) -> list[Plan]:
+def decompose_plan(
+    plan: Plan, state: InformationState, domain: DomainModel | None = None
+) -> list[Plan]:
     """Decompose a high-level plan into subplans.
 
-    This creates a plan hierarchy for complex goals.
+    DEPRECATED: Domain-specific plan decomposition should use domain.get_plan()
+    with registered plan builders instead of this generic function.
+
+    This function is kept for backward compatibility but returns empty list,
+    indicating no generic decomposition is available. Use domain-specific
+    plan builders registered with DomainModel instead.
 
     Args:
         plan: The plan to decompose
         state: Current information state
+        domain: Optional domain model for domain-specific decomposition
 
     Returns:
-        List of subplans (may be empty if plan is atomic)
+        Empty list (domain-specific decomposition should use domain.get_plan())
+
+    Example:
+        # DEPRECATED - Don't do this:
+        subplans = decompose_plan(plan, state)
+
+        # CORRECT - Use domain-specific plan builders:
+        domain = get_travel_domain()
+        plan = domain.get_plan("travel_booking", context)
     """
-    content_lower = str(plan.content).lower()
-
-    # Example decompositions
-    if "book" in content_lower and "restaurant" in content_lower:
-        # Booking a restaurant requires: time, party size, location
-        return [
-            Plan(
-                plan_type="findout",
-                content="findout(restaurant_time)",
-                status="active",
-            ),
-            Plan(
-                plan_type="findout",
-                content="findout(party_size)",
-                status="active",
-            ),
-            Plan(
-                plan_type="findout",
-                content="findout(location_preference)",
-                status="active",
-            ),
-            Plan(
-                plan_type="perform",
-                content="perform(make_reservation)",
-                status="pending",
-            ),
-        ]
-    elif "book" in content_lower and "flight" in content_lower:
-        # Flight booking requires: origin, destination, dates
-        return [
-            Plan(
-                plan_type="findout",
-                content="findout(origin)",
-                status="active",
-            ),
-            Plan(
-                plan_type="findout",
-                content="findout(destination)",
-                status="active",
-            ),
-            Plan(
-                plan_type="findout",
-                content="findout(travel_dates)",
-                status="active",
-            ),
-            Plan(
-                plan_type="perform",
-                content="perform(book_flight)",
-                status="pending",
-            ),
-        ]
-
-    # No decomposition needed
+    # Domain-specific plan decomposition should be done via domain.get_plan()
+    # with registered plan builders, not hardcoded logic here.
+    # See travel_domain.py and nda_domain.py for examples.
     return []

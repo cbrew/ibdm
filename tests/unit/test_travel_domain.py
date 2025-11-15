@@ -5,9 +5,9 @@ from ibdm.core.questions import WhQuestion, YNQuestion
 from ibdm.domains.travel_domain import (
     TRANSPORT_MODES,
     TRAVEL_CLASSES,
+    _build_travel_plan,
     create_travel_domain,
     get_travel_domain,
-    _build_travel_plan,
 )
 
 
@@ -103,7 +103,9 @@ class TestTravelDomainPlanBuilder:
         plan = _build_travel_plan({"include_return": False})
 
         assert len(plan.subplans) == 6  # skips return question + return day
-        predicates = [sp.content.predicate for sp in plan.subplans[:4] if isinstance(sp.content, WhQuestion)]
+        predicates = [
+            sp.content.predicate for sp in plan.subplans[:4] if isinstance(sp.content, WhQuestion)
+        ]
         assert "return_day" not in predicates
 
     def test_subplan_sequence(self):
