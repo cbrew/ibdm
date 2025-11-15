@@ -8,8 +8,19 @@ from typing import Any
 
 from burr.core import ApplicationBuilder, State, default, expr
 
-from ibdm.burr_integration.actions import generate, idle, initialize, integrate, interpret, select
+from ibdm.burr_integration.actions import (
+    generate,
+    idle,
+    initialize,
+    integrate,
+    interpret,
+    nlg,
+    nlu,
+    select,
+)
 from ibdm.core import InformationState
+from ibdm.nlg import NLGEngine
+from ibdm.nlu import NLUEngine
 from ibdm.rules import RuleSet
 
 
@@ -18,23 +29,26 @@ def create_dialogue_application(
     rules: RuleSet | None = None,
     engine_class: type | None = None,
     engine_config: Any | None = None,
+    nlu_engine: NLUEngine | None = None,
+    nlg_engine: NLGEngine | None = None,
     app_id: str | None = None,
     storage_dir: str | None = None,
 ) -> Any:
     """Create a Burr application for dialogue management.
 
-    The state machine implements the IBDM control loop:
-    - idle: Waiting for input
-    - interpret: Map utterance to dialogue moves
-    - integrate: Update information state
-    - select: Choose next action
-    - generate: Produce response utterance
+    The state machine implements the IBDM control loop with optional 6-stage pipeline:
+    - 4-stage (legacy): interpret → integrate → select → generate
+    - 6-stage (explicit NLU/NLG): nlu → interpret → integrate → select → nlg → generate
+
+    The 6-stage pipeline is used when nlu_engine and nlg_engine are provided.
 
     Args:
         agent_id: ID of the dialogue agent
         rules: Optional rule set for dialogue processing
         engine_class: Optional engine class (e.g., NLUDialogueEngine)
         engine_config: Optional configuration for the engine
+        nlu_engine: Optional NLU engine for 6-stage pipeline
+        nlg_engine: Optional NLG engine for 6-stage pipeline
         app_id: Optional application ID for tracking
         storage_dir: Optional directory for state persistence
 
@@ -42,43 +56,90 @@ def create_dialogue_application(
         Burr Application instance
     """
     # Prepare initial state
-    initial_state = {"agent_id": agent_id, "rules": rules}
+    initial_state: dict[str, Any] = {"agent_id": agent_id, "rules": rules}
     if engine_class is not None:
         initial_state["engine_class"] = engine_class
     if engine_config is not None:
         initial_state["engine_config"] = engine_config
+    if nlu_engine is not None:
+        initial_state["nlu_engine"] = nlu_engine
+    if nlg_engine is not None:
+        initial_state["nlg_engine"] = nlg_engine
+
+    # Determine which pipeline to use based on whether NLU/NLG engines are provided
+    use_6_stage = nlu_engine is not None and nlg_engine is not None
 
     # Build the application
-    builder = (
-        ApplicationBuilder()
-        .with_actions(
-            # Initialization and idle
-            initialize=initialize,
-            idle=idle,
-            # Main control loop actions
-            interpret=interpret,
-            integrate=integrate,
-            select=select,
-            generate=generate,
+    if use_6_stage:
+        # 6-stage pipeline: nlu → interpret → integrate → select → nlg → generate
+        builder = (
+            ApplicationBuilder()
+            .with_actions(
+                # Initialization and idle
+                initialize=initialize,
+                idle=idle,
+                # 6-stage control loop actions
+                nlu=nlu,
+                interpret=interpret,
+                integrate=integrate,
+                select=select,
+                nlg=nlg,
+                generate=generate,
+            )
+            .with_transitions(
+                # Start with initialization
+                ("initialize", "idle", default),
+                # From idle, start with NLU
+                ("idle", "nlu", default),
+                # After NLU, interpret the results
+                ("nlu", "interpret", default),
+                # After interpretation, always integrate
+                ("interpret", "integrate", default),
+                # After integration, decide what to do next
+                ("integrate", "select", default),
+                # From select, either do NLG or go idle
+                ("select", "nlg", expr("has_response")),
+                ("select", "idle", default),
+                # After NLG, integrate system move
+                ("nlg", "generate", default),
+                # After generation (system move integration), go back to idle
+                ("generate", "idle", default),
+            )
+            .with_entrypoint("initialize")
+            .with_state(**initial_state)
         )
-        .with_transitions(
-            # Start with initialization
-            ("initialize", "idle", default),
-            # From idle, wait for input trigger (handled externally)
-            ("idle", "interpret", default),
-            # After interpretation, always integrate
-            ("interpret", "integrate", default),
-            # After integration, decide what to do next
-            ("integrate", "select", default),
-            # From select, either generate or go idle
-            ("select", "generate", expr("has_response")),
-            ("select", "idle", default),
-            # After generation, go back to idle
-            ("generate", "idle", default),
+    else:
+        # 4-stage pipeline (legacy): interpret → integrate → select → generate
+        builder = (
+            ApplicationBuilder()
+            .with_actions(
+                # Initialization and idle
+                initialize=initialize,
+                idle=idle,
+                # 4-stage control loop actions (legacy)
+                interpret=interpret,
+                integrate=integrate,
+                select=select,
+                generate=generate,
+            )
+            .with_transitions(
+                # Start with initialization
+                ("initialize", "idle", default),
+                # From idle, wait for input trigger (handled externally)
+                ("idle", "interpret", default),
+                # After interpretation, always integrate
+                ("interpret", "integrate", default),
+                # After integration, decide what to do next
+                ("integrate", "select", default),
+                # From select, either generate or go idle
+                ("select", "generate", expr("has_response")),
+                ("select", "idle", default),
+                # After generation, go back to idle
+                ("generate", "idle", default),
+            )
+            .with_entrypoint("initialize")
+            .with_state(**initial_state)
         )
-        .with_entrypoint("initialize")
-        .with_state(**initial_state)
-    )
 
     # Add tracking if app_id is provided
     if app_id:
@@ -112,6 +173,8 @@ class DialogueStateMachine:
         rules: RuleSet | None = None,
         engine_class: type | None = None,
         engine_config: Any | None = None,
+        nlu_engine: NLUEngine | None = None,
+        nlg_engine: NLGEngine | None = None,
         app_id: str | None = None,
         storage_dir: str | None = None,
     ):
@@ -122,6 +185,8 @@ class DialogueStateMachine:
             rules: Optional rule set for dialogue processing
             engine_class: Optional engine class (e.g., NLUDialogueEngine)
             engine_config: Optional configuration for the engine
+            nlu_engine: Optional NLU engine for 6-stage pipeline
+            nlg_engine: Optional NLG engine for 6-stage pipeline
             app_id: Optional application ID for tracking
             storage_dir: Optional directory for state persistence
         """
@@ -130,10 +195,13 @@ class DialogueStateMachine:
             rules=rules,
             engine_class=engine_class,
             engine_config=engine_config,
+            nlu_engine=nlu_engine,
+            nlg_engine=nlg_engine,
             app_id=app_id,
             storage_dir=storage_dir,
         )
         self._initialized = False
+        self._use_6_stage = nlu_engine is not None and nlg_engine is not None
 
     def initialize(self) -> dict[str, Any]:
         """Initialize the state machine.
@@ -142,7 +210,7 @@ class DialogueStateMachine:
             Result from initialization action
         """
         if not self._initialized:
-            action, result, state = self.app.step()
+            _, result, _ = self.app.step()
             self._initialized = True
             return result
         return {"ready": True}
@@ -170,41 +238,81 @@ class DialogueStateMachine:
         self.app._state = state
 
         # Run through the control loop
-        # The app should be at 'idle' state, so first step transitions idle -> interpret
         action, result, state = self.app.step()
 
-        # If we're at idle, step again to get to interpret
+        # If we're at idle, step again
         if action.name == "idle":
             action, result, state = self.app.step()
 
-        # Now we should be at interpret
-        if action.name != "interpret":
-            raise AssertionError(f"Expected interpret after idle, got {action.name}")
+        if self._use_6_stage:
+            # 6-stage pipeline: nlu -> interpret -> integrate -> select -> nlg -> generate
+            # Step 1: NLU
+            if action.name != "nlu":
+                raise AssertionError(f"Expected nlu after idle, got {action.name}")
 
-        # Step 2: integrate
-        action, result, state = self.app.step()
-        if action.name != "integrate":
-            raise AssertionError(f"Expected integrate, got {action.name}")
-
-        # Step 3: select
-        action, result, state = self.app.step()
-        if action.name != "select":
-            raise AssertionError(f"Expected select, got {action.name}")
-
-        response_data = {
-            "has_response": result.get("has_response", False),
-            "utterance_text": "",
-        }
-
-        # Step 4: generate (if we have a response) or go to idle
-        action, result, state = self.app.step()
-        if action.name == "generate":
-            response_data["utterance_text"] = result.get("utterance_text", "")
-            # Step to idle after generate
+            # Step 2: interpret
             action, result, state = self.app.step()
-        # else we're already at idle
+            if action.name != "interpret":
+                raise AssertionError(f"Expected interpret after nlu, got {action.name}")
 
-        return response_data
+            # Step 3: integrate
+            action, result, state = self.app.step()
+            if action.name != "integrate":
+                raise AssertionError(f"Expected integrate, got {action.name}")
+
+            # Step 4: select
+            action, result, state = self.app.step()
+            if action.name != "select":
+                raise AssertionError(f"Expected select, got {action.name}")
+
+            response_data = {
+                "has_response": result.get("has_response", False),
+                "utterance_text": "",
+            }
+
+            # Step 5: nlg (if we have a response) or go to idle
+            action, result, state = self.app.step()
+            if action.name == "nlg":
+                # Step 6: generate (integrate system move)
+                action, result, state = self.app.step()
+                if action.name != "generate":
+                    raise AssertionError(f"Expected generate after nlg, got {action.name}")
+                response_data["utterance_text"] = result.get("utterance_text", "")
+                # Step to idle after generate
+                action, result, state = self.app.step()
+            # else we're already at idle
+
+            return response_data
+        else:
+            # 4-stage pipeline (legacy): interpret -> integrate -> select -> generate
+            # Step 1: interpret
+            if action.name != "interpret":
+                raise AssertionError(f"Expected interpret after idle, got {action.name}")
+
+            # Step 2: integrate
+            action, result, state = self.app.step()
+            if action.name != "integrate":
+                raise AssertionError(f"Expected integrate, got {action.name}")
+
+            # Step 3: select
+            action, result, state = self.app.step()
+            if action.name != "select":
+                raise AssertionError(f"Expected select, got {action.name}")
+
+            response_data = {
+                "has_response": result.get("has_response", False),
+                "utterance_text": "",
+            }
+
+            # Step 4: generate (if we have a response) or go to idle
+            action, result, state = self.app.step()
+            if action.name == "generate":
+                response_data["utterance_text"] = result.get("utterance_text", "")
+                # Step to idle after generate
+                action, result, state = self.app.step()
+            # else we're already at idle
+
+            return response_data
 
     def get_state(self) -> State:
         """Get the current Burr state.
