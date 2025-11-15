@@ -3,7 +3,8 @@
 Interpretation rules map utterances to dialogue moves. They are SYNTACTIC/SEMANTIC ONLY.
 
 Task plan formation (creating plans for user tasks) happens in the INTEGRATION phase,
-not here. See integration_rules.py for task plan formation logic.
+not here. See `ibdm.rules.integration_rules` for task plan formation and accommodation
+logic.
 
 Key distinction (Larsson 2002):
 • INTERPRETATION: Utterance → DialogueMove (syntactic/semantic)
@@ -28,8 +29,9 @@ from ibdm.rules.update_rules import UpdateRule
 def create_interpretation_rules() -> list[UpdateRule]:
     """Create standard interpretation rules.
 
-    These rules are SYNTACTIC/SEMANTIC ONLY - they map utterances to dialogue moves.
-    Task plan formation happens in integration_rules.py, not here.
+    These rules are SYNTACTIC/SEMANTIC ONLY - they map utterances to dialogue moves and
+    stop. Task plan formation, plan activation, and NDA task accommodation all happen
+    in `integration_rules.py`.
 
     Returns:
         List of interpretation rules
@@ -207,7 +209,11 @@ def _is_answer(state: InformationState) -> bool:
 
 
 def _is_command_request(state: InformationState) -> bool:
-    """Check if utterance is a command or request for the system to perform a task."""
+    """Check if an utterance should be tagged as a command/request move.
+
+    The check is intentionally shallow - just enough to label the dialogue move so the
+    integration phase can perform task accommodation and plan creation.
+    """
     utterance = state.private.beliefs.get("_temp_utterance", "").lower()
 
     # Check for command/request patterns
@@ -390,7 +396,11 @@ def _create_answer_move(state: InformationState) -> InformationState:
 
 
 def _create_command_move(state: InformationState) -> InformationState:
-    """Create a command/request dialogue move."""
+    """Create a command/request dialogue move placeholder.
+
+    This only enqueues the move on the agenda. Integration rules are responsible for
+    interpreting the command pragmatically (e.g., creating NDA plans).
+    """
     new_state = state.clone()
     speaker = new_state.private.beliefs.get("_temp_speaker", "user")
     utterance = new_state.private.beliefs.get("_temp_utterance", "")

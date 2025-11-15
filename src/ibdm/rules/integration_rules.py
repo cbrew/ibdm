@@ -119,7 +119,18 @@ def _is_task_request_move(state: InformationState) -> bool:
 
     # Check content for task keywords
     content_str = str(move.content).lower()
-    task_keywords = ["draft", "create", "prepare", "need", "help"]
+    task_keywords = [
+        "draft",
+        "create",
+        "prepare",
+        "need",
+        "help",
+        "book",
+        "travel",
+        "flight",
+        "train",
+        "trip",
+    ]
     return any(keyword in content_str for keyword in task_keywords)
 
 
@@ -221,6 +232,33 @@ def _form_task_plan(state: InformationState) -> InformationState:
             if first_subplan.content and isinstance(first_subplan.content, Question):
                 new_state.shared.push_qud(first_subplan.content)
 
+    # Check for travel booking requests (Larsson 2002 travel agency domain)
+    elif (
+        task_type == "BOOK_TRAVEL"
+        or "travel" in intent.lower()
+        or "book" in str(move.content).lower()
+        or "flight" in str(move.content).lower()
+        or "train" in str(move.content).lower()
+        or "trip" in str(move.content).lower()
+    ):
+        # Get travel domain and create plan using domain model
+        from ibdm.domains.travel_domain import get_travel_domain
+
+        domain = get_travel_domain()
+
+        # Use domain to get plan (not hardcoded!)
+        context = _extract_context(move, state)
+        plan = domain.get_plan("travel_booking", context)
+
+        # Add plan to state
+        new_state.private.plan.append(plan)
+
+        # Push first question to QUD
+        if plan.subplans and len(plan.subplans) > 0:
+            first_subplan = plan.subplans[0]
+            if first_subplan.content and isinstance(first_subplan.content, Question):
+                new_state.shared.push_qud(first_subplan.content)
+
     # Add move to history
     new_state.shared.last_moves.append(move)
 
@@ -247,6 +285,33 @@ def _extract_context(move: DialogueMove, state: InformationState) -> dict[str, s
     # Can extract entities, intent details, etc.
     # For now, return empty context
     return {}
+
+
+def _get_active_domain(state: InformationState):
+    """Determine which domain is active based on the plan.
+
+    Args:
+        state: Current information state
+
+    Returns:
+        The active domain model, or NDA domain as default
+
+    Note:
+        Inspects active plans to determine which domain is in use.
+        Falls back to NDA domain if unable to determine.
+    """
+    from ibdm.domains.nda_domain import get_nda_domain
+    from ibdm.domains.travel_domain import get_travel_domain
+
+    # Check active plans for domain hints
+    for plan in state.private.plan:
+        if plan.plan_type == "travel_booking":
+            return get_travel_domain()
+        elif plan.plan_type == "nda_drafting":
+            return get_nda_domain()
+
+    # Default to NDA domain for backward compatibility
+    return get_nda_domain()
 
 
 def _complete_subplan_for_question(state: InformationState, question: Question) -> None:
@@ -408,10 +473,9 @@ def _integrate_answer(state: InformationState) -> InformationState:
         # Check if this answer resolves the top QUD using domain validation
         top_question = new_state.shared.top_qud()
         if top_question:
-            # Get domain for semantic validation
-            from ibdm.domains.nda_domain import get_nda_domain
-
-            domain = get_nda_domain()
+            # Get active domain for semantic validation
+            # Automatically selects NDA or travel domain based on active plan
+            domain = _get_active_domain(new_state)
 
             # Use domain.resolves() for type checking and validation
             # This implements Larsson (2002) Section 2.4.3 semantic operation
