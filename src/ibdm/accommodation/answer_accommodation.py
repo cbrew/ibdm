@@ -129,11 +129,11 @@ def _resolve_alt_answer(answer_text: str, question: AltQuestion, state: Informat
     return Answer(content=text_lower, question_ref=question, certainty=0.6)
 
 
-def expand_fragment_to_sentence(fragment: str, question: Question) -> str:
+def expand_fragment_to_sentence(fragment: str | bool, question: Question) -> str:
     """Expand a fragment answer into a complete sentence.
 
     Args:
-        fragment: The fragment answer
+        fragment: The fragment answer (string or bool for YN questions)
         question: The question being answered
 
     Returns:

@@ -38,13 +38,11 @@ class PrivateIS:
     def to_dict(self) -> dict[str, Any]:
         """Convert to JSON-serializable dict."""
         return {
-            "plan": [p.to_dict() if hasattr(p, "to_dict") else str(p) for p in self.plan],
-            "agenda": [m.to_dict() if hasattr(m, "to_dict") else str(m) for m in self.agenda],
+            "plan": [getattr(p, "to_dict", lambda: str(p))() for p in self.plan],
+            "agenda": [getattr(m, "to_dict", lambda: str(m))() for m in self.agenda],
             "beliefs": self.beliefs.copy(),
             "last_utterance": (
-                self.last_utterance.to_dict()
-                if self.last_utterance and hasattr(self.last_utterance, "to_dict")
-                else str(self.last_utterance)
+                getattr(self.last_utterance, "to_dict", lambda: str(self.last_utterance))()
                 if self.last_utterance
                 else None
             ),

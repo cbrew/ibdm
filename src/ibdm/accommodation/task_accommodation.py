@@ -58,7 +58,7 @@ def accommodate_task(task: str, state: InformationState) -> DialogueMove:
             current_plan = state.private.plan[-1]
             return DialogueMove(
                 move_type="request",
-                content=f"cancel {current_plan.goal}",
+                content=f"cancel {current_plan.content}",
                 speaker=state.control.speaker,
             )
         elif state.shared.qud:
@@ -104,7 +104,7 @@ def _resolve_task_anaphora(task: str, state: InformationState) -> str:
         current_plan = state.private.plan[-1]
         for pron in ["that", "it", "this"]:
             if pron in task_lower:
-                return task.replace(pron, current_plan.goal)
+                return task.replace(pron, str(current_plan.content))
 
     # Couldn't resolve - return original
     return task

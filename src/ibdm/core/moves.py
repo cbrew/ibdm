@@ -6,7 +6,7 @@ They represent speaker intentions and actions.
 
 import time
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 
 @dataclass
@@ -29,7 +29,7 @@ class DialogueMove:
     timestamp: float = field(default_factory=lambda: time.time())
     """Timestamp when the move was created"""
 
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=lambda: {})
     """Additional metadata about the move (e.g., confidence scores, NLU annotations)"""
 
     def to_dict(self) -> dict[str, Any]:
@@ -66,7 +66,7 @@ class DialogueMove:
         Returns:
             Reconstructed DialogueMove
         """
-        content = data.get("content")
+        content: Any = data.get("content")
 
         # Deserialize Questions and Answers from dict representations
         if isinstance(content, dict):
@@ -74,12 +74,13 @@ class DialogueMove:
             from ibdm.core.answers import Answer
             from ibdm.core.questions import Question
 
+            content_dict = cast(dict[str, Any], content)
             # Check if it's a Question (has 'type' field)
-            if "type" in content:
-                content = Question.from_dict(content)
+            if "type" in content_dict:
+                content = Question.from_dict(content_dict)
             # Check if it's an Answer (has 'question_ref' field)
-            elif "question_ref" in content:
-                content = Answer.from_dict(content)
+            elif "question_ref" in content_dict:
+                content = Answer.from_dict(content_dict)
             # Otherwise leave as dict
 
         return cls(
