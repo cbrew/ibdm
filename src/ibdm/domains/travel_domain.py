@@ -5,6 +5,8 @@ work, providing predicates, sorts, and dialogue plans for collecting itinerary
 constraints before consulting a database.
 """
 
+from typing import Any
+
 from ibdm.core.domain import DomainModel
 from ibdm.core.plans import Plan
 from ibdm.core.questions import WhQuestion, YNQuestion
@@ -89,7 +91,7 @@ def create_travel_domain() -> DomainModel:
     return domain
 
 
-def _build_travel_plan(context: dict) -> Plan:
+def _build_travel_plan(context: dict[str, Any]) -> Plan:
     """Build Larsson-style travel booking plan.
 
     Collects itinerary slots before the system looks up fares.
@@ -100,7 +102,7 @@ def _build_travel_plan(context: dict) -> Plan:
     Returns:
         Plan with ordered subplans representing the travel dialogue strategy
     """
-    include_return = context.get("include_return", True)
+    include_return: bool = context.get("include_return", True)  # type: ignore[assignment]
 
     subplans: list[Plan] = [
         Plan(

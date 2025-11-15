@@ -9,6 +9,8 @@ This domain model provides semantic grounding for:
 - Jurisdiction selection (governing law)
 """
 
+from typing import Any
+
 from ibdm.core.domain import DomainModel
 from ibdm.core.plans import Plan
 from ibdm.core.questions import AltQuestion, WhQuestion
@@ -76,7 +78,7 @@ def create_nda_domain() -> DomainModel:
     return domain
 
 
-def _build_nda_plan(context: dict) -> Plan:
+def _build_nda_plan(context: dict[str, Any]) -> Plan:
     """Build NDA drafting plan.
 
     Creates a findout plan for gathering NDA requirements.

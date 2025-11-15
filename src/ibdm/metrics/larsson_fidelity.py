@@ -40,9 +40,9 @@ class MetricResult:
     name: str
     score: float
     passed: bool
-    details: dict[str, Any] = field(default_factory=dict)
-    issues: list[str] = field(default_factory=list)
-    recommendations: list[str] = field(default_factory=list)
+    details: dict[str, Any] = field(default_factory=lambda: {})
+    issues: list[str] = field(default_factory=lambda: [])
+    recommendations: list[str] = field(default_factory=lambda: [])
 
     def __str__(self) -> str:
         """Human-readable summary."""
