@@ -231,14 +231,14 @@ def create_question_understanding_template() -> PromptTemplate:
 
     # Add examples
     template.add_example(
-        input="What's the best Italian restaurant in downtown?",
-        output='{"type": "wh", "focus": "Italian restaurant", '
-        '"presuppositions": ["There are Italian restaurants in downtown", '
-        '"Some are better than others"], '
-        '"constraints": ["Location: downtown", "Cuisine: Italian", "Quality: best"]}',
-        reasoning="This is a wh-question (what) asking about restaurants. "
-        "It presupposes restaurants exist and can be ranked. "
-        "Constraints include location (downtown), cuisine (Italian), and quality (best).",
+        input="What's the fastest route to the office?",
+        output='{"type": "wh", "focus": "route", '
+        '"presuppositions": ["There are multiple routes to the office", '
+        '"Routes have different speeds"], '
+        '"constraints": ["Destination: office", "Metric: fastest"]}',
+        reasoning="This is a wh-question (what) asking about routes. "
+        "It presupposes multiple routes exist and can be compared by speed. "
+        "Constraints include destination (office) and optimization metric (fastest).",
     )
 
     template.add_example(
@@ -422,13 +422,13 @@ def create_answer_parsing_template() -> PromptTemplate:
     )
 
     template.add_example(
-        input='Question: "Is the restaurant expensive?"\n'
-        'Answer: "It\'s a Michelin star restaurant with entrees starting at $45."',
+        input='Question: "Is the software expensive?"\n'
+        'Answer: "It\'s an enterprise solution with licensing starting at $5000 per year."',
         output='{"addresses_question": true, "answer_type": "over-informative", '
-        '"propositional_content": "restaurant has Michelin star, entrees start at $45", '
-        '"implied_info": ["yes, it is expensive", "it is high quality"]}',
+        '"propositional_content": "enterprise solution, $5000/year licensing", '
+        '"implied_info": ["yes, it is expensive", "it is for business use"]}',
         reasoning="This answer provides more information than requested. It doesn't "
-        'directly say "yes" but implies expensiveness through concrete details.',
+        'directly say "yes" but implies expensiveness through concrete pricing details.',
     )
 
     template.add_example(
@@ -487,15 +487,15 @@ def create_reference_resolution_template() -> PromptTemplate:
     )
 
     template.add_example(
-        input='Context: "We have two restaurants available. The Italian one is downtown."\n'
+        input='Context: "We have two candidates. The senior one has 10 years experience."\n'
         'Current: "What about the other one?"',
         output='{"references": ['
         '{"expression": "the other one", "type": "definite", '
-        '"antecedent": "the non-Italian restaurant", "confidence": 0.9, '
+        '"antecedent": "the junior candidate", "confidence": 0.9, '
         '"alternatives": []}'
         "]}",
-        reasoning='"The other one" refers to the second restaurant mentioned in context, '
-        "implicitly the non-Italian one since one was already specified.",
+        reasoning='"The other one" refers to the second candidate mentioned in context, '
+        "implicitly the junior one since the senior one was already specified.",
     )
 
     return template
