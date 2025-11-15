@@ -196,14 +196,16 @@ ruff format demos/
 
 ## Related Documentation
 
-- **DEMO_PLAN.md**: Complete demo script with talking points
-- **SYSTEM_ACHIEVEMENTS.md**: Full system documentation
-- **GETTING_STARTED.md**: Tutorial for using IBDM
-- **README.md**: Project overview
+- **../DEMO_PLAN.md**: Complete demo script with talking points (top-level)
+- **../SYSTEM_ACHIEVEMENTS.md**: Full system documentation
+- **../GETTING_STARTED.md**: Tutorial for using IBDM
+- **../README.md**: Project overview
+- **SCENARIO_PLAN_NDA.md**: Detailed NDA scenario design (this directory)
+- **RULE_DRIVEN_PLAN.md**: Rule-driven implementation notes (completed)
 
 ## Questions?
 
-See DEMO_PLAN.md for:
+See [../DEMO_PLAN.md](../DEMO_PLAN.md) for:
 - Common questions and answers
 - Detailed explanations of each concept
 - Tips for presenting

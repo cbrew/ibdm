@@ -1,9 +1,13 @@
 # Legal Document Generation Scenario Plan
 ## Demo: IBDM-NLU Integration for NDA Generation
 
+**📋 STATUS: CURRENT** - Scenario design for NDA generation demo. Implementation complete in `03_nlu_integration_*.py` files.
+
 **Document**: Non-Disclosure Agreement (NDA)
 **Participants**: Attorney (User) ↔ Legal Document Generation System (Agent)
-**Demo File**: `demos/03_nlu_integration_basic.py`
+**Demo Files**:
+- `demos/03_nlu_integration_interactive.py` (recommended - interactive)
+- `demos/03_nlu_integration_basic.py` (pre-scripted)
 
 ---
 
@@ -11,11 +15,11 @@
 
 This scenario demonstrates Issue-Based Dialogue Management (IBDM) concepts through a realistic legal document generation dialogue. An attorney interacts with a system to create a Non-Disclosure Agreement by answering structured questions. The demo showcases:
 
-- **Natural Language Understanding**: Transforming legal terminology into structured DialogueMoves
+- **Natural Language Understanding**: Transforming legal terminology into structured DialogueMoves with Claude Sonnet 4.5
 - **Question Under Discussion (QUD)**: Managing information gathering sequence
 - **Entity Tracking**: Extracting and tracking legal entities (organizations, dates, jurisdictions)
 - **Task Accommodation**: System infers document requirements from initial request
-- **Hybrid Strategy**: Demonstrating cost-effective NLU routing (patterns → Haiku → Sonnet)
+- **Domain-Driven Planning**: Uses NDA domain model for structured information gathering
 
 ---
 

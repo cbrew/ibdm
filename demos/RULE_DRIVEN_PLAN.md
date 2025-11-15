@@ -1,23 +1,24 @@
 # Rule-Driven Demo Implementation
 
-## Status: ✅ COMPLETED (2025-11-12)
+**✅ STATUS: COMPLETED** (2025-11-12)
+
+This document tracked the implementation of rule-driven dialogue flow for the NDA demo. Implementation is complete.
+
+## What Was Implemented
 
 All planned tasks have been implemented and tested. The system now uses:
-- **LLM-based task classification** with semantic domain representations
-- **Plan-based dialogue control** via interpretation and selection rules
+- **Domain-based task planning** via `DomainModel` and plan builders
+- **Plan-based dialogue control** via integration and selection rules
 - **Fully rule-driven flow** without manual question creation
 
-See commits:
-- cc5dff1: feat(nlu): add LLM-based task classifier with semantic domain representation
-- 5466d9c: refactor(rules): use flexible keyword matching for NDA detection
-- 94f9f1a: feat(rules): add request integration rule and fix type safety
-- d048086: fix(rules): create request move in NDA accommodation rule
-- 05299f6: refactor(demo): remove manual question creation, use rule-driven flow
+## Current State
 
-Documentation:
-- `docs/TASK_CLASSIFICATION.md` - Complete task classification documentation
-- `src/ibdm/nlu/task_classifier.py` - Implementation with examples
-- `src/ibdm/rules/interpretation_rules.py` - Rule integration
+The rule-driven architecture evolved into the domain semantic layer (see `../docs/REVISED_REFACTORING_TASKS.md` and `src/ibdm/core/domain.py`).
+
+**Note**: Original task classification docs referenced here have been archived. See:
+- `src/ibdm/domains/nda_domain.py` - Current NDA domain implementation
+- `src/ibdm/core/domain.py` - Domain model abstraction
+- `src/ibdm/rules/integration_rules.py` - Plan formation rules
 
 ---
 
