@@ -107,6 +107,7 @@ pyright src/ibdm/core/                       # Type check specific module
 - When modifying existing code, fix ALL type errors in functions/classes you touch
 - Type errors indicate design problems: incomplete error handling, missing None checks, unclear types
 - Never suppress type errors with `# type: ignore` without understanding and documenting why
+- For type errors in code you don't touch, an effort to fix the error is still appreciated
 
 **Common Issues & Fixes**:
 - `reportOptionalMemberAccess`: Check for None before accessing attributes (`if obj is not None: obj.attr`)
