@@ -65,26 +65,46 @@ def nlu(state: "State[Any]") -> tuple[dict[str, Any], "State[Any]"]:
 
 
 @action(
-    reads=["utterance", "speaker", "information_state", "engine", "nlu_context"],
-    writes=["moves", "nlu_context"],
+    reads=["nlu_result", "speaker", "information_state", "engine"],
+    writes=["moves"],
 )
 def interpret(state: "State[Any]") -> tuple[dict[str, Any], "State[Any]"]:
-    """Interpret utterance into dialogue moves.
+    """Interpret NLU result into dialogue moves.
+
+    In the 6-stage pipeline, this action reads nlu_result from state
+    (produced by the nlu() action) and creates DialogueMoves from it.
 
     Args:
-        state: Current Burr state with utterance, speaker, information_state, engine,
-            and nlu_context
+        state: Current Burr state with nlu_result, speaker, information_state, engine
 
     Returns:
-        Tuple of (result dict, updated state)
+        Tuple of (result dict, updated state with moves)
     """
-    utterance: str = state["utterance"]  # type: ignore[index]
+    nlu_result_dict: dict[str, Any] | None = state.get("nlu_result")  # type: ignore[assignment, attr-defined]
     speaker: str = state["speaker"]  # type: ignore[index]
     info_state_dict: dict[str, Any] = state["information_state"]  # type: ignore[index]
     engine: DialogueMoveEngine = state["engine"]  # type: ignore[index]
 
     # Convert dict to InformationState object
     info_state = InformationState.from_dict(info_state_dict)
+
+    # Check if we have nlu_result (6-stage pipeline)
+    if nlu_result_dict is not None:
+        # Convert nlu_result dict to NLUResult object
+        nlu_result = NLUResult.from_dict(nlu_result_dict)
+
+        # Use new interpret_from_nlu_result method
+        moves = engine.interpret_from_nlu_result(nlu_result, speaker, info_state)
+
+        # Convert moves to dicts for storage
+        moves_dicts: list[dict[str, Any]] = [m.to_dict() for m in moves]
+
+        # Update state with moves
+        result = {"moves": moves_dicts, "move_count": len(moves)}
+        return result, state.update(moves=moves_dicts)
+
+    # Backward compatibility: if no nlu_result, try old interpretation methods
+    utterance: str = state.get("utterance", "")  # type: ignore[assignment]
 
     # Check if engine supports NLU context (Phase 4: NLU state integration)
     if hasattr(engine, "interpret_with_nlu_context"):
@@ -95,28 +115,28 @@ def interpret(state: "State[Any]") -> tuple[dict[str, Any], "State[Any]"]:
         nlu_context = NLUContext.from_dict(nlu_context_dict)
 
         # Use NLU-aware interpretation
-        moves: list[DialogueMove]
+        moves_list: list[DialogueMove]
         updated_nlu_context: NLUContext
-        moves, updated_nlu_context = engine.interpret_with_nlu_context(  # type: ignore[attr-defined]
+        moves_list, updated_nlu_context = engine.interpret_with_nlu_context(  # type: ignore[attr-defined]
             utterance, speaker, info_state, nlu_context
         )
 
         # Convert moves and NLU context to dicts for storage
-        moves_dicts: list[dict[str, Any]] = [m.to_dict() for m in moves]
+        moves_dicts = [m.to_dict() for m in moves_list]
         updated_nlu_context_dict: dict[str, Any] = updated_nlu_context.to_dict()
 
         # Update state with moves and NLU context
-        result = {"moves": moves_dicts, "move_count": len(moves)}
+        result = {"moves": moves_dicts, "move_count": len(moves_list)}
         return result, state.update(moves=moves_dicts, nlu_context=updated_nlu_context_dict)
     else:
         # Use standard interpretation (backward compatibility)
-        moves = engine.interpret(utterance, speaker, info_state)
+        moves_list = engine.interpret(utterance, speaker, info_state)
 
         # Convert moves to dicts for storage
-        moves_dicts = [m.to_dict() for m in moves]
+        moves_dicts = [m.to_dict() for m in moves_list]
 
         # Update state with moves as dicts
-        result = {"moves": moves_dicts, "move_count": len(moves)}
+        result = {"moves": moves_dicts, "move_count": len(moves_list)}
         return result, state.update(moves=moves_dicts)
 
 
@@ -236,20 +256,24 @@ def nlg(state: "State[Any]") -> tuple[dict[str, Any], "State[Any]"]:
 
 
 @action(
-    reads=["response_move", "information_state", "engine"],
-    writes=["information_state", "utterance_text"],
+    reads=["response_move", "information_state", "nlg_engine", "engine"],
+    writes=["information_state", "utterance_text", "nlg_result"],
 )
 def generate(state: "State[Any]") -> tuple[dict[str, Any], "State[Any]"]:
     """Generate utterance from dialogue move.
 
+    In the 6-stage pipeline, this action uses nlg_engine if available.
+    Falls back to engine.generate() for backward compatibility.
+
     Args:
-        state: Current Burr state containing response_move, information_state, and engine
+        state: Current Burr state containing response_move, information_state, nlg_engine, engine
 
     Returns:
-        Tuple of (result dict, updated state with updated information_state)
+        Tuple of (result dict, updated state with utterance_text)
     """
     response_move_dict: dict[str, Any] | None = state["response_move"]  # type: ignore[index]
     info_state_dict: dict[str, Any] = state["information_state"]  # type: ignore[index]
+    nlg_engine: NLGEngine | None = state.get("nlg_engine")  # type: ignore[assignment, attr-defined]
     engine: DialogueMoveEngine = state["engine"]  # type: ignore[index]
 
     if response_move_dict is None:
@@ -260,20 +284,47 @@ def generate(state: "State[Any]") -> tuple[dict[str, Any], "State[Any]"]:
     response_move = DialogueMove.from_dict(response_move_dict)
     info_state = InformationState.from_dict(info_state_dict)
 
-    # Generate utterance using generation rules (Phase 2: pure function)
-    utterance_text = engine.generate(response_move, info_state)
+    # Prefer NLG engine (6-stage pipeline)
+    if nlg_engine is not None:
+        # Use NLG engine
+        nlg_result: NLGResult = nlg_engine.generate(response_move, info_state)
+        utterance_text = nlg_result.utterance_text
 
-    # Update move content and integrate our own move
-    response_move.content = utterance_text
-    updated_info_state = engine.integrate(response_move, info_state)
+        # Store NLG result in state
+        nlg_result_dict = nlg_result.to_dict()
 
-    # Convert back to dict for storage
-    updated_info_state_dict = updated_info_state.to_dict()
+        # Update move content and integrate our own move
+        response_move.content = utterance_text
+        updated_info_state = engine.integrate(response_move, info_state)
 
-    result = {"utterance_text": utterance_text}
-    return result, state.update(
-        information_state=updated_info_state_dict, utterance_text=utterance_text
-    )
+        # Convert back to dict for storage
+        updated_info_state_dict = updated_info_state.to_dict()
+
+        result = {
+            "utterance_text": utterance_text,
+            "strategy": nlg_result.strategy,
+            "latency": nlg_result.latency,
+        }
+        return result, state.update(
+            information_state=updated_info_state_dict,
+            utterance_text=utterance_text,
+            nlg_result=nlg_result_dict,
+        )
+    else:
+        # Fallback: use engine's generation rules (backward compatibility)
+        utterance_text = engine.generate(response_move, info_state)
+
+        # Update move content and integrate our own move
+        response_move.content = utterance_text
+        updated_info_state = engine.integrate(response_move, info_state)
+
+        # Convert back to dict for storage
+        updated_info_state_dict = updated_info_state.to_dict()
+
+        result = {"utterance_text": utterance_text}
+        return result, state.update(
+            information_state=updated_info_state_dict, utterance_text=utterance_text
+        )
 
 
 @action(reads=[], writes=["information_state", "engine", "nlu_context", "ready"])
