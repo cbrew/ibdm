@@ -98,8 +98,9 @@ def create_dialogue_application(
             ("select", "nlg", expr("has_response")),
             ("nlg", "generate", default),
             ("generate", "nlu", default),
-            # No response path: select → nlu (loop)
-            ("select", "nlu", default),
+            # No response path: halt at select (controlled by halt_after in process_utterance)
+            # When has_response=False, halt_after=["select"] stops execution
+            # Next process_utterance() call provides new inputs and resumes at nlu
         )
         .with_entrypoint("initialize")
         .with_state(**initial_state)

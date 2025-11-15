@@ -55,30 +55,29 @@ def print_text_graph():
            │                        │
            ├─[has_response]─────────┤
            │                        │
-           ▼                        │
+           ▼                   [no response]
     ┌─────────────┐                 │
-    │     nlg     │                 │
-    └──────┬──────┘                 │
-           │                        │
-           ▼                        │
-    ┌─────────────┐                 │
-    │  generate   │                 │
-    └──────┬──────┘                 │
-           │                        │
+    │     nlg     │           ┌──────────┐
+    └──────┬──────┘           │   HALT   │
+           │                  │  (wait)  │
+           ▼                  └──────────┘
+    ┌─────────────┐
+    │  generate   │
+    └──────┬──────┘
+           │
            └────────────────────────┘
 
     Legend:
     • Solid arrows (│,▼): Default transitions
-    • Conditional [has_response]: Only if response available
-    • Loop back to nlu: Waits for next user input
+    • [has_response]: Response path to nlg/generate
+    • HALT: Execution stops at select when no response
+    • Loop: After generate, returns to nlu with new input
     """)
     print("=" * 60)
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Visualize IBDM Burr application graph"
-    )
+    parser = argparse.ArgumentParser(description="Visualize IBDM Burr application graph")
     parser.add_argument(
         "--output",
         "-o",
@@ -157,8 +156,8 @@ def main():
     print("\n3. Application Structure:")
     print(f"   - Entry point: initialize")
     print(f"   - Main loop: nlu → interpret → integrate → select → nlg → generate → nlu")
-    print(f"   - Conditional: select → nlg (when has_response)")
-    print(f"   - No-response: select → nlu (when not has_response)")
+    print(f"   - Response path: select → nlg → generate → nlu (when has_response)")
+    print(f"   - No-response: halt at select (halt_after controls wait for input)")
 
     print("\n" + "=" * 60)
     print("Graph Details:")
@@ -175,9 +174,12 @@ def main():
     print(f"\nTransitions (edges):")
     print(f"  • initialize → nlu (start)")
     print(f"  • nlu → interpret → integrate → select (pipeline)")
-    print(f"  • select → nlg [if has_response]")
-    print(f"  • select → nlu [if not has_response] (wait for input)")
-    print(f"  • nlg → generate → nlu (complete response)")
+    print(f"  • select → nlg [if has_response] → generate → nlu (response loop)")
+    print(f"  • select [if not has_response] → HALT (wait for next input)")
+    print(f"\nControl Flow:")
+    print(f"  • process_utterance() uses halt_after=['generate', 'select']")
+    print(f"  • With response: halts after generate")
+    print(f"  • No response: halts at select, waits for next utterance")
 
     print("\n" + "=" * 60)
     print(f"✓ Visualization complete: {output_path.absolute()}")
