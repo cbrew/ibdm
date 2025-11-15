@@ -20,7 +20,7 @@ git commit -m "feat(scope): description"
 
 ## Table of Contents
 
-- [Architecture](#architecture) - Policies 0, 10, 11, 12
+- [Architecture](#architecture) - Policies 0, 10, 11, 12, 14
 - [Tooling](#tooling) - Policies 1, 2, 3, 9
 - [Process](#process) - Policies 4, 5, 6, 7, 8, 13
 - [Workflow](#workflow) - Daily tasks, commits, pushing
@@ -72,6 +72,63 @@ git commit -m "feat(scope): description"
 - Domain-independent rules
 
 📖 **Details**: [`docs/LARSSON_ALGORITHMS.md`](docs/LARSSON_ALGORITHMS.md)
+
+### 14. ZFC Principles: Selective Compliance
+
+**Policy**: Use Zero Framework Cognition (ZFC) for language processing, intentionally violate it for dialogue management.
+
+**ZFC says**: "Delegate ALL reasoning to external AI"
+**IBDM says**: "Implement Larsson's algorithms explicitly"
+
+**These are opposite philosophies - we use both selectively.**
+
+#### ✅ Use ZFC For: Language & Infrastructure
+
+**NLU/NLG** (Delegate to AI):
+- ✅ DO: Delegate utterance interpretation to Claude 4.5
+- ✅ DO: Delegate text generation to templates/LLM
+- ❌ DON'T: Keyword matching, fallback heuristics, template selection logic
+
+**Infrastructure** (Pure orchestration):
+- ✅ DO: Burr state machine (mechanical execution)
+- ✅ DO: Structural validation (schema, types)
+- ❌ DON'T: Decision logic in orchestration
+
+#### ❌ Violate ZFC For: Dialogue Management
+
+**Update Rules** (INTENTIONAL VIOLATION):
+- ✅ DO: Implement Larsson's algorithms explicitly
+- ✅ DO: Semantic reasoning (domain.resolves)
+- ✅ DO: Priority-based rule selection
+- **Why**: This IS the research contribution
+
+**Semantic Operations** (INTENTIONAL VIOLATION):
+- ✅ DO: domain.resolves(answer, question)
+- ✅ DO: Type matching, semantic validation
+- **Why**: Larsson Section 2.4.3 defines these
+
+**QUD & Plans** (INTENTIONAL VIOLATION):
+- ✅ DO: Explicit stack operations (push, pop)
+- ✅ DO: Plan progression logic
+- **Why**: Core IBDM structures must be transparent
+
+#### The Boundary
+
+```
+Language (ZFC) → Dialogue Semantics (NOT ZFC) → Language (ZFC)
+   ↑ AI              ↑ Larsson Algorithms           ↑ AI
+```
+
+#### Why We Violate
+
+**Violations are intentional** because:
+1. Research goal: Demonstrate Larsson's algorithms work
+2. Transparency: Dialogue behavior must be inspectable
+3. Validation: Can measure fidelity to Larsson (2002)
+
+**Philosophy**: "Use AI for what humans are bad at (language). Use explicit algorithms for what we understand (dialogue)."
+
+📖 **Details**: [`reports/zfc-analysis-ibdm.md`](reports/zfc-analysis-ibdm.md)
 
 ---
 
