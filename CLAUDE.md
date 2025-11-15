@@ -22,7 +22,7 @@ git commit -m "feat(scope): description"
 
 - [Architecture](#architecture) - Policies 0, 10, 11, 12
 - [Tooling](#tooling) - Policies 1, 2, 3, 9
-- [Process](#process) - Policies 4, 5, 6, 7, 8
+- [Process](#process) - Policies 4, 5, 6, 7, 8, 13
 - [Workflow](#workflow) - Daily tasks, commits, pushing
 
 ---
@@ -189,6 +189,42 @@ All reports tagged with timestamp and git hash in `reports/` directory.
 2. Write minimal code to pass
 3. Refactor code quality
 4. Commit each step
+
+### 13. Documentation Organization
+
+**Policy**: Maintain organized, current documentation with clear status markers.
+
+**Active Documentation** (keep current):
+- Top-level: `CLAUDE.md`, `README.md`, `GETTING_STARTED.md`, `SYSTEM_ACHIEVEMENTS.md`, `LARSSON_PRIORITY_ROADMAP.md`
+- `docs/architecture/`: Architecture principles and algorithms
+- `docs/configuration/`: Setup and configuration guides
+- `docs/reference/`: Larsson thesis material
+- `docs/INDEX.md`: Complete documentation index
+
+**Archive Old Docs**: Move historical/completed docs to `docs/archive/` with status markers:
+- `docs/archive/design-discussions/`: Architectural analysis
+- `docs/archive/refactoring-plans/`: Completed refactoring plans
+- `docs/archive/planning/`: Original planning documents
+- `docs/archive/reviews/`: One-time reviews
+
+**Status Markers** (use in document headers):
+- **✅ CURRENT**: Actively maintained, authoritative
+- **📋 HISTORICAL**: Original planning, evolved significantly
+- **✅ COMPLETED**: Implementation finished, kept for reference
+- **❌ DEPRECATED**: Approach superseded by new design
+- **📖 REFERENCE**: Background material, still valid
+
+**No Duplicates**: Single source of truth
+- `CLAUDE.md` is canonical (top-level)
+- `AGENTS.md` is auto-synced from `CLAUDE.md` (don't edit)
+- Delete or merge duplicates
+
+**Update `docs/INDEX.md`**: When adding/moving documentation
+
+**Never Create** (unless explicitly requested):
+- README files for subdirectories (use INDEX.md)
+- Duplicate docs (check existing first)
+- Documentation for unimplemented features (wait until implemented)
 
 ---
 
