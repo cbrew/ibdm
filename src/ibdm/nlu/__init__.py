@@ -57,6 +57,7 @@ from ibdm.nlu.llm_adapter import (
     ModelType,
     create_adapter,
 )
+from ibdm.nlu.nlu_result import NLUResult
 from ibdm.nlu.prompts import (
     Example,
     PromptTemplate,
@@ -94,6 +95,7 @@ from ibdm.nlu.semantic_parser import (
 from ibdm.nlu.semantic_parser import (
     create_parser as create_semantic_parser,
 )
+from ibdm.nlu.nlu_engine import NLUEngine, NLUEngineConfig, create_nlu_engine
 
 __all__ = [
     # LLM Adapter
@@ -165,4 +167,10 @@ __all__ = [
     "ReferenceResolverConfig",
     "ReferenceType",
     "create_resolver",
+    # NLU Result
+    "NLUResult",
+    # NLU Engine
+    "NLUEngine",
+    "NLUEngineConfig",
+    "create_nlu_engine",
 ]
