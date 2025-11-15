@@ -11,6 +11,57 @@ from burr.core import State, action
 from ibdm.burr_integration.nlu_context import NLUContext
 from ibdm.core import DialogueMove, InformationState
 from ibdm.engine import DialogueMoveEngine
+from ibdm.nlg import NLGEngine
+from ibdm.nlg.nlg_result import NLGResult
+from ibdm.nlu import NLUEngine
+from ibdm.nlu.nlu_result import NLUResult
+
+
+@action(
+    reads=["utterance", "speaker", "information_state", "nlu_engine", "nlu_context"],
+    writes=["nlu_result", "nlu_context"],
+)
+def nlu(state: "State[Any]") -> tuple[dict[str, Any], "State[Any]"]:
+    """Process utterance through NLU engine.
+
+    Args:
+        state: Current Burr state with utterance, speaker, information_state,
+            nlu_engine, and nlu_context
+
+    Returns:
+        Tuple of (result dict, updated state with nlu_result and nlu_context)
+    """
+    utterance: str = state["utterance"]  # type: ignore[index]
+    speaker: str = state["speaker"]  # type: ignore[index]
+    info_state_dict: dict[str, Any] = state["information_state"]  # type: ignore[index]
+    nlu_engine: NLUEngine = state["nlu_engine"]  # type: ignore[index]
+
+    # Get NLU context from state (or create empty if not present)
+    nlu_context_dict: dict[str, Any] = state.get("nlu_context", NLUContext.create_empty().to_dict())  # type: ignore[assignment, attr-defined]
+    nlu_context = NLUContext.from_dict(nlu_context_dict)
+
+    # Convert dict to InformationState object
+    info_state = InformationState.from_dict(info_state_dict)
+
+    # Process utterance through NLU engine
+    nlu_result: NLUResult
+    updated_nlu_context: NLUContext
+    nlu_result, updated_nlu_context = nlu_engine.process(
+        utterance, speaker, info_state, nlu_context
+    )
+
+    # Convert to dicts for Burr State storage
+    nlu_result_dict = nlu_result.to_dict()
+    updated_nlu_context_dict = updated_nlu_context.to_dict()
+
+    # Build result
+    result = {
+        "dialogue_act": nlu_result.dialogue_act,
+        "confidence": nlu_result.confidence,
+        "latency": nlu_result.latency,
+    }
+
+    return result, state.update(nlu_result=nlu_result_dict, nlu_context=updated_nlu_context_dict)
 
 
 @action(
@@ -138,6 +189,49 @@ def select(state: "State[Any]") -> tuple[dict[str, Any], "State[Any]"]:
         information_state=updated_info_state_dict,
         has_response=has_response,
         response_move=response_move_dict,
+    )
+
+
+@action(
+    reads=["response_move", "information_state", "nlg_engine"],
+    writes=["utterance_text", "nlg_result"],
+)
+def nlg(state: "State[Any]") -> tuple[dict[str, Any], "State[Any]"]:
+    """Generate natural language utterance from dialogue move.
+
+    Args:
+        state: Current Burr state containing response_move, information_state, and nlg_engine
+
+    Returns:
+        Tuple of (result dict, updated state with utterance_text and nlg_result)
+    """
+    response_move_dict: dict[str, Any] | None = state["response_move"]  # type: ignore[index]
+    info_state_dict: dict[str, Any] = state["information_state"]  # type: ignore[index]
+    nlg_engine: NLGEngine = state["nlg_engine"]  # type: ignore[index]
+
+    if response_move_dict is None:
+        result = {"utterance_text": ""}
+        return result, state.update(utterance_text="")
+
+    # Convert from dicts to objects
+    response_move = DialogueMove.from_dict(response_move_dict)
+    info_state = InformationState.from_dict(info_state_dict)
+
+    # Generate utterance using NLG engine
+    nlg_result: NLGResult = nlg_engine.generate(response_move, info_state)
+
+    # Convert to dict for Burr State storage
+    nlg_result_dict = nlg_result.to_dict()
+
+    # Build result
+    result = {
+        "utterance_text": nlg_result.utterance_text,
+        "strategy": nlg_result.strategy,
+        "latency": nlg_result.latency,
+    }
+
+    return result, state.update(
+        utterance_text=nlg_result.utterance_text, nlg_result=nlg_result_dict
     )
 
 
