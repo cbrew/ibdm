@@ -22,9 +22,12 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPORTS_DIR="${PROJECT_ROOT}/reports"
 PREDICTIONS_DIR="${REPORTS_DIR}/predictions"
 BEADS_HELPERS="${PROJECT_ROOT}/.claude/beads-helpers.sh"
+MPLCONFIGDIR="${PROJECT_ROOT}/.matplotlib_cache"
+XDG_CACHE_HOME="${PROJECT_ROOT}/.cache"
+export MPLCONFIGDIR XDG_CACHE_HOME
 
 # Ensure directories exist
-mkdir -p "$REPORTS_DIR" "$PREDICTIONS_DIR"
+mkdir -p "$REPORTS_DIR" "$PREDICTIONS_DIR" "$MPLCONFIGDIR" "$XDG_CACHE_HOME"
 
 # Get current git hash (short)
 get_git_hash() {
@@ -47,24 +50,30 @@ generate_report() {
     local txt_path="${REPORTS_DIR}/${filename}.txt"
     local json_path="${REPORTS_DIR}/${filename}.json"
 
-    echo "Generating Larsson fidelity report: ${label}"
+    echo "Generating Larsson fidelity report: ${label}" >&2
 
     # Generate both text and JSON reports
-    python "${PROJECT_ROOT}/scripts/generate_fidelity_report.py" \
-        --output "$txt_path" 2>/dev/null || {
-        echo "Error: Failed to generate text report"
-        return 1
-    }
+    if ! python "${PROJECT_ROOT}/scripts/generate_fidelity_report.py" \
+        --output "$txt_path" 1>&2; then
+        if [ ! -f "$txt_path" ]; then
+            echo "Error: Failed to generate text report" >&2
+            return 1
+        fi
+        echo "Warning: Text report command exited with non-zero status" >&2
+    fi
 
-    python "${PROJECT_ROOT}/scripts/generate_fidelity_report.py" \
-        --json --output "$json_path" 2>/dev/null || {
-        echo "Error: Failed to generate JSON report"
-        return 1
-    }
+    if ! python "${PROJECT_ROOT}/scripts/generate_fidelity_report.py" \
+        --json --output "$json_path" 1>&2; then
+        if [ ! -f "$json_path" ]; then
+            echo "Error: Failed to generate JSON report" >&2
+            return 1
+        fi
+        echo "Warning: JSON report command exited with non-zero status" >&2
+    fi
 
-    echo "  Text: ${txt_path}"
-    echo "  JSON: ${json_path}"
-    echo ""
+    echo "  Text: ${txt_path}" >&2
+    echo "  JSON: ${json_path}" >&2
+    echo "" >&2
 
     # Return paths for later use
     echo "$txt_path|$json_path"
