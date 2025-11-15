@@ -60,7 +60,7 @@ class NLUResult:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "NLUResult":
+    def from_dict(cls, data: dict[str, Any]) -> NLUResult:
         """Create from dict loaded from Burr state.
 
         Args:

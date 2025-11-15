@@ -234,9 +234,7 @@ class DialogueMoveEngine:
 
         return moves
 
-    def _create_question_from_details(
-        self, question_details: dict[str, Any]
-    ) -> Question | None:
+    def _create_question_from_details(self, question_details: dict[str, Any]) -> Question | None:
         """Create a Question object from NLU question details.
 
         Args:
