@@ -1,5 +1,13 @@
 # ibdm-64.14: Hybrid Rule/LLM Fallback Strategy - Detailed Review
 
+**❌ STATUS: DEPRECATED** - This review document was created during Phase 3.5 implementation. The hybrid fallback strategy was implemented but is now deprecated per CLAUDE.md Policy #0 (Architectural Clarity - no cascading fallbacks).
+
+**Current Approach**: Direct model selection based on task type (Sonnet 4.5 for complex, Haiku 4.5 for quick tasks). See `docs/architecture_principles.md` and `docs/llm_configuration.md`.
+
+**Historical Value**: Documents the reasoning behind the original hybrid approach before simplification.
+
+---
+
 ## Task Description
 **Goal**: Implement fallback strategies and hybrid rule/LLM approach
 - Integrate LLM-based NLU with existing rule-based system

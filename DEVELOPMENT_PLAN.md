@@ -1,5 +1,15 @@
 # Issue-Based Dialogue Management: Development Plan
 
+**📋 STATUS: HISTORICAL** - This is the original 8-phase development plan from project inception. Many phases have evolved significantly or been completed. For current status, see:
+- `SYSTEM_ACHIEVEMENTS.md` - What's been built
+- `LARSSON_PRIORITY_ROADMAP.md` - Current priorities and task breakdown
+- `CLAUDE.md` - Active development policies and workflow
+- Beads tasks - Live project tracking (run `.claude/beads-helpers.sh summary`)
+
+**Value**: Provides theoretical foundation and original architectural vision. Useful for understanding project goals and Larsson framework concepts.
+
+---
+
 ## Overview
 
 This document outlines the implementation of Staffan Larsson's Issue-Based Dialogue Management (IBDM) system in Python, using Burr for finite state control and designed for multi-agent dialogue from the outset.

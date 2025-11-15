@@ -1,5 +1,11 @@
 # LLM-Enhanced Natural Language Understanding Plan
 
+**✅ STATUS: COMPLETED** - Phase 3.5 complete as of November 2024. This document represents the original planning phase. See `SYSTEM_ACHIEVEMENTS.md` for implementation results and `docs/llm_configuration.md` for current LLM setup.
+
+**Note**: Original plan mentioned Gemini/OpenAI, but implementation uses Claude 4.5 (Sonnet/Haiku) exclusively per CLAUDE.md Policy #9.
+
+---
+
 ## Overview
 
 This plan enhances the IBDM system with sophisticated natural language understanding capabilities using modern LLMs (GPT-4, Claude, Llama, etc.). The current rule-based interpretation system will be augmented with deep semantic understanding.

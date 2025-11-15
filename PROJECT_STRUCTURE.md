@@ -1,5 +1,17 @@
 # Issue-Based Dialogue Management - Project Structure
 
+**📋 STATUS: HISTORICAL** - This describes the *ideal* directory structure from the original design phase. The actual `src/` layout has evolved during implementation.
+
+**Current Reality**:
+- Core structure mostly matches (src/ibdm/core/, rules/, engine/)
+- NLU implementation is more extensive than planned (11 components vs. 3 sketched)
+- Domain layer added (src/ibdm/domains/, src/ibdm/core/domain.py)
+- Some planned modules not yet implemented (grounding/, persistence/ partially done)
+
+**Use**: Reference for understanding intended architecture. For actual structure, explore `src/` directory or run `tree src/ibdm -L 2`.
+
+---
+
 ## Directory Layout
 
 ```

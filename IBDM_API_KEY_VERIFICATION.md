@@ -1,8 +1,10 @@
 # IBDM_API_KEY Verification Report
 
+**📋 STATUS: REFERENCE** - One-time verification report documenting successful IBDM_API_KEY setup (task ibdm-zfl.9 closed). For current environment setup, see `docs/environment_setup.md` and `docs/llm_configuration.md`.
+
 **Date:** 2025-11-11
 **Status:** ✅ VERIFIED
-**Related Beads Task:** ibdm-zfl.9
+**Related Beads Task:** ibdm-zfl.9 (closed)
 
 ## Summary
 
