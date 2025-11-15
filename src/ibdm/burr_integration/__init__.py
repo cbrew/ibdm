@@ -7,7 +7,6 @@ as a Burr application with state tracking and visualization.
 
 from ibdm.burr_integration.actions import (
     generate,
-    idle,
     initialize,
     integrate,
     interpret,
@@ -21,7 +20,6 @@ from ibdm.burr_integration.state_machine import DialogueStateMachine, create_dia
 __all__ = [
     # Actions
     "initialize",
-    "idle",
     "nlu",
     "interpret",
     "integrate",

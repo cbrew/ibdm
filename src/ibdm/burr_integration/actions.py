@@ -4,35 +4,40 @@ This module defines the Burr actions that implement the four stages of
 the IBDM control loop: interpret, integrate, select, and generate.
 """
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from burr.core import State, action
 
 from ibdm.burr_integration.nlu_context import NLUContext
 from ibdm.core import DialogueMove, InformationState
 from ibdm.engine import DialogueMoveEngine
-from ibdm.nlg import NLGEngine
-from ibdm.nlg.nlg_result import NLGResult
-from ibdm.nlu import NLUEngine
-from ibdm.nlu.nlu_result import NLUResult
+
+if TYPE_CHECKING:
+    from ibdm.nlg import NLGEngine
+    from ibdm.nlg.nlg_result import NLGResult
+    from ibdm.nlu import NLUEngine
+    from ibdm.nlu.nlu_result import NLUResult
 
 
 @action(
-    reads=["utterance", "speaker", "information_state", "nlu_engine", "nlu_context"],
-    writes=["nlu_result", "nlu_context"],
+    reads=["information_state", "nlu_engine", "nlu_context"],
+    writes=["utterance", "speaker", "nlu_result", "nlu_context"],
 )
-def nlu(state: "State[Any]") -> tuple[dict[str, Any], "State[Any]"]:
+def nlu(state: "State[Any]", utterance: str, speaker: str) -> tuple[dict[str, Any], "State[Any]"]:
     """Process utterance through NLU engine.
 
+    This is the entry point for the 6-stage pipeline. It receives user input
+    as parameters (not from state), processes through NLU, and writes both
+    the input and results to state for subsequent actions.
+
     Args:
-        state: Current Burr state with utterance, speaker, information_state,
-            nlu_engine, and nlu_context
+        state: Current Burr state with information_state, nlu_engine, and nlu_context
+        utterance: User utterance (input parameter)
+        speaker: Speaker ID (input parameter)
 
     Returns:
-        Tuple of (result dict, updated state with nlu_result and nlu_context)
+        Tuple of (result dict, updated state with utterance, speaker, nlu_result, nlu_context)
     """
-    utterance: str = state["utterance"]  # type: ignore[index]
-    speaker: str = state["speaker"]  # type: ignore[index]
     info_state_dict: dict[str, Any] = state["information_state"]  # type: ignore[index]
     nlu_engine: NLUEngine = state["nlu_engine"]  # type: ignore[index]
 
@@ -61,7 +66,13 @@ def nlu(state: "State[Any]") -> tuple[dict[str, Any], "State[Any]"]:
         "latency": nlu_result.latency,
     }
 
-    return result, state.update(nlu_result=nlu_result_dict, nlu_context=updated_nlu_context_dict)
+    # Write inputs to state for subsequent actions, along with NLU results
+    return result, state.update(
+        utterance=utterance,
+        speaker=speaker,
+        nlu_result=nlu_result_dict,
+        nlu_context=updated_nlu_context_dict,
+    )
 
 
 @action(
@@ -90,8 +101,13 @@ def interpret(state: "State[Any]") -> tuple[dict[str, Any], "State[Any]"]:
 
     # Check if we have nlu_result (6-stage pipeline)
     if nlu_result_dict is not None:
+        # Import locally within function to avoid circular imports at module level
+        # This works because ibdm.nlu module is fully initialized by the time
+        # this function runs (it's only called after app is built)
+        import ibdm.nlu.nlu_result
+
         # Convert nlu_result dict to NLUResult object
-        nlu_result = NLUResult.from_dict(nlu_result_dict)
+        nlu_result = ibdm.nlu.nlu_result.NLUResult.from_dict(nlu_result_dict)
 
         # Use new interpret_from_nlu_result method
         moves = engine.interpret_from_nlu_result(nlu_result, speaker, info_state)
@@ -337,10 +353,11 @@ def initialize(state: "State[Any]") -> tuple[dict[str, Any], "State[Any]"]:
     Returns:
         Tuple of (result dict, updated state with engine, information_state, and nlu_context)
     """
-    # Get initialization parameters from state if available
+    # Get initialization parameters from state
+    # engine_class is always provided by create_dialogue_application
     agent_id: str = state.get("agent_id", "system")  # type: ignore[assignment]
     rules = state.get("rules", None)  # type: ignore[attr-defined]
-    engine_class = state.get("engine_class", DialogueMoveEngine)  # type: ignore[attr-defined]
+    engine_class = state["engine_class"]  # type: ignore[index]
     engine_config = state.get("engine_config", None)  # type: ignore[attr-defined]
 
     # Create initial InformationState and convert to dict for Burr State
@@ -366,35 +383,3 @@ def initialize(state: "State[Any]") -> tuple[dict[str, Any], "State[Any]"]:
         nlu_context=nlu_context_dict,
         ready=True,
     )
-
-
-@action(reads=[], writes=["utterance", "speaker"])
-def receive_input(
-    state: "State[Any]", utterance: str, speaker: str
-) -> tuple[dict[str, Any], "State[Any]"]:
-    """Receive user input.
-
-    Args:
-        state: Current Burr state
-        utterance: The input utterance
-        speaker: ID of the speaker
-
-    Returns:
-        Tuple of (result dict, updated state)
-    """
-    result = {"utterance": utterance, "speaker": speaker}
-    return result, state.update(utterance=utterance, speaker=speaker, integrated=False)
-
-
-@action(reads=[], writes=[])
-def idle(state: "State[Any]") -> tuple[dict[str, Any], "State[Any]"]:
-    """Idle state - waiting for input.
-
-    Args:
-        state: Current Burr state
-
-    Returns:
-        Tuple of (result dict, state unchanged)
-    """
-    result = {"status": "idle"}
-    return result, state

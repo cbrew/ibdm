@@ -57,7 +57,8 @@ from ibdm.nlu.llm_adapter import (
     ModelType,
     create_adapter,
 )
-from ibdm.nlu.nlu_result import NLUResult
+# Import nlu_result first (nlu_engine import moved to end to avoid circular import)
+from ibdm.nlu.nlu_result import NLUResult  # noqa: I001
 from ibdm.nlu.prompts import (
     Example,
     PromptTemplate,
@@ -95,7 +96,8 @@ from ibdm.nlu.semantic_parser import (
 from ibdm.nlu.semantic_parser import (
     create_parser as create_semantic_parser,
 )
-from ibdm.nlu.nlu_engine import NLUEngine, NLUEngineConfig, create_nlu_engine
+# Import at end to avoid circular import with nlu_engine
+from ibdm.nlu.nlu_engine import NLUEngine, NLUEngineConfig, create_nlu_engine  # noqa: E402, I001
 
 __all__ = [
     # LLM Adapter
