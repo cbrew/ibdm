@@ -308,3 +308,137 @@ def test_create_dialogue_application_with_persistence():
         # Check tracking directory exists
         tracking_dir = Path(tmpdir)
         assert tracking_dir.exists()
+
+
+class Test6StagePipeline:
+    """Test 6-stage Burr pipeline with explicit NLU/NLG actions."""
+
+    def test_6_stage_pipeline_with_nlu_nlg_engines(self):
+        """Test that 6-stage pipeline is used when NLU/NLG engines are provided."""
+        from ibdm.nlg import NLGEngine, NLGEngineConfig
+        from ibdm.nlu import NLUEngine, NLUEngineConfig
+
+        # Create NLU and NLG engines
+        nlu_config = NLUEngineConfig()
+        nlu_engine = NLUEngine(config=nlu_config)
+
+        nlg_config = NLGEngineConfig()
+        nlg_engine = NLGEngine(config=nlg_config)
+
+        # Create state machine with engines
+        sm = DialogueStateMachine(agent_id="system", nlu_engine=nlu_engine, nlg_engine=nlg_engine)
+
+        # Should use 6-stage pipeline
+        assert sm._use_6_stage is True
+
+        # Initialize
+        sm.initialize()
+
+        # Process a simple greeting
+        result = sm.process_utterance("Hello", speaker="user")
+
+        # Should complete without errors
+        assert result is not None
+        assert "has_response" in result
+        assert "utterance_text" in result
+
+    def test_6_stage_pipeline_nlu_result_in_state(self):
+        """Test that NLU results are visible in Burr state."""
+        from ibdm.nlg import NLGEngine, NLGEngineConfig
+        from ibdm.nlu import NLUEngine, NLUEngineConfig
+
+        # Create engines
+        nlu_config = NLUEngineConfig()
+        nlu_engine = NLUEngine(config=nlu_config)
+
+        nlg_config = NLGEngineConfig()
+        nlg_engine = NLGEngine(config=nlg_config)
+
+        # Create state machine
+        sm = DialogueStateMachine(agent_id="system", nlu_engine=nlu_engine, nlg_engine=nlg_engine)
+        sm.initialize()
+
+        # Process utterance
+        sm.process_utterance("Hello", speaker="user")
+
+        # Check that nlu_result is in state
+        state = sm.get_state()
+        assert "nlu_result" in state
+        nlu_result_dict = state["nlu_result"]
+        assert nlu_result_dict is not None
+        assert "dialogue_act" in nlu_result_dict
+        assert "confidence" in nlu_result_dict
+
+    def test_6_stage_pipeline_nlg_result_in_state(self):
+        """Test that NLG results are visible in Burr state when response generated."""
+        from ibdm.nlg import NLGEngine, NLGEngineConfig
+        from ibdm.nlu import NLUEngine, NLUEngineConfig
+
+        # Create engines
+        nlu_config = NLUEngineConfig()
+        nlu_engine = NLUEngine(config=nlu_config)
+
+        nlg_config = NLGEngineConfig()
+        nlg_engine = NLGEngine(config=nlg_config)
+
+        # Create state machine
+        sm = DialogueStateMachine(agent_id="system", nlu_engine=nlu_engine, nlg_engine=nlg_engine)
+        sm.initialize()
+
+        # Process greeting (should trigger a response)
+        result = sm.process_utterance("Hello", speaker="user")
+
+        # If a response was generated, check nlg_result
+        if result.get("has_response"):
+            state = sm.get_state()
+            assert "nlg_result" in state
+            nlg_result_dict = state.get("nlg_result")
+            if nlg_result_dict is not None:
+                assert "utterance_text" in nlg_result_dict
+                assert "strategy" in nlg_result_dict
+
+    def test_4_stage_pipeline_without_engines(self):
+        """Test that 4-stage pipeline is used when engines are not provided."""
+        # Create state machine without NLU/NLG engines
+        sm = DialogueStateMachine(agent_id="system")
+
+        # Should use 4-stage pipeline
+        assert sm._use_6_stage is False
+
+        # Initialize
+        sm.initialize()
+
+        # Process a simple greeting
+        result = sm.process_utterance("Hello", speaker="user")
+
+        # Should complete without errors
+        assert result is not None
+        assert "has_response" in result
+        assert "utterance_text" in result
+
+    def test_create_6_stage_application(self):
+        """Test creating 6-stage application directly."""
+        from ibdm.nlg import NLGEngine, NLGEngineConfig
+        from ibdm.nlu import NLUEngine, NLUEngineConfig
+
+        # Create engines
+        nlu_config = NLUEngineConfig()
+        nlu_engine = NLUEngine(config=nlu_config)
+
+        nlg_config = NLGEngineConfig()
+        nlg_engine = NLGEngine(config=nlg_config)
+
+        # Create application with engines
+        app = create_dialogue_application(
+            agent_id="system", nlu_engine=nlu_engine, nlg_engine=nlg_engine
+        )
+
+        assert app is not None
+
+        # Initialize
+        action, result, state = app.step()
+        assert action.name == "initialize"
+
+        # Check that engines are in state
+        assert state.get("nlu_engine") is not None
+        assert state.get("nlg_engine") is not None
