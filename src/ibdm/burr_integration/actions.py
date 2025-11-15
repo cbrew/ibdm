@@ -272,75 +272,50 @@ def nlg(state: "State[Any]") -> tuple[dict[str, Any], "State[Any]"]:
 
 
 @action(
-    reads=["response_move", "information_state", "nlg_engine", "engine"],
-    writes=["information_state", "utterance_text", "nlg_result"],
+    reads=["response_move", "information_state", "utterance_text", "engine"],
+    writes=["information_state"],
 )
 def generate(state: "State[Any]") -> tuple[dict[str, Any], "State[Any]"]:
-    """Generate utterance from dialogue move.
+    """Integrate system's own move into information state.
 
-    In the 6-stage pipeline, this action uses nlg_engine if available.
-    Falls back to engine.generate() for backward compatibility.
+    In the 6-stage pipeline:
+    - nlg() action generates utterance_text (already in state)
+    - generate() action integrates the system's move with that utterance
+
+    This completes the response generation cycle by updating the information
+    state with the system's own dialogue move.
 
     Args:
-        state: Current Burr state containing response_move, information_state, nlg_engine, engine
+        state: Current Burr state containing response_move, information_state,
+            utterance_text, engine
 
     Returns:
-        Tuple of (result dict, updated state with utterance_text)
+        Tuple of (result dict, updated state with integrated system move)
     """
     response_move_dict: dict[str, Any] | None = state["response_move"]  # type: ignore[index]
     info_state_dict: dict[str, Any] = state["information_state"]  # type: ignore[index]
-    nlg_engine: NLGEngine | None = state.get("nlg_engine")  # type: ignore[assignment, attr-defined]
+    utterance_text: str = state.get("utterance_text", "")  # type: ignore[assignment]
     engine: DialogueMoveEngine = state["engine"]  # type: ignore[index]
 
     if response_move_dict is None:
-        result = {"utterance_text": ""}
-        return result, state.update(utterance_text="")
+        # No move to integrate
+        return {"integrated": False}, state
 
     # Convert from dicts to objects
     response_move = DialogueMove.from_dict(response_move_dict)
     info_state = InformationState.from_dict(info_state_dict)
 
-    # Prefer NLG engine (6-stage pipeline)
-    if nlg_engine is not None:
-        # Use NLG engine
-        nlg_result: NLGResult = nlg_engine.generate(response_move, info_state)
-        utterance_text = nlg_result.utterance_text
+    # Update move content with generated utterance (from nlg action)
+    response_move.content = utterance_text
 
-        # Store NLG result in state
-        nlg_result_dict = nlg_result.to_dict()
+    # Integrate system's own move into information state
+    updated_info_state = engine.integrate(response_move, info_state)
 
-        # Update move content and integrate our own move
-        response_move.content = utterance_text
-        updated_info_state = engine.integrate(response_move, info_state)
+    # Convert back to dict for storage
+    updated_info_state_dict = updated_info_state.to_dict()
 
-        # Convert back to dict for storage
-        updated_info_state_dict = updated_info_state.to_dict()
-
-        result = {
-            "utterance_text": utterance_text,
-            "strategy": nlg_result.strategy,
-            "latency": nlg_result.latency,
-        }
-        return result, state.update(
-            information_state=updated_info_state_dict,
-            utterance_text=utterance_text,
-            nlg_result=nlg_result_dict,
-        )
-    else:
-        # Fallback: use engine's generation rules (backward compatibility)
-        utterance_text = engine.generate(response_move, info_state)
-
-        # Update move content and integrate our own move
-        response_move.content = utterance_text
-        updated_info_state = engine.integrate(response_move, info_state)
-
-        # Convert back to dict for storage
-        updated_info_state_dict = updated_info_state.to_dict()
-
-        result = {"utterance_text": utterance_text}
-        return result, state.update(
-            information_state=updated_info_state_dict, utterance_text=utterance_text
-        )
+    result = {"integrated": True}
+    return result, state.update(information_state=updated_info_state_dict)
 
 
 @action(reads=[], writes=["information_state", "engine", "nlu_context", "ready"])
