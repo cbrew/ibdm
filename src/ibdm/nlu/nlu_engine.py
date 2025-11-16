@@ -13,18 +13,17 @@ from typing import Any
 
 from ibdm.burr_integration.nlu_context import NLUContext
 from ibdm.core import InformationState
-from ibdm.nlu import (
-    ContextInterpreter,
-    ContextInterpreterConfig,
+
+# Import directly from submodules to avoid circular import with __init__.py
+from ibdm.nlu.context_interpreter import ContextInterpreter, ContextInterpreterConfig
+from ibdm.nlu.dialogue_act_classifier import (
     DialogueActClassifier,
     DialogueActClassifierConfig,
     DialogueActType,
-    LLMConfig,
-    ModelType,
-    QuestionAnalyzer,
-    QuestionAnalyzerConfig,
 )
+from ibdm.nlu.llm_adapter import LLMConfig, ModelType
 from ibdm.nlu.nlu_result import NLUResult
+from ibdm.nlu.question_analyzer import QuestionAnalyzer, QuestionAnalyzerConfig
 
 logger = logging.getLogger(__name__)
 
