@@ -137,20 +137,33 @@ Turn 2:
 
 ---
 
-### ibdm-91: Create IBiS3 Implementation Guide
+### ✅ ibdm-91: Create IBiS3 Implementation Guide (COMPLETED)
 
 **Priority**: P0
 **Duration**: 2 hours
+**Status**: ✅ COMPLETED (2025-11-16)
 
-**What to Do**:
-- Create `docs/ibis3_implementation.md`
-- Overview of Rules 4.1 and 4.2
-- How questions flow: plan → issues → QUD
-- Volunteer information handling
-- Testing approach
-- Common pitfalls (rule priorities, fallback behavior)
+**What Was Done**:
+- ✅ Created comprehensive `docs/ibis3_implementation.md` (850+ lines)
+- ✅ Documented architecture (private.issues, two-phase accommodation)
+- ✅ Detailed Rules 4.1 & 4.2 with code examples
+- ✅ Complete question flow diagram (plan → issues → QUD)
+- ✅ Volunteer information handling mechanisms
+- ✅ Testing approach (unit, integration, MockNLUService examples)
+- ✅ Common pitfalls from Week 3 debugging with solutions
+- ✅ Next steps (Rules 4.3-4.5)
+- ✅ Committed and pushed: `docs(ibis3): create comprehensive IBiS3 implementation guide (ibdm-91)`
 
-**Beads Command**: `~/go/bin/bd show ibdm-91`
+**Key Sections**:
+1. Overview with before/after examples
+2. Architecture and information state extensions
+3. Rules 4.1 & 4.2 implementation details
+4. 8-step question flow walkthrough
+5. Volunteer information processing
+6. Testing patterns (using new NLU interface)
+7. 5 common pitfalls with solutions
+
+**Commit**: `8ee195b` on branch `claude/ibdm-90-task-update-01JFezWoFyPhY64VPA9SNBFM`
 
 ---
 
@@ -268,19 +281,20 @@ Turn 2:
 
 ## Bottom Line
 
-**Completed Week 4 Tasks** (3/4 complete):
+**✅ Week 4 Complete!** (4/4 tasks - 100%):
 1. ✅ **ibdm-89**: Update SYSTEM_ACHIEVEMENTS.md - DONE (commit `955310e`)
 2. ✅ **ibdm-90**: Update LARSSON_PRIORITY_ROADMAP.md - DONE (commit `8f71715`)
 3. ✅ **ibdm-92**: NLU Interface Adoption - DONE (commit `9b7673e`)
+4. ✅ **ibdm-91**: Create IBiS3 Implementation Guide - DONE (commit `8ee195b`)
 
-**Remaining Week 4 Tasks** (P0 Priority):
-4. 📋 **ibdm-91**: Create IBiS3 implementation guide - 2 hours
-   - Now can include concrete NLU interface examples
-   - Document Rules 4.1-4.2 implementation details
-   - Common pitfalls and testing approaches
+**Week 4 Achievements**:
+- Documented all Week 1-3 IBiS3 progress
+- Created NLU service interface for testing independence
+- Comprehensive 850+ line implementation guide
+- All documentation current and synchronized
 
 **Next Recommended Task** (P1 Priority):
-5. ⚡ **ibdm-93**: Implement Rule 4.3 (IssueClarification) - 3-5 days ⬅️ **RECOMMENDED NEXT**
+5. ⚡ **ibdm-93**: Implement Rule 4.3 (IssueClarification) - 3-5 days ⬅️ **START WEEK 5**
    - Handle ambiguous utterances with clarification questions
    - Larsson Section 4.6.3
    - **Why Next**: Natural progression after Rules 4.1-4.2, improves dialogue robustness
@@ -290,7 +304,7 @@ Turn 2:
 6. 🔮 **ibdm-94**: Implement Rule 4.4 (DependentIssueAccommodation) - 3-5 days
 7. 🔮 **ibdm-95**: Implement Rule 4.5 (QuestionReaccommodation) - 3-5 days
 
-**Week 4 Progress**: 3/4 tasks complete (75%)
+**Week 4 Progress**: ✅ 4/4 tasks complete (100%)
 **IBiS3 Progress**: 60% complete
 **Next Milestone**: Complete Rule 4.3 → 75% complete
 
