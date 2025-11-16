@@ -6,10 +6,13 @@ Showcases IBiS3 question accommodation and IBiS2 grounding in action.
 from __future__ import annotations
 
 import random
+import uuid
+from datetime import datetime
 from typing import Any
 
 from ibdm.core import Answer, DialogueMove, InformationState, WhQuestion
 from ibdm.core.grounding import select_grounding_strategy
+from ibdm.demo.visualization import DialogueHistory, DialogueVisualizer
 from ibdm.domains.nda_domain import get_nda_domain
 from ibdm.engine import DialogueMoveEngine
 from ibdm.rules import RuleSet, create_integration_rules, create_selection_rules
@@ -73,9 +76,22 @@ class InteractiveDemo:
         # Initialize information state
         self.state = InformationState(agent_id=agent_id)
 
-        # Dialogue history
+        # Dialogue history (simple format for backward compatibility)
         self.history: list[tuple[str, str]] = []  # (speaker, utterance)
         self.turn_count = 0
+
+        # Enhanced dialogue history tracking
+        session_id = f"demo-{uuid.uuid4().hex[:8]}"
+        self.dialogue_history = DialogueHistory(
+            session_id=session_id,
+            start_time=datetime.now().isoformat(),
+            metadata={
+                "agent_id": agent_id,
+                "user_id": user_id,
+                "confidence_mode": confidence_mode,
+            },
+        )
+        self.visualizer = DialogueVisualizer(width=70)
 
     def display_banner(self) -> None:
         """Display welcome banner."""
@@ -89,6 +105,7 @@ class InteractiveDemo:
         print("  /help       - Show this help")
         print("  /state      - Toggle state display")
         print("  /history    - Show dialogue history")
+        print("  /export     - Export dialogue history")
         print("  /confidence - Change confidence mode")
         print("  /reset      - Reset the dialogue")
         print("  /quit       - Exit the demo")
@@ -170,14 +187,33 @@ class InteractiveDemo:
         else:
             print(f"\n{prefix} {content}")
 
-    def display_history(self) -> None:
-        """Display dialogue history."""
-        print("\n" + "=" * 70)
-        print("Dialogue History:")
-        print("=" * 70)
-        for i, (speaker, utterance) in enumerate(self.history, 1):
-            print(f"{i}. {speaker}: {utterance}")
-        print("=" * 70)
+    def display_history(self, format_type: str = "compact") -> None:
+        """Display dialogue history.
+
+        Args:
+            format_type: Display format ('compact', 'detailed', 'full')
+        """
+        if format_type == "compact":
+            # Compact format (one line per turn)
+            print(self.visualizer.format_compact_history(self.dialogue_history))
+        elif format_type == "detailed":
+            # Detailed format with metadata
+            print(self.visualizer.format_history(self.dialogue_history, show_metadata=True))
+        elif format_type == "full":
+            # Full format with state snapshots
+            print(
+                self.visualizer.format_history(
+                    self.dialogue_history, show_metadata=True, show_state=True
+                )
+            )
+        else:
+            # Fallback to old simple format
+            print("\n" + "=" * 70)
+            print("Dialogue History:")
+            print("=" * 70)
+            for i, (speaker, utterance) in enumerate(self.history, 1):
+                print(f"{i}. {speaker}: {utterance}")
+            print("=" * 70)
 
     def process_command(self, user_input: str) -> bool:
         """Process special commands.
@@ -200,14 +236,14 @@ class InteractiveDemo:
             print(f"\nState display: {'ON' if self.show_state else 'OFF'}")
         elif command == "/history":
             self.display_history()
+        elif command == "/export":
+            self._export_history()
         elif command == "/confidence":
             self._change_confidence_mode()
         elif command == "/reset":
-            self.state = InformationState(agent_id=self.agent_id)
-            self.history = []
-            self.turn_count = 0
-            print("\nDialogue reset.")
+            self._reset_dialogue()
         elif command == "/quit":
+            self.dialogue_history.end_time = datetime.now().isoformat()
             print("\nGoodbye!")
             return True
         else:
@@ -215,6 +251,60 @@ class InteractiveDemo:
             print("Type /help for available commands.")
 
         return True
+
+    def _reset_dialogue(self) -> None:
+        """Reset the dialogue state."""
+        self.state = InformationState(agent_id=self.agent_id)
+        self.history = []
+        self.turn_count = 0
+
+        # Create new dialogue history
+        session_id = f"demo-{uuid.uuid4().hex[:8]}"
+        self.dialogue_history = DialogueHistory(
+            session_id=session_id,
+            start_time=datetime.now().isoformat(),
+            metadata={
+                "agent_id": self.agent_id,
+                "user_id": self.user_id,
+                "confidence_mode": self.confidence_mode,
+            },
+        )
+        print("\nDialogue reset.")
+
+    def _export_history(self) -> None:
+        """Export dialogue history."""
+        print("\nExport Formats:")
+        print("  1. JSON   - Full dialogue history with metadata")
+        print("  2. Markdown - Formatted dialogue history")
+        print("  3. CSV    - Tabular format for analysis")
+        print("  4. View detailed history (no export)")
+
+        try:
+            choice = input("\nSelect format (1-4): ").strip()
+
+            if choice == "1":
+                filename = f"dialogue-{self.dialogue_history.session_id}.json"
+                self.dialogue_history.save_to_file(filename)
+                print(f"\n✓ Exported to: {filename}")
+            elif choice == "2":
+                filename = f"dialogue-{self.dialogue_history.session_id}.md"
+                content = self.visualizer.export_to_markdown(self.dialogue_history)
+                with open(filename, "w") as f:
+                    f.write(content)
+                print(f"\n✓ Exported to: {filename}")
+            elif choice == "3":
+                filename = f"dialogue-{self.dialogue_history.session_id}.csv"
+                content = self.visualizer.export_to_csv(self.dialogue_history)
+                with open(filename, "w") as f:
+                    f.write(content)
+                print(f"\n✓ Exported to: {filename}")
+            elif choice == "4":
+                # Display detailed history
+                self.display_history(format_type="full")
+            else:
+                print("\nInvalid choice. Export cancelled.")
+        except (EOFError, KeyboardInterrupt):
+            print("\nExport cancelled.")
 
     def _change_confidence_mode(self) -> None:
         """Change the confidence simulation mode."""
@@ -237,6 +327,8 @@ class InteractiveDemo:
             }
             if choice in modes:
                 self.confidence_mode = modes[choice]
+                if self.dialogue_history.metadata is not None:
+                    self.dialogue_history.metadata["confidence_mode"] = self.confidence_mode
                 print(f"\nConfidence mode set to: {self.confidence_mode}")
             else:
                 print("\nInvalid choice. Mode unchanged.")
@@ -340,6 +432,25 @@ class InteractiveDemo:
         # Display confidence and grounding info
         print(f"[Confidence: {confidence:.2f}, Strategy: {grounding_strategy.value}]")
 
+        # Create state snapshot for history
+        state_snapshot = {
+            "qud_depth": len(self.state.shared.qud),
+            "issues_count": len(self.state.private.issues),
+            "commitments_count": len(self.state.shared.commitments),
+            "active_plans": len([p for p in self.state.private.plan if p.status == "active"]),
+        }
+
+        # Record user turn in enhanced history
+        self.dialogue_history.add_turn(
+            turn_number=self.turn_count,
+            speaker=self.user_id,
+            utterance=utterance,
+            move_type=move_type_for_grounding,
+            confidence=confidence,
+            grounding_strategy=grounding_strategy.value,
+            state_snapshot=state_snapshot.copy(),
+        )
+
         # Process through dialogue engine
         # For now, use simple heuristics to create moves
 
@@ -400,6 +511,24 @@ class InteractiveDemo:
                     # Add to history
                     self.history.append((self.agent_id, response_text))
                     print(f"\n{self.agent_id}: {response_text}")
+
+                    # Record system turn in enhanced history
+                    state_snapshot_after = {
+                        "qud_depth": len(self.state.shared.qud),
+                        "issues_count": len(self.state.private.issues),
+                        "commitments_count": len(self.state.shared.commitments),
+                        "active_plans": len(
+                            [p for p in self.state.private.plan if p.status == "active"]
+                        ),
+                    }
+
+                    self.dialogue_history.add_turn(
+                        turn_number=self.turn_count,
+                        speaker=self.agent_id,
+                        utterance=response_text,
+                        move_type=response_move.move_type,
+                        state_snapshot=state_snapshot_after,
+                    )
 
         # Display state
         self.display_state()

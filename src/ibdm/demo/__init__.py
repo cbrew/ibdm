@@ -12,6 +12,7 @@ from ibdm.demo.scenarios import (
     get_scenario,
     list_scenarios,
 )
+from ibdm.demo.visualization import DialogueHistory, DialogueVisualizer, TurnRecord
 
 __all__ = [
     "InteractiveDemo",
@@ -21,4 +22,7 @@ __all__ = [
     "list_scenarios",
     "get_ibis3_scenarios",
     "get_ibis2_scenarios",
+    "DialogueHistory",
+    "DialogueVisualizer",
+    "TurnRecord",
 ]
