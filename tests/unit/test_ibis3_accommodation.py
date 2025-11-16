@@ -1,14 +1,17 @@
-"""Tests for IBiS3 accommodation rules (Rules 4.1, 4.2, and 4.3).
+"""Tests for IBiS3 accommodation rules (Rules 4.1, 4.2, 4.3, and 4.4).
 
 Tests issue accommodation (Rule 4.1), local question accommodation (Rule 4.2),
-and issue clarification (Rule 4.3) per Larsson (2002) Section 4.6.
+issue clarification (Rule 4.3), and dependent issue accommodation (Rule 4.4)
+per Larsson (2002) Section 4.6.
 
 IBiS3 Enhancement: Questions from task plans are accommodated to private.issues
 first, then raised to QUD incrementally when contextually appropriate.
 Clarification questions are pushed to QUD to suspend original questions.
+Dependent questions are suspended until their prerequisites are answered.
 """
 
 from ibdm.core import (
+    DomainModel,
     InformationState,
     Plan,
     WhQuestion,
@@ -389,3 +392,144 @@ class TestRule43IssueClarification:
 
         # Flag should be cleared
         assert not new_state.private.beliefs.get("_needs_clarification", False)
+
+
+class TestRule44DependentIssueAccommodation:
+    """Test Rule 4.4: DependentIssueAccommodation for prerequisite questions."""
+
+    def test_rule_4_4_dependent_issue_accommodation(self):
+        """Test Rule 4.4: Prerequisite question pushed to QUD when needed."""
+        from ibdm.rules.selection_rules import _accommodate_dependency
+
+        state = InformationState()
+
+        # Setup domain with dependencies
+        domain = DomainModel("travel")
+        domain.add_predicate("price", arity=1)
+        domain.add_predicate("departure_city", arity=1)
+        domain.add_dependency("price", "departure_city")  # price depends on city
+
+        state.private.beliefs["_domain"] = domain
+
+        # Setup: Question on QUD that has dependency
+        price_q = WhQuestion(variable="x", predicate="price")
+        state.shared.push_qud(price_q)
+
+        # Apply Rule 4.4
+        new_state = _accommodate_dependency(state)
+
+        # Assertions
+        assert len(new_state.shared.qud) == 2  # Original + prerequisite
+        assert new_state.shared.qud[0] == price_q  # Price at bottom (suspended)
+        prereq_q = new_state.shared.qud[-1]  # Prerequisite on top
+        assert prereq_q.predicate == "departure_city"
+        assert prereq_q.constraints.get("is_prerequisite") is True
+
+    def test_has_unanswered_dependency_precondition(self):
+        """Test precondition: detects unanswered dependencies."""
+        from ibdm.rules.selection_rules import _has_unanswered_dependency
+
+        state = InformationState()
+
+        # Setup domain with dependencies
+        domain = DomainModel("travel")
+        domain.add_predicate("price", arity=1)
+        domain.add_predicate("departure_city", arity=1)
+        domain.add_dependency("price", "departure_city")
+
+        state.private.beliefs["_domain"] = domain
+
+        # No question on QUD - should be False
+        assert not _has_unanswered_dependency(state)
+
+        # Add question with dependency
+        price_q = WhQuestion(variable="x", predicate="price")
+        state.shared.push_qud(price_q)
+
+        # Should be True (dependency not answered)
+        assert _has_unanswered_dependency(state)
+
+        # Answer the dependency
+        state.private.beliefs["departure_city"] = "London"
+
+        # Should be False (dependency answered)
+        assert not _has_unanswered_dependency(state)
+
+    def test_no_dependency_no_accommodation(self):
+        """Test that questions without dependencies are not accommodated."""
+        from ibdm.rules.selection_rules import _accommodate_dependency
+
+        state = InformationState()
+
+        # Setup domain without dependencies
+        domain = DomainModel("simple")
+        domain.add_predicate("name", arity=1)
+
+        state.private.beliefs["_domain"] = domain
+
+        # Add question with no dependencies
+        name_q = WhQuestion(variable="x", predicate="name")
+        state.shared.push_qud(name_q)
+
+        # Apply Rule 4.4
+        new_state = _accommodate_dependency(state)
+
+        # Should have no effect
+        assert len(new_state.shared.qud) == 1
+        assert new_state.shared.qud[0] == name_q
+
+    def test_multiple_dependencies_one_at_a_time(self):
+        """Test that multiple dependencies are accommodated one at a time."""
+        from ibdm.rules.selection_rules import _accommodate_dependency
+
+        state = InformationState()
+
+        # Setup domain with multiple dependencies
+        domain = DomainModel("travel")
+        domain.add_predicate("price", arity=1)
+        domain.add_predicate("departure_city", arity=1)
+        domain.add_predicate("travel_date", arity=1)
+        domain.add_dependency("price", ["departure_city", "travel_date"])
+
+        state.private.beliefs["_domain"] = domain
+
+        # Add question with multiple dependencies
+        price_q = WhQuestion(variable="x", predicate="price")
+        state.shared.push_qud(price_q)
+
+        # Apply Rule 4.4
+        new_state = _accommodate_dependency(state)
+
+        # Should only accommodate first dependency
+        assert len(new_state.shared.qud) == 2
+        assert new_state.shared.qud[0] == price_q
+        # First dependency should be on top
+        prereq_q = new_state.shared.qud[-1]
+        assert prereq_q.predicate in ["departure_city", "travel_date"]
+
+    def test_dependency_contains_context(self):
+        """Test that prerequisite question contains context about dependent question."""
+        from ibdm.rules.selection_rules import _accommodate_dependency
+
+        state = InformationState()
+
+        # Setup domain
+        domain = DomainModel("travel")
+        domain.add_predicate("price", arity=1)
+        domain.add_predicate("destination", arity=1)
+        domain.add_dependency("price", "destination")
+
+        state.private.beliefs["_domain"] = domain
+
+        # Add dependent question
+        price_q = WhQuestion(variable="x", predicate="price")
+        state.shared.push_qud(price_q)
+
+        # Apply Rule 4.4
+        new_state = _accommodate_dependency(state)
+
+        # Check prerequisite contains context
+        prereq_q = new_state.shared.top_qud()
+        assert prereq_q is not None
+        assert "for_question" in prereq_q.constraints
+        assert prereq_q.constraints["for_question"] == str(price_q)

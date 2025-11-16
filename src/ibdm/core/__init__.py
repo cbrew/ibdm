@@ -9,6 +9,7 @@ This module provides the fundamental data structures for IBDM:
 """
 
 from ibdm.core.answers import Answer
+from ibdm.core.domain import DomainModel
 from ibdm.core.information_state import ControlIS, InformationState, PrivateIS, SharedIS
 from ibdm.core.moves import DialogueMove
 from ibdm.core.plans import Plan
@@ -31,4 +32,6 @@ __all__ = [
     "PrivateIS",
     "SharedIS",
     "ControlIS",
+    # Domain
+    "DomainModel",
 ]

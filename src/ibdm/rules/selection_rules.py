@@ -36,6 +36,16 @@ def create_selection_rules() -> list[UpdateRule]:
             priority=25,  # Highest - must handle invalid input first
             rule_type="selection",
         ),
+        # IBiS3 Rule 4.4: DependentIssueAccommodation - push prerequisite questions
+        # Pre: top(QUD) depends on unanswered question
+        # Effect: push prerequisite question to QUD
+        UpdateRule(
+            name="accommodate_dependent_question",
+            preconditions=_has_unanswered_dependency,
+            effects=_accommodate_dependency,
+            priority=22,  # Before raise (20) and ask (10)
+            rule_type="selection",
+        ),
         # IBiS3 Rule 4.2: LocalQuestionAccommodation - raise issues to QUD
         # Pre: private.issues not empty AND QUD is empty
         # Effect: raise first issue to QUD
@@ -99,6 +109,56 @@ def create_selection_rules() -> list[UpdateRule]:
 
 
 # Precondition functions (IBiS1)
+
+
+def _has_unanswered_dependency(state: InformationState) -> bool:
+    """Check if top QUD question has unanswered dependencies.
+
+    IBiS3 Rule 4.4 (DependentIssueAccommodation):
+    If the question on top of QUD depends on other questions that haven't
+    been answered yet, we need to ask those prerequisite questions first.
+
+    Preconditions:
+    - There's a question on QUD
+    - That question depends on at least one other question (domain knowledge)
+    - The prerequisite question hasn't been answered yet (not in commitments)
+
+    Larsson (2002) Section 4.6.4 - DependentIssueAccommodation rule.
+    """
+    # Don't trigger if there's already something on the agenda
+    if state.private.agenda:
+        return False
+
+    # Need a question on QUD
+    top_question = state.shared.top_qud()
+    if not top_question:
+        return False
+
+    # Check if this question has dependencies via domain model
+    # We need to get the domain model from somewhere - let's check beliefs
+    domain = state.private.beliefs.get("_domain")
+    if not domain:
+        return False  # No domain model available
+
+    # Get dependencies for this question
+    dependency_predicates = domain.get_dependencies(top_question)
+    if not dependency_predicates:
+        return False  # No dependencies
+
+    # Check if any dependency is unanswered
+    for dep_predicate in dependency_predicates:
+        # Check if we have this predicate in commitments or beliefs
+        answered = False
+        for key in state.private.beliefs:
+            if dep_predicate in key.lower() and state.private.beliefs[key]:
+                answered = True
+                break
+
+        # If any dependency is unanswered, we need to accommodate it
+        if not answered:
+            return True
+
+    return False
 
 
 def _has_raisable_issue(state: InformationState) -> bool:
@@ -262,6 +322,71 @@ def _should_greet(state: InformationState) -> bool:
 
 
 # Effect functions (IBiS1)
+
+
+def _accommodate_dependency(state: InformationState) -> InformationState:
+    """Accommodate prerequisite question to QUD.
+
+    IBiS3 Rule 4.4 (DependentIssueAccommodation):
+    When the top QUD question depends on unanswered questions, push the
+    first prerequisite question to QUD. This suspends the dependent question
+    until the prerequisite is answered.
+
+    Args:
+        state: Current information state
+
+    Returns:
+        New state with prerequisite question on QUD
+
+    Larsson (2002) Section 4.6.4 - DependentIssueAccommodation rule.
+    """
+    from ibdm.core import WhQuestion
+
+    new_state = state.clone()
+
+    # Get top question
+    top_question = new_state.shared.top_qud()
+    if not top_question:
+        return new_state
+
+    # Get domain model
+    domain = new_state.private.beliefs.get("_domain")
+    if not domain:
+        return new_state
+
+    # Get dependencies
+    dependency_predicates = domain.get_dependencies(top_question)
+    if not dependency_predicates:
+        return new_state
+
+    # Find first unanswered dependency
+    for dep_predicate in dependency_predicates:
+        # Check if answered
+        answered = False
+        for key in new_state.private.beliefs:
+            if dep_predicate in key.lower() and new_state.private.beliefs[key]:
+                answered = True
+                break
+
+        # If unanswered, create and push question for it
+        if not answered:
+            # Create WhQuestion for the dependency
+            prerequisite_question = WhQuestion(
+                variable="X",
+                predicate=dep_predicate,
+                constraints={
+                    "is_prerequisite": True,
+                    "for_question": str(top_question),
+                },
+            )
+
+            # Push prerequisite to QUD (suspends dependent question below)
+            new_state.shared.push_qud(prerequisite_question)
+
+            # Only accommodate one dependency at a time
+            break
+
+    return new_state
 
 
 def _raise_issue_to_qud(state: InformationState) -> InformationState:

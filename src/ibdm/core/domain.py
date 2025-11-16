@@ -86,6 +86,7 @@ class DomainModel:
         self.predicates: dict[str, PredicateSpec] = {}
         self.sorts: dict[str, list[str]] = {}
         self._plan_builders: dict[str, Callable[[dict[str, Any]], Plan]] = {}
+        self._dependencies: dict[str, set[str]] = {}  # predicate -> {prerequisite predicates}
 
     def add_predicate(
         self,
@@ -285,11 +286,84 @@ class DomainModel:
         # Unknown type - accept any non-empty value
         return True
 
+    def add_dependency(self, predicate: str, depends_on: str | list[str]):
+        """Register question dependency.
+
+        Defines that questions about `predicate` depend on questions about
+        `depends_on` being answered first.
+
+        Based on Larsson (2002) Section 4.6.4 - DependentIssueAccommodation.
+
+        Args:
+            predicate: The dependent predicate (e.g., "price")
+            depends_on: One or more prerequisite predicates (e.g., "departure_city")
+
+        Example:
+            >>> domain.add_dependency("price", ["departure_city", "travel_date"])
+            >>> domain.add_dependency("hotel_price", "destination")
+        """
+        if isinstance(depends_on, str):
+            depends_on = [depends_on]
+
+        if predicate not in self._dependencies:
+            self._dependencies[predicate] = set()
+
+        self._dependencies[predicate].update(depends_on)
+
+    def depends(self, question1: Question, question2: Question) -> bool:
+        """Check if question1 depends on question2.
+
+        Based on Larsson (2002) Section 4.6.4:
+        Q1 depends on Q2 if answering Q2 is a prerequisite for answering Q1.
+
+        Args:
+            question1: The dependent question
+            question2: The potential prerequisite question
+
+        Returns:
+            True if question1 depends on question2
+
+        Example:
+            >>> q_price = WhQuestion(variable="x", predicate="price")
+            >>> q_city = WhQuestion(variable="y", predicate="departure_city")
+            >>> domain.depends(q_price, q_city)  # True if dependency registered
+        """
+        # Extract predicates from questions
+        pred1 = getattr(question1, "predicate", None)
+        pred2 = getattr(question2, "predicate", None)
+
+        if not pred1 or not pred2:
+            return False
+
+        # Check if pred1 depends on pred2
+        return pred2 in self._dependencies.get(pred1, set())
+
+    def get_dependencies(self, question: Question) -> list[str]:
+        """Get all prerequisite predicates for a question.
+
+        Args:
+            question: Question to check
+
+        Returns:
+            List of predicate names that must be answered first
+
+        Example:
+            >>> q_price = WhQuestion(variable="x", predicate="price")
+            >>> domain.get_dependencies(q_price)
+            ['departure_city', 'travel_date']
+        """
+        predicate = getattr(question, "predicate", None)
+        if not predicate:
+            return []
+
+        return list(self._dependencies.get(predicate, set()))
+
     def __repr__(self) -> str:
         """String representation of domain model."""
         return (
             f"DomainModel(name={self.name!r}, "
             f"predicates={len(self.predicates)}, "
             f"sorts={len(self.sorts)}, "
-            f"plan_builders={len(self._plan_builders)})"
+            f"plan_builders={len(self._plan_builders)}, "
+            f"dependencies={len(self._dependencies)})"
         )

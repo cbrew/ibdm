@@ -4,13 +4,14 @@ Tests the complete IBiS3 dialogue flow:
 1. Rule 4.1 (IssueAccommodation): Task plan questions → private.issues
 2. Rule 4.2 (LocalQuestionAccommodation): private.issues → QUD incrementally
 3. Rule 4.3 (IssueClarification): Clarification questions for invalid answers
-4. Volunteer information: User answers unasked questions
-5. Natural dialogue: System skips already-answered questions
+4. Rule 4.4 (DependentIssueAccommodation): Prerequisite questions before dependent ones
+5. Volunteer information: User answers unasked questions
+6. Natural dialogue: System skips already-answered questions
 
-Based on Larsson (2002) Sections 4.6.1, 4.6.2, and 4.6.3.
+Based on Larsson (2002) Sections 4.6.1, 4.6.2, 4.6.3, and 4.6.4.
 """
 
-from ibdm.core import Answer, DialogueMove, InformationState, WhQuestion
+from ibdm.core import Answer, DialogueMove, DomainModel, InformationState, WhQuestion
 from ibdm.rules import RuleSet, create_integration_rules, create_selection_rules
 
 
@@ -324,4 +325,66 @@ class TestIBiS3MultiTurnDialogue:
 
         print("\n" + "=" * 60)
         print("🎉 Rule 4.3 working: Clarification question accommodated!")
+        print("=" * 60)
+
+    def test_dependent_question_accommodation(self):
+        """Test Rule 4.4: Prerequisite questions asked before dependent questions.
+
+        Flow:
+        1. System raises question to QUD that has dependencies
+        2. SELECTION: Rule 4.4 detects unmet dependency
+        3. Rule 4.4 pushes prerequisite question to QUD
+        4. System asks prerequisite first
+        5. User answers prerequisite
+        6. System returns to original dependent question
+        """
+        # Setup rulesets
+        selection_ruleset = RuleSet()
+        for rule in create_selection_rules():
+            selection_ruleset.add_rule(rule)
+
+        state = InformationState(agent_id="system")
+
+        # Setup domain with dependencies
+        domain = DomainModel("travel")
+        domain.add_predicate("price", arity=1)
+        domain.add_predicate("departure_city", arity=1)
+        domain.add_dependency("price", "departure_city")  # price depends on city
+
+        state.private.beliefs["_domain"] = domain
+
+        print("\n" + "=" * 60)
+        print("Testing Rule 4.4: DependentIssueAccommodation")
+        print("=" * 60)
+
+        # Turn 1: Raise dependent question to QUD
+        print("\n📥 Turn 1: Price question raised to QUD (depends on city)")
+        price_q = WhQuestion(variable="x", predicate="price")
+        state.shared.push_qud(price_q)
+
+        # SELECTION phase - Rule 4.4 should detect dependency and push prerequisite
+        state = selection_ruleset.apply_rules("selection", state)
+
+        # Verify: Prerequisite question added to QUD
+        assert len(state.shared.qud) == 2, "QUD should have price + prerequisite"
+        assert state.shared.qud[0] == price_q  # Price at bottom (suspended)
+        prereq_q = state.shared.top_qud()
+        assert prereq_q is not None
+        assert prereq_q.predicate == "departure_city"
+        assert prereq_q.constraints.get("is_prerequisite") is True
+
+        print(f"  ✅ QUD length: {len(state.shared.qud)} (prerequisite added)")
+        print(f"  ✅ Prerequisite question on top: {prereq_q.predicate}")
+        print("  ✅ Price question suspended below")
+
+        # Verify: System selected to ask prerequisite question
+        assert len(state.private.agenda) > 0, "Agenda should have a move"
+        agenda_move = state.private.agenda[-1]
+        assert agenda_move.move_type == "ask"
+        assert agenda_move.content == prereq_q
+
+        print("  ✅ System selected to ask prerequisite question")
+
+        print("\n" + "=" * 60)
+        print("🎉 Rule 4.4 working: Dependent question accommodation!")
         print("=" * 60)
