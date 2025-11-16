@@ -11,7 +11,17 @@ This module provides the fundamental data structures for IBDM:
 from ibdm.core.answers import Answer
 from ibdm.core.domain import DomainModel
 from ibdm.core.information_state import ControlIS, InformationState, PrivateIS, SharedIS
-from ibdm.core.moves import DialogueMove
+from ibdm.core.moves import (
+    DialogueMove,
+    Polarity,
+    create_icm_acceptance_negative,
+    create_icm_acceptance_positive,
+    create_icm_perception_negative,
+    create_icm_perception_positive,
+    create_icm_understanding_interrogative,
+    create_icm_understanding_negative,
+    create_icm_understanding_positive,
+)
 from ibdm.core.plans import Plan
 from ibdm.core.questions import AltQuestion, Question, WhQuestion, YNQuestion
 
@@ -25,6 +35,15 @@ __all__ = [
     "Answer",
     # Moves
     "DialogueMove",
+    "Polarity",
+    # ICM Factory Functions (IBiS2)
+    "create_icm_perception_positive",
+    "create_icm_perception_negative",
+    "create_icm_understanding_positive",
+    "create_icm_understanding_negative",
+    "create_icm_understanding_interrogative",
+    "create_icm_acceptance_positive",
+    "create_icm_acceptance_negative",
     # Plans
     "Plan",
     # Information State
