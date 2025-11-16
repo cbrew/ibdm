@@ -12,6 +12,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from ibdm.core.actions import Action, Proposition
 from ibdm.core.answers import Answer
 from ibdm.core.plans import Plan
 from ibdm.core.questions import Question
@@ -87,6 +88,12 @@ class DomainModel:
         self.sorts: dict[str, list[str]] = {}
         self._plan_builders: dict[str, Callable[[dict[str, Any]], Plan]] = {}
         self._dependencies: dict[str, set[str]] = {}  # predicate -> {prerequisite predicates}
+        self._postcond_functions: dict[
+            str, Callable[[Action], list[Proposition]]
+        ] = {}  # action_name -> postcond function
+        self._precond_functions: dict[
+            str, Callable[[Action, set[str]], tuple[bool, str]]
+        ] = {}  # action_name -> precond check function
 
     def add_predicate(
         self,
@@ -468,6 +475,263 @@ class DomainModel:
 
         return WhQuestion(predicate=question_str, variable="X")
 
+    def register_precond_function(
+        self,
+        action_name: str,
+        precond_fn: Callable[[Action, set[str]], tuple[bool, str]],
+    ):
+        """Register precondition checker for an action.
+
+        Based on Larsson (2002) Section 5.6.2 (Action Execution).
+
+        Args:
+            action_name: Name of the action (e.g., "book_hotel", "generate_draft")
+            precond_fn: Function that takes (Action, commitments) and returns
+                       (is_satisfied: bool, error_message: str)
+
+        Example:
+            >>> def book_hotel_precond(action: Action, commitments: set[str]) -> tuple[bool, str]:
+            ...     # Check required parameters
+            ...     if "hotel_id" not in action.parameters:
+            ...         return (False, "Missing hotel_id parameter")
+            ...     # Check required information in commitments
+            ...     if "check_in_date" not in commitments:
+            ...         return (False, "Check-in date must be known before booking")
+            ...     return (True, "")
+            >>> domain.register_precond_function("book_hotel", book_hotel_precond)
+        """
+        self._precond_functions[action_name] = precond_fn
+
+    def has_precond_function(self, action_name: str) -> bool:
+        """Check if a precondition function is registered for an action.
+
+        Args:
+            action_name: Name of the action to check
+
+        Returns:
+            True if a precondition function is registered
+        """
+        return action_name in self._precond_functions
+
+    def check_preconditions(
+        self, action: Action, commitments: set[str]
+    ) -> tuple[bool, str]:
+        """Check if action preconditions are satisfied.
+
+        Validates that an action can be executed in the current dialogue state.
+        Checks both action parameters and dialogue commitments.
+
+        Based on Larsson (2002) Section 5.6.2 (Action Execution).
+
+        Args:
+            action: Action to check preconditions for
+            commitments: Current set of commitments from shared IS
+
+        Returns:
+            Tuple of (satisfied, error_message):
+            - (True, "") if preconditions are satisfied
+            - (False, "error description") if preconditions fail
+
+        Example:
+            >>> action = Action(
+            ...     action_type=ActionType.BOOK,
+            ...     name="book_hotel",
+            ...     parameters={"hotel_id": "H123"},
+            ...     preconditions=["check_in_date", "check_out_date"]
+            ... )
+            >>> satisfied, error = domain.check_preconditions(action, commitments)
+            >>> if not satisfied:
+            ...     print(f"Cannot execute: {error}")
+        """
+        # Check if we have a registered precondition function
+        if action.name in self._precond_functions:
+            return self._precond_functions[action.name](action, commitments)
+
+        # Fallback: check action's declared preconditions
+        if action.preconditions:
+            return self._check_declared_preconditions(action, commitments)
+
+        # No preconditions - always satisfied
+        return (True, "")
+
+    def _check_declared_preconditions(
+        self, action: Action, commitments: set[str]
+    ) -> tuple[bool, str]:
+        """Check action's declared string preconditions against commitments.
+
+        Internal helper for check_preconditions().
+
+        Args:
+            action: Action with preconditions list
+            commitments: Current dialogue commitments
+
+        Returns:
+            (satisfied, error_message) tuple
+
+        Example:
+            >>> action = Action(
+            ...     action_type=ActionType.BOOK,
+            ...     name="book_hotel",
+            ...     preconditions=["check_in_date_known", "check_out_date_known"]
+            ... )
+            >>> satisfied, error = domain._check_declared_preconditions(action, commitments)
+        """
+        missing_preconditions: list[str] = []
+
+        for precond_str in action.preconditions:
+            # Check if precondition is satisfied in commitments
+            # Two strategies:
+            # 1. Exact match (commitment == precondition)
+            # 2. Prefix match (commitment starts with predicate name)
+
+            satisfied = False
+
+            # Strategy 1: Exact match
+            if precond_str in commitments:
+                satisfied = True
+            else:
+                # Strategy 2: Prefix match
+                # e.g., "check_in_date: 2025-01-05" matches "check_in_date"
+                for commitment in commitments:
+                    if commitment.startswith(precond_str):
+                        satisfied = True
+                        break
+
+            if not satisfied:
+                missing_preconditions.append(precond_str)
+
+        if missing_preconditions:
+            missing_str: str = ", ".join(missing_preconditions)
+            return (False, f"Missing required information: {missing_str}")
+
+        return (True, "")
+
+    def register_postcond_function(
+        self,
+        action_name: str,
+        postcond_fn: Callable[[Action], list[Proposition]],
+    ):
+        """Register postcondition generator for an action.
+
+        Based on Larsson (2002) Section 5.3.2 (Actions and Postconditions).
+
+        Args:
+            action_name: Name of the action (e.g., "book_hotel", "generate_draft")
+            postcond_fn: Function that takes Action and returns list of Propositions
+
+        Example:
+            >>> def book_hotel_postconds(action: Action) -> list[Proposition]:
+            ...     hotel_id = action.parameters.get("hotel_id", "unknown")
+            ...     return [Proposition(
+            ...         predicate="booked",
+            ...         arguments={"hotel_id": hotel_id}
+            ...     )]
+            >>> domain.register_postcond_function("book_hotel", book_hotel_postconds)
+        """
+        self._postcond_functions[action_name] = postcond_fn
+
+    def has_postcond_function(self, action_name: str) -> bool:
+        """Check if a postcondition function is registered for an action.
+
+        Args:
+            action_name: Name of the action to check
+
+        Returns:
+            True if a postcondition function is registered
+        """
+        return action_name in self._postcond_functions
+
+    def postcond(self, action: Action) -> list[Proposition]:
+        """Get postconditions for an action.
+
+        Returns propositions that become true after successful action execution.
+        These are typically added to commitments after the action executes.
+
+        Based on Larsson (2002) Section 5.3.2 (Actions and Postconditions).
+
+        Args:
+            action: Action to get postconditions for
+
+        Returns:
+            List of Propositions that will be true after action execution.
+            Returns empty list if no postcondition function registered.
+
+        Example:
+            >>> action = Action(
+            ...     action_type=ActionType.BOOK,
+            ...     name="book_hotel",
+            ...     parameters={"hotel_id": "H123", "check_in": "2025-01-05"}
+            ... )
+            >>> postconds = domain.postcond(action)
+            >>> # [Proposition(predicate="booked", arguments={"hotel_id": "H123"})]
+        """
+        # Check if we have a registered postcondition function
+        if action.name in self._postcond_functions:
+            return self._postcond_functions[action.name](action)
+
+        # Fallback: use action's declared postconditions
+        if action.postconditions:
+            return self._parse_postconditions_to_propositions(action)
+
+        # No postconditions available
+        return []
+
+    def _parse_postconditions_to_propositions(self, action: Action) -> list[Proposition]:
+        """Convert action's string postconditions to Proposition objects.
+
+        Internal helper for postcond() method.
+
+        Args:
+            action: Action with postconditions list
+
+        Returns:
+            List of Proposition objects parsed from action.postconditions
+
+        Example:
+            >>> action = Action(
+            ...     action_type=ActionType.BOOK,
+            ...     name="book_hotel",
+            ...     postconditions=["booked(hotel_id=H123)", "confirmed(booking=true)"]
+            ... )
+            >>> props = domain._parse_postconditions_to_propositions(action)
+            >>> len(props)  # 2
+        """
+        propositions: list[Proposition] = []
+
+        for postcond_str in action.postconditions:
+            # Parse postcondition string (e.g., "booked(hotel_id=H123)")
+            # Simple parser for predicate(arg=value) format
+            if "(" in postcond_str and postcond_str.endswith(")"):
+                # Extract predicate and arguments
+                parts = postcond_str.split("(", 1)
+                predicate = parts[0].strip()
+                args_str = parts[1].rstrip(")")
+
+                # Parse arguments
+                arguments: dict[str, Any] = {}
+                if args_str:
+                    # Simple key=value parser
+                    for arg in args_str.split(","):
+                        arg = arg.strip()
+                        if "=" in arg:
+                            key, value = arg.split("=", 1)
+                            arguments[key.strip()] = value.strip()
+
+                prop = Proposition(
+                    predicate=predicate,
+                    arguments=arguments,
+                )
+                propositions.append(prop)
+            else:
+                # Simple predicate without arguments
+                prop = Proposition(
+                    predicate=postcond_str.strip(),
+                    arguments={},
+                )
+                propositions.append(prop)
+
+        return propositions
+
     def __repr__(self) -> str:
         """String representation of domain model."""
         return (
@@ -475,5 +739,7 @@ class DomainModel:
             f"predicates={len(self.predicates)}, "
             f"sorts={len(self.sorts)}, "
             f"plan_builders={len(self._plan_builders)}, "
-            f"dependencies={len(self._dependencies)})"
+            f"dependencies={len(self._dependencies)}, "
+            f"precond_functions={len(self._precond_functions)}, "
+            f"postcond_functions={len(self._postcond_functions)})"
         )
