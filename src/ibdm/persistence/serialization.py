@@ -5,10 +5,9 @@ Supports Questions, Answers, DialogueMoves, Plans, and InformationState.
 """
 
 import json
-from typing import Any, cast
+from typing import Any
 
 from ibdm.core import (
-    AltQuestion,
     Answer,
     ControlIS,
     DialogueMove,
@@ -17,8 +16,6 @@ from ibdm.core import (
     PrivateIS,
     Question,
     SharedIS,
-    WhQuestion,
-    YNQuestion,
 )
 
 
@@ -30,24 +27,11 @@ def question_to_dict(question: Question) -> dict[str, Any]:
 
     Returns:
         Dictionary representation
+
+    Note:
+        This function now delegates to Question.to_dict() for consistency.
     """
-    if isinstance(question, WhQuestion):
-        return {
-            "type": "WhQuestion",
-            "variable": question.variable,
-            "predicate": question.predicate,
-            "constraints": question.constraints,
-        }
-    elif isinstance(question, YNQuestion):
-        return {
-            "type": "YNQuestion",
-            "proposition": question.proposition,
-            "parameters": question.parameters,
-        }
-    elif isinstance(question, AltQuestion):
-        return {"type": "AltQuestion", "alternatives": question.alternatives}
-    else:
-        raise ValueError(f"Unknown question type: {type(question)}")
+    return question.to_dict()
 
 
 def dict_to_question(data: dict[str, Any]) -> Question:
@@ -58,20 +42,11 @@ def dict_to_question(data: dict[str, Any]) -> Question:
 
     Returns:
         Question object
+
+    Note:
+        This function now delegates to Question.from_dict() for consistency.
     """
-    qtype = data.get("type")
-    if qtype == "WhQuestion":
-        return WhQuestion(
-            variable=data["variable"],
-            predicate=data["predicate"],
-            constraints=data.get("constraints", {}),
-        )
-    elif qtype == "YNQuestion":
-        return YNQuestion(proposition=data["proposition"], parameters=data.get("parameters", {}))
-    elif qtype == "AltQuestion":
-        return AltQuestion(alternatives=data.get("alternatives", []))
-    else:
-        raise ValueError(f"Unknown question type: {qtype}")
+    return Question.from_dict(data)
 
 
 def answer_to_dict(answer: Answer) -> dict[str, Any]:
@@ -82,12 +57,11 @@ def answer_to_dict(answer: Answer) -> dict[str, Any]:
 
     Returns:
         Dictionary representation
+
+    Note:
+        This function now delegates to Answer.to_dict() for consistency.
     """
-    return {
-        "content": answer.content,
-        "question_ref": question_to_dict(answer.question_ref) if answer.question_ref else None,
-        "certainty": answer.certainty,
-    }
+    return answer.to_dict()
 
 
 def dict_to_answer(data: dict[str, Any]) -> Answer:
@@ -98,12 +72,11 @@ def dict_to_answer(data: dict[str, Any]) -> Answer:
 
     Returns:
         Answer object
+
+    Note:
+        This function now delegates to Answer.from_dict() for consistency.
     """
-    return Answer(
-        content=data["content"],
-        question_ref=dict_to_question(data["question_ref"]) if data.get("question_ref") else None,
-        certainty=data.get("certainty", 1.0),
-    )
+    return Answer.from_dict(data)
 
 
 def dialogue_move_to_dict(move: DialogueMove) -> dict[str, Any]:
@@ -114,20 +87,11 @@ def dialogue_move_to_dict(move: DialogueMove) -> dict[str, Any]:
 
     Returns:
         Dictionary representation
-    """
-    content = move.content
-    # Handle special content types
-    if isinstance(content, Question):
-        content = question_to_dict(content)
-    elif isinstance(content, Answer):
-        content = answer_to_dict(content)
 
-    return {
-        "move_type": move.move_type,
-        "content": content,
-        "speaker": move.speaker,
-        "timestamp": move.timestamp,
-    }
+    Note:
+        This function now delegates to DialogueMove.to_dict() for consistency.
+    """
+    return move.to_dict()
 
 
 def dict_to_dialogue_move(data: dict[str, Any]) -> DialogueMove:
@@ -138,22 +102,11 @@ def dict_to_dialogue_move(data: dict[str, Any]) -> DialogueMove:
 
     Returns:
         DialogueMove object
-    """
-    content = data["content"]
-    # Handle special content types
-    if isinstance(content, dict) and "type" in content:
-        content_dict = cast(dict[str, Any], content)
-        if content_dict["type"] in ["WhQuestion", "YNQuestion", "AltQuestion"]:
-            content = dict_to_question(content_dict)
-        elif "certainty" in content_dict:  # Heuristic for Answer
-            content = dict_to_answer(content_dict)
 
-    return DialogueMove(
-        move_type=data["move_type"],
-        content=content,
-        speaker=data["speaker"],
-        timestamp=data["timestamp"],
-    )
+    Note:
+        This function now delegates to DialogueMove.from_dict() for consistency.
+    """
+    return DialogueMove.from_dict(data)
 
 
 def plan_to_dict(plan: Plan) -> dict[str, Any]:
@@ -164,17 +117,11 @@ def plan_to_dict(plan: Plan) -> dict[str, Any]:
 
     Returns:
         Dictionary representation
-    """
-    content = plan.content
-    if isinstance(content, Question):
-        content = question_to_dict(content)
 
-    return {
-        "plan_type": plan.plan_type,
-        "content": content,
-        "status": plan.status,
-        "subplans": [plan_to_dict(sp) for sp in plan.subplans],
-    }
+    Note:
+        This function now delegates to Plan.to_dict() for consistency.
+    """
+    return plan.to_dict()
 
 
 def dict_to_plan(data: dict[str, Any]) -> Plan:
@@ -185,19 +132,11 @@ def dict_to_plan(data: dict[str, Any]) -> Plan:
 
     Returns:
         Plan object
-    """
-    content = data["content"]
-    if isinstance(content, dict) and "type" in content:
-        content_dict = cast(dict[str, Any], content)
-        if content_dict["type"] in ["WhQuestion", "YNQuestion", "AltQuestion"]:
-            content = dict_to_question(content_dict)
 
-    return Plan(
-        plan_type=data["plan_type"],
-        content=content,
-        status=data["status"],
-        subplans=[dict_to_plan(sp) for sp in data.get("subplans", [])],
-    )
+    Note:
+        This function now delegates to Plan.from_dict() for consistency.
+    """
+    return Plan.from_dict(data)
 
 
 def information_state_to_dict(state: InformationState) -> dict[str, Any]:

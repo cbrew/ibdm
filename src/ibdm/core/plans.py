@@ -44,3 +44,49 @@ class Plan:
     def abandon(self) -> None:
         """Mark plan as abandoned."""
         self.status = "abandoned"
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to JSON-serializable dict.
+
+        Returns:
+            Dictionary representation suitable for JSON serialization
+        """
+        from ibdm.core.questions import Question
+
+        # Convert content if it's a Question
+        content = self.content
+        if isinstance(content, Question):
+            content = content.to_dict()
+
+        return {
+            "plan_type": self.plan_type,
+            "content": content,
+            "status": self.status,
+            "subplans": [subplan.to_dict() for subplan in self.subplans],
+        }
+
+    @staticmethod
+    def from_dict(data: dict[str, Any]) -> "Plan":
+        """Reconstruct Plan from dict.
+
+        Args:
+            data: Dictionary representation from to_dict()
+
+        Returns:
+            Reconstructed Plan object
+        """
+        from ibdm.core.questions import Question
+
+        # Reconstruct content if it's a Question dict
+        content: Any = data.get("content")
+        if isinstance(content, dict) and "type" in content:
+            # Cast to dict[str, Any] for Question.from_dict()
+            content_dict: dict[str, Any] = content  # type: ignore[assignment]
+            content = Question.from_dict(content_dict)
+
+        return Plan(
+            plan_type=data.get("plan_type", ""),
+            content=content,
+            status=data.get("status", "active"),
+            subplans=[Plan.from_dict(sp) for sp in data.get("subplans", [])],
+        )
