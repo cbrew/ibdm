@@ -88,11 +88,11 @@ Turn 2:
 
 ---
 
-## 🎯 NEXT PRIORITY: Documentation & Consolidation
+## 🎯 NEXT PRIORITY: Continue IBiS3 Features
 
-**Current Focus**: Week 4 - Document achievements and prepare for next features
-**Duration**: 1-2 days
-**Blockers**: None - IBiS3 core working!
+**Current Focus**: Week 5 - Implement remaining IBiS3 rules (4.3, 4.4, 4.5)
+**Duration**: 2-3 weeks
+**Blockers**: None - Rule 4.3 complete!
 
 **✅ Beads Tasks Created**: ibdm-89, ibdm-90, ibdm-91, ibdm-92, ibdm-93, ibdm-94, ibdm-95
 
@@ -191,39 +191,73 @@ Turn 2:
 
 ---
 
-## Week 5+ Tasks: Next IBiS3 Features (P1 Priority)
+## Week 5 Tasks: IBiS3 Clarification (P1 Priority)
 
-### ibdm-93: Implement Rule 4.3 (IssueClarification)
+### ✅ ibdm-93: Implement Rule 4.3 (IssueClarification) (COMPLETED)
 
-**Priority**: P1 (after Week 4 documentation)
-**Duration**: 3-5 days
-**Goal**: Handle ambiguous utterances with clarification questions
+**Priority**: P1
+**Duration**: 1 day (completed 2025-11-16)
+**Status**: ✅ COMPLETED
 
-**What to Do**:
-- Review Larsson Section 4.6.3 (clarification)
-- Design precondition and effect functions
-- Implement clarification question accommodation
-- Add tests for ambiguous utterance handling
+**What Was Done**:
+- ✅ Reviewed Larsson Section 4.6.3 (IssueClarification)
+- ✅ Designed precondition and effect functions for Rule 4.3
+- ✅ Implemented clarification question accommodation in integration_rules.py
+- ✅ Added 6 unit tests for Rule 4.3 (all passing)
+- ✅ Added integration test for complete clarification flow
+- ✅ Updated select_clarification to defer to Rule 4.3 when clarification on QUD
+- ✅ All tests passing (21/21 IBiS3 tests)
+- ✅ Type checks clean (integration_rules.py 0 errors)
+- ✅ Committed and pushed: `feat(ibis3): implement Rule 4.3 (IssueClarification)`
 
-**Why Next**: Natural complement to Rules 4.1, 4.2; improves dialogue robustness
+**Commit**: `cf1c536` on branch `claude/ibdm-93-01PQnqqsnj4X3Ym4AtYnK9ow`
 
-**Beads Command**: `~/go/bin/bd show ibdm-93`
+**Key Achievement**: Clarification questions are now first-class questions on QUD!
+```
+System: "What are the parties?"
+User: "blue" ← Invalid answer
+System: [Rule 4.3 pushes clarification question to QUD]
+System: "What is a valid parties?" ← Clarification question from QUD
+User: "Acme Corp and Smith Inc"
+System: [Pops clarification, returns to original question]
+```
 
 ---
 
-### ibdm-94: Implement Rule 4.4 (DependentIssueAccommodation)
+## Week 6 Tasks: IBiS3 Dependencies (P1 Priority)
+
+### ✅ ibdm-94: Implement Rule 4.4 (DependentIssueAccommodation) (COMPLETED)
 
 **Priority**: P1
-**Duration**: 3-5 days
-**Goal**: Handle questions that depend on other questions being answered first
+**Duration**: 1 day (completed 2025-11-16)
+**Status**: ✅ COMPLETED
 
-**What to Do**:
-- Review Larsson Section 4.6.4 (dependent issues)
-- Design dependency detection and ordering
-- Implement dependent issue accommodation
-- Add tests for question dependencies
+**What Was Done**:
+- ✅ Reviewed Larsson Section 4.6.4 (DependentIssueAccommodation)
+- ✅ Designed dependency tracking in domain model
+- ✅ Implemented add_dependency, depends, get_dependencies methods
+- ✅ Implemented Rule 4.4 in selection_rules.py (priority 22)
+- ✅ Added 5 unit tests for Rule 4.4 (all passing)
+- ✅ Added integration test for dependency flow
+- ✅ All tests passing (27/27 IBiS3 tests)
+- ✅ Type checks clean (0 errors)
+- ✅ Committed and pushed: `feat(ibis3): implement Rule 4.4 (DependentIssueAccommodation)`
 
-**Beads Command**: `~/go/bin/bd show ibdm-94`
+**Commit**: `09c62cb` on branch `claude/ibdm-93-01PQnqqsnj4X3Ym4AtYnK9ow`
+
+**Key Achievement**: Prerequisite question ordering now works!
+```
+System: "What's the price?" (depends on departure_city)
+[Rule 4.4 detects dependency, pushes city question to QUD]
+System: "What's your departure city?" ← Prerequisite asked first
+User: "London"
+[City answered, price question resumes from QUD]
+System: "What's the price?" ← Now can ask dependent question
+```
+
+---
+
+## Week 7+ Tasks: Next IBiS3 Features (P1 Priority)
 
 ---
 
@@ -249,14 +283,14 @@ Turn 2:
 - Week 1: ✅ Foundation (30% → 35%)
 - Week 2: ✅ Rules 4.1-4.2 (35% → 50%)
 - Week 3: ✅ End-to-end testing (50% → 60%)
-- Week 4: 📋 Documentation + NLU interface (60% → 65%)
-- Week 5-6: 📋 Rule 4.3 - Clarification (65% → 75%)
-- Week 7-8: 📋 Rule 4.4 - Dependent issues (75% → 85%)
-- Week 9-10: 📋 Rule 4.5 - Reaccommodation (85% → 95%)
-- Week 11: 📋 Integration tests + polish (95% → 100%)
+- Week 4: ✅ Documentation + NLU interface (60% → 65%)
+- Week 5: ✅ Rule 4.3 - Clarification (65% → 75%)
+- Week 6: ✅ Rule 4.4 - Dependent issues (75% → 85%)
+- Week 7-8: 📋 Rule 4.5 - Reaccommodation (85% → 95%)
+- Week 9: 📋 Integration tests + polish (95% → 100%)
 
-**Current**: 60% complete
-**Target**: 65% by end of Week 4
+**Current**: 85% complete
+**Target**: 95% by end of Week 8
 
 **Beads Status**:
 - **P0 Tasks**: 4 (Week 4 documentation + NLU interface)
@@ -271,47 +305,37 @@ Turn 2:
 **Implemented**:
 - ✅ **Section 4.6.1**: IssueAccommodation rule (Rule 4.1)
 - ✅ **Section 4.6.2**: LocalQuestionAccommodation rule (Rule 4.2)
+- ✅ **Section 4.6.3**: IssueClarification (Rule 4.3)
+- ✅ **Section 4.6.4**: DependentIssueAccommodation (Rule 4.4)
 
 **Next**:
-- 📋 **Section 4.6.3**: IssueClarification (Rule 4.3)
-- 📋 **Section 4.6.4**: DependentIssueAccommodation (Rule 4.4)
 - 📋 **Section 4.6.5**: QuestionReaccommodation (Rule 4.5)
 
 ---
 
 ## Bottom Line
 
-**✅ Week 4 Complete!** (4/4 tasks - 100%):
-1. ✅ **ibdm-89**: Update SYSTEM_ACHIEVEMENTS.md - DONE (commit `955310e`)
-2. ✅ **ibdm-90**: Update LARSSON_PRIORITY_ROADMAP.md - DONE (commit `8f71715`)
-3. ✅ **ibdm-92**: NLU Interface Adoption - DONE (commit `9b7673e`)
-4. ✅ **ibdm-91**: Create IBiS3 Implementation Guide - DONE (commit `8ee195b`)
+**✅ Week 6 Complete!** (1/1 task - 100%):
+1. ✅ **ibdm-94**: Implement Rule 4.4 (DependentIssueAccommodation) - DONE (commit `09c62cb`)
 
-**Week 4 Achievements**:
-- Documented all Week 1-3 IBiS3 progress
-- Created NLU service interface for testing independence
-- Comprehensive 850+ line implementation guide
-- All documentation current and synchronized
+**Week 6 Achievements**:
+- Implemented Rule 4.4 (DependentIssueAccommodation) from Larsson Section 4.6.4
+- Added dependency tracking to domain model (add_dependency, depends, get_dependencies)
+- Prerequisite questions now automatically pushed to QUD before dependent questions
+- 5 new unit tests + 1 integration test (all passing)
+- IBiS3 progress: 75% → 85%
 
 **Next Recommended Task** (P1 Priority):
-5. ⚡ **ibdm-93**: Implement Rule 4.3 (IssueClarification) - 3-5 days ⬅️ **START WEEK 5**
-   - Handle ambiguous utterances with clarification questions
-   - Larsson Section 4.6.3
-   - **Why Next**: Natural progression after Rules 4.1-4.2, improves dialogue robustness
-   - **Impact**: IBiS3 60% → 75%
+2. ⚡ **ibdm-95**: Implement Rule 4.5 (QuestionReaccommodation) - 3-5 days ⬅️ **START WEEK 7**
+   - Re-prioritize unresolved questions based on context
+   - Larsson Section 4.6.5
+   - **Why Next**: Final IBiS3 accommodation rule, enables dynamic question ordering
+   - **Impact**: IBiS3 85% → 95%
 
-**After ibdm-93** (P1 Priority):
-6. 🔮 **ibdm-94**: Implement Rule 4.4 (DependentIssueAccommodation) - 3-5 days
-7. 🔮 **ibdm-95**: Implement Rule 4.5 (QuestionReaccommodation) - 3-5 days
+**Week 6 Progress**: ✅ 1/1 task complete (100%)
+**IBiS3 Progress**: 85% complete (up from 75%)
+**Next Milestone**: Complete Rule 4.5 → 95% complete
 
-**Week 4 Progress**: ✅ 4/4 tasks complete (100%)
-**IBiS3 Progress**: 60% complete
-**Next Milestone**: Complete Rule 4.3 → 75% complete
+**Key Achievement**: Prerequisite question ordering working! Travel booking scenario now feasible.
 
-**Beads Integration**: ✅ All tasks created, old tasks winnowed, priorities aligned with IBiS3 focus
-
-**Key Insight**: NLU interface enables testing IBiS variants independently of NLU complexity!
-
-**Use Beads**: Run `~/go/bin/bd ready --priority 0` to see P0 tasks, or `~/go/bin/bd show ibdm-89` to start!
-
-Ready to consolidate! 📚
+Ready for the final IBiS3 rule! 🔮

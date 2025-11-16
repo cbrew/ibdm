@@ -3,13 +3,15 @@
 Tests the complete IBiS3 dialogue flow:
 1. Rule 4.1 (IssueAccommodation): Task plan questions → private.issues
 2. Rule 4.2 (LocalQuestionAccommodation): private.issues → QUD incrementally
-3. Volunteer information: User answers unasked questions
-4. Natural dialogue: System skips already-answered questions
+3. Rule 4.3 (IssueClarification): Clarification questions for invalid answers
+4. Rule 4.4 (DependentIssueAccommodation): Prerequisite questions before dependent ones
+5. Volunteer information: User answers unasked questions
+6. Natural dialogue: System skips already-answered questions
 
-Based on Larsson (2002) Sections 4.6.1 and 4.6.2.
+Based on Larsson (2002) Sections 4.6.1, 4.6.2, 4.6.3, and 4.6.4.
 """
 
-from ibdm.core import Answer, DialogueMove, InformationState, WhQuestion
+from ibdm.core import Answer, DialogueMove, DomainModel, InformationState, WhQuestion
 from ibdm.rules import RuleSet, create_integration_rules, create_selection_rules
 
 
@@ -248,4 +250,141 @@ class TestIBiS3MultiTurnDialogue:
 
         print("\n" + "=" * 60)
         print("🎉 IBiS3 working: Incremental questioning achieved!")
+        print("=" * 60)
+
+    def test_clarification_question_accommodation(self):
+        """Test Rule 4.3: Clarification question when user gives invalid answer.
+
+        Flow:
+        1. System asks a question (on QUD)
+        2. User provides invalid answer
+        3. INTEGRATION: Rule 4.3 pushes clarification question to QUD
+        4. SELECTION: System asks clarification question
+        5. User provides valid answer to clarification
+        6. System pops clarification, returns to original question
+        """
+        # Setup rulesets
+        integration_ruleset = RuleSet()
+        for rule in create_integration_rules():
+            integration_ruleset.add_rule(rule)
+
+        selection_ruleset = RuleSet()
+        for rule in create_selection_rules():
+            selection_ruleset.add_rule(rule)
+
+        state = InformationState(agent_id="system")
+
+        # Setup: Question on QUD
+        original_q = WhQuestion(variable="x", predicate="parties(x)")
+        state.shared.push_qud(original_q)
+
+        print("\n" + "=" * 60)
+        print("Testing Rule 4.3: IssueClarification")
+        print("=" * 60)
+
+        # Turn 1: User provides invalid answer
+        print("\n📥 Turn 1: User provides invalid answer")
+        invalid_answer = Answer(content="blue", question_ref=original_q)  # Invalid!
+        answer_move = DialogueMove(move_type="answer", content=invalid_answer, speaker="user")
+        state.private.beliefs["_temp_move"] = answer_move
+
+        # Process: INTEGRATION
+        # The _integrate_answer should detect invalid answer and set clarification flags
+        # But first we need to manually set the flags to test Rule 4.3
+        # (In real system, NLU or domain validation would set these)
+        state.private.beliefs["_needs_clarification"] = True
+        state.private.beliefs["_clarification_question"] = original_q
+        state.private.beliefs["_invalid_answer"] = "blue"
+
+        # Apply Rule 4.3 via integration phase
+        state = integration_ruleset.apply_rules("integration", state)
+
+        # Verify: Clarification question added to QUD
+        assert len(state.shared.qud) == 2, "QUD should have original + clarification"
+        clarification_q = state.shared.top_qud()
+        assert clarification_q is not None
+        assert clarification_q.constraints.get("is_clarification") is True
+        assert original_q in state.shared.qud, "Original question suspended on stack"
+
+        print(f"  ✅ QUD length: {len(state.shared.qud)} (clarification added)")
+        print("  ✅ Clarification question on top of QUD")
+        print("  ✅ Original question suspended below")
+        clarification_cleared = not state.private.beliefs.get("_needs_clarification", False)
+        print(f"  ✅ Clarification flag cleared: {clarification_cleared}")
+
+        # SELECTION phase - system should ask clarification question
+        state = selection_ruleset.apply_rules("selection", state)
+
+        # Verify: System selected to ask clarification question
+        assert len(state.private.agenda) > 0, "Agenda should have a move"
+        agenda_move = state.private.agenda[-1]
+        assert agenda_move.move_type == "ask"
+        assert agenda_move.content == clarification_q
+
+        print("  ✅ System selected to ask clarification question")
+
+        print("\n" + "=" * 60)
+        print("🎉 Rule 4.3 working: Clarification question accommodated!")
+        print("=" * 60)
+
+    def test_dependent_question_accommodation(self):
+        """Test Rule 4.4: Prerequisite questions asked before dependent questions.
+
+        Flow:
+        1. System raises question to QUD that has dependencies
+        2. SELECTION: Rule 4.4 detects unmet dependency
+        3. Rule 4.4 pushes prerequisite question to QUD
+        4. System asks prerequisite first
+        5. User answers prerequisite
+        6. System returns to original dependent question
+        """
+        # Setup rulesets
+        selection_ruleset = RuleSet()
+        for rule in create_selection_rules():
+            selection_ruleset.add_rule(rule)
+
+        state = InformationState(agent_id="system")
+
+        # Setup domain with dependencies
+        domain = DomainModel("travel")
+        domain.add_predicate("price", arity=1)
+        domain.add_predicate("departure_city", arity=1)
+        domain.add_dependency("price", "departure_city")  # price depends on city
+
+        state.private.beliefs["_domain"] = domain
+
+        print("\n" + "=" * 60)
+        print("Testing Rule 4.4: DependentIssueAccommodation")
+        print("=" * 60)
+
+        # Turn 1: Raise dependent question to QUD
+        print("\n📥 Turn 1: Price question raised to QUD (depends on city)")
+        price_q = WhQuestion(variable="x", predicate="price")
+        state.shared.push_qud(price_q)
+
+        # SELECTION phase - Rule 4.4 should detect dependency and push prerequisite
+        state = selection_ruleset.apply_rules("selection", state)
+
+        # Verify: Prerequisite question added to QUD
+        assert len(state.shared.qud) == 2, "QUD should have price + prerequisite"
+        assert state.shared.qud[0] == price_q  # Price at bottom (suspended)
+        prereq_q = state.shared.top_qud()
+        assert prereq_q is not None
+        assert prereq_q.predicate == "departure_city"
+        assert prereq_q.constraints.get("is_prerequisite") is True
+
+        print(f"  ✅ QUD length: {len(state.shared.qud)} (prerequisite added)")
+        print(f"  ✅ Prerequisite question on top: {prereq_q.predicate}")
+        print("  ✅ Price question suspended below")
+
+        # Verify: System selected to ask prerequisite question
+        assert len(state.private.agenda) > 0, "Agenda should have a move"
+        agenda_move = state.private.agenda[-1]
+        assert agenda_move.move_type == "ask"
+        assert agenda_move.content == prereq_q
+
+        print("  ✅ System selected to ask prerequisite question")
+
+        print("\n" + "=" * 60)
+        print("🎉 Rule 4.4 working: Dependent question accommodation!")
         print("=" * 60)

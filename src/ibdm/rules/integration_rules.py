@@ -58,12 +58,21 @@ def create_integration_rules() -> list[UpdateRule]:
             priority=11,
             rule_type="integration",
         ),
+        # IBiS3 Rule 4.3: IssueClarification - accommodate clarification questions to QUD
+        # This must run BEFORE answer integration to handle unclear/invalid answers
+        UpdateRule(
+            name="accommodate_clarification_question",
+            preconditions=_needs_clarification_question,
+            effects=_accommodate_clarification,
+            priority=10,  # Before integrate_answer (9)
+            rule_type="integration",
+        ),
         # Question integration - push to QUD
         UpdateRule(
             name="integrate_question",
             preconditions=_is_ask_move,
             effects=_integrate_question,
-            priority=10,
+            priority=9,
             rule_type="integration",
         ),
         # Answer integration - resolve QUD and add commitment
@@ -71,7 +80,7 @@ def create_integration_rules() -> list[UpdateRule]:
             name="integrate_answer",
             preconditions=_is_answer_move,
             effects=_integrate_answer,
-            priority=9,
+            priority=8,
             rule_type="integration",
         ),
         # Assertion integration - add to commitments
@@ -79,7 +88,7 @@ def create_integration_rules() -> list[UpdateRule]:
             name="integrate_assertion",
             preconditions=_is_assert_move,
             effects=_integrate_assertion,
-            priority=8,
+            priority=7,
             rule_type="integration",
         ),
         # Greet integration - update control
@@ -87,7 +96,7 @@ def create_integration_rules() -> list[UpdateRule]:
             name="integrate_greet",
             preconditions=_is_greet_move,
             effects=_integrate_greet,
-            priority=7,
+            priority=6,
             rule_type="integration",
         ),
         # Quit integration - end dialogue
@@ -95,7 +104,7 @@ def create_integration_rules() -> list[UpdateRule]:
             name="integrate_quit",
             preconditions=_is_quit_move,
             effects=_integrate_quit,
-            priority=7,
+            priority=6,
             rule_type="integration",
         ),
     ]
@@ -212,6 +221,42 @@ def _is_quit_move(state: InformationState) -> bool:
     return isinstance(move, DialogueMove) and move.move_type == "quit"
 
 
+def _needs_clarification_question(state: InformationState) -> bool:
+    """Check if clarification question should be accommodated to QUD.
+
+    IBiS3 Rule 4.3 (IssueClarification):
+    When user utterance is unclear or ambiguous, we need to push
+    a clarification question to QUD to resolve the ambiguity before
+    continuing with the original question.
+
+    Preconditions:
+    - Clarification is needed (flag set during previous processing)
+    - There's a question that needs clarification
+    - Clarification question hasn't already been raised
+
+    Larsson (2002) Section 4.6.3 - IssueClarification rule.
+    """
+    # Check if clarification marker is set (from previous turn or NLU)
+    if not state.private.beliefs.get("_needs_clarification", False):
+        return False
+
+    # Check if we have information about what needs clarification
+    clarification_question = state.private.beliefs.get("_clarification_question")
+    if not clarification_question:
+        return False
+
+    # Don't re-raise if QUD top is already a clarification question
+    # (Check constraints dict to see if it's a clarification question)
+    top_qud = state.shared.top_qud()
+    if top_qud:
+        # WhQuestion has constraints dict, check if it's marked as clarification
+        constraints = getattr(top_qud, "constraints", {})
+        if constraints.get("is_clarification"):
+            return False
+
+    return True
+
+
 # Effect functions
 
 
@@ -249,6 +294,64 @@ def _accommodate_findout_to_issues(state: InformationState) -> InformationState:
                         and question not in new_state.shared.qud
                     ):
                         new_state.private.issues.append(question)
+
+    return new_state
+
+
+def _accommodate_clarification(state: InformationState) -> InformationState:
+    """Accommodate clarification question to QUD.
+
+    IBiS3 Rule 4.3 (IssueClarification):
+    When user utterance is unclear or invalid, push a clarification
+    question to QUD. This suspends the original question (it stays
+    on the stack below the clarification question).
+
+    The clarification question becomes the new top of QUD, and must
+    be answered before the original question can be addressed.
+
+    Args:
+        state: Current information state
+
+    Returns:
+        New state with clarification question on QUD
+
+    Larsson (2002) Section 4.6.3 - IssueClarification rule.
+    """
+    from ibdm.core import WhQuestion
+
+    new_state = state.clone()
+
+    # Get the invalid answer and original question
+    invalid_answer = new_state.private.beliefs.get("_invalid_answer")
+    original_question = new_state.private.beliefs.get("_clarification_question")
+
+    # Generate clarification question
+    # The clarification question asks the user to provide a valid answer
+    # for the original question's expected type
+    if isinstance(original_question, WhQuestion):
+        predicate_for_clarification = f"clarification_for_{original_question.predicate}"
+    else:
+        predicate_for_clarification = "clarification"
+
+    clarification_question = WhQuestion(
+        predicate=predicate_for_clarification,
+        variable="X",
+        constraints={
+            "is_clarification": True,
+            "for_question": str(original_question),
+            "invalid_answer": str(invalid_answer) if invalid_answer else None,
+        },
+    )
+
+    # Push clarification question to QUD
+    # This suspends the original question (it stays on stack below)
+    new_state.shared.push_qud(clarification_question)
+
+    # Clear the clarification flag (it's been handled)
+    new_state.private.beliefs["_needs_clarification"] = False
+
+    # Keep the invalid answer in beliefs for context
+    # (Selection/generation can use this to provide helpful feedback)
 
     return new_state
 

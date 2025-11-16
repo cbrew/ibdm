@@ -1,13 +1,17 @@
-"""Tests for IBiS3 accommodation rules (Rules 4.1 and 4.2).
+"""Tests for IBiS3 accommodation rules (Rules 4.1, 4.2, 4.3, and 4.4).
 
-Tests issue accommodation (Rule 4.1) and local question accommodation (Rule 4.2)
+Tests issue accommodation (Rule 4.1), local question accommodation (Rule 4.2),
+issue clarification (Rule 4.3), and dependent issue accommodation (Rule 4.4)
 per Larsson (2002) Section 4.6.
 
 IBiS3 Enhancement: Questions from task plans are accommodated to private.issues
 first, then raised to QUD incrementally when contextually appropriate.
+Clarification questions are pushed to QUD to suspend original questions.
+Dependent questions are suspended until their prerequisites are answered.
 """
 
 from ibdm.core import (
+    DomainModel,
     InformationState,
     Plan,
     WhQuestion,
@@ -255,3 +259,277 @@ class TestVolunteerInformationHandling:
         # Assertions
         assert len(new_state.shared.qud) == 0  # QUD popped
         assert len(new_state.shared.commitments) > 0  # Answer committed
+
+
+class TestRule43IssueClarification:
+    """Test Rule 4.3: IssueClarification for ambiguous/invalid utterances."""
+
+    def test_rule_4_3_issue_clarification(self):
+        """Test Rule 4.3: Clarification question pushed to QUD when needed."""
+        from ibdm.rules.integration_rules import _accommodate_clarification
+
+        state = InformationState()
+
+        # Setup: Original question on QUD, invalid answer detected
+        original_q = WhQuestion(variable="x", predicate="parties(x)")
+        state.shared.push_qud(original_q)
+        state.private.beliefs["_needs_clarification"] = True
+        state.private.beliefs["_clarification_question"] = original_q
+        state.private.beliefs["_invalid_answer"] = "some invalid value"
+
+        # Apply Rule 4.3
+        new_state = _accommodate_clarification(state)
+
+        # Assertions
+        assert len(new_state.shared.qud) == 2  # Original + clarification
+        # Stack: index 0 is bottom (first pushed), index -1 is top (last pushed)
+        assert new_state.shared.qud[0] == original_q  # Original at bottom (suspended)
+        clarification_q = new_state.shared.qud[-1]  # Clarification on top
+        assert clarification_q.constraints.get("is_clarification") is True
+        assert not new_state.private.beliefs.get("_needs_clarification", False)
+
+    def test_needs_clarification_question_precondition(self):
+        """Test precondition: detects when clarification is needed."""
+        from ibdm.rules.integration_rules import _needs_clarification_question
+
+        state = InformationState()
+
+        # No clarification marker - should be False
+        assert not _needs_clarification_question(state)
+
+        # Add clarification marker but no question - should be False
+        state.private.beliefs["_needs_clarification"] = True
+        assert not _needs_clarification_question(state)
+
+        # Add question needing clarification - should be True
+        q = WhQuestion(variable="x", predicate="parties(x)")
+        state.private.beliefs["_clarification_question"] = q
+        assert _needs_clarification_question(state)
+
+    def test_clarification_question_suspends_original(self):
+        """Test that clarification question suspends (doesn't remove) original question."""
+        from ibdm.rules.integration_rules import _accommodate_clarification
+
+        state = InformationState()
+
+        # Setup: Original question on QUD
+        original_q = WhQuestion(variable="x", predicate="effective_date(x)")
+        state.shared.push_qud(original_q)
+        state.private.beliefs["_needs_clarification"] = True
+        state.private.beliefs["_clarification_question"] = original_q
+        state.private.beliefs["_invalid_answer"] = "invalid date"
+
+        # Apply Rule 4.3
+        new_state = _accommodate_clarification(state)
+
+        # Assertions
+        assert len(new_state.shared.qud) == 2
+        # Original question should still be on stack (suspended, not removed)
+        assert original_q in new_state.shared.qud
+        # Clarification question should be on top
+        clarification_q = new_state.shared.top_qud()
+        assert clarification_q is not None
+        assert clarification_q.constraints.get("is_clarification") is True
+
+    def test_no_duplicate_clarification_questions(self):
+        """Test that clarification questions are not re-raised if already on QUD."""
+        from ibdm.rules.integration_rules import _needs_clarification_question
+
+        state = InformationState()
+
+        # Setup: Clarification question already on QUD
+        clarification_q = WhQuestion(
+            variable="X",
+            predicate="clarification",
+            constraints={"is_clarification": True},
+        )
+        state.shared.push_qud(clarification_q)
+        state.private.beliefs["_needs_clarification"] = True
+        state.private.beliefs["_clarification_question"] = clarification_q
+
+        # Precondition should be False (already have clarification on QUD)
+        assert not _needs_clarification_question(state)
+
+    def test_clarification_question_contains_context(self):
+        """Test that clarification question contains context about the error."""
+        from ibdm.rules.integration_rules import _accommodate_clarification
+
+        state = InformationState()
+
+        # Setup with specific original question and invalid answer
+        original_q = WhQuestion(variable="x", predicate="governing_law(x)")
+        invalid_answer = "blue"  # Invalid for governing law
+        state.shared.push_qud(original_q)
+        state.private.beliefs["_needs_clarification"] = True
+        state.private.beliefs["_clarification_question"] = original_q
+        state.private.beliefs["_invalid_answer"] = invalid_answer
+
+        # Apply Rule 4.3
+        new_state = _accommodate_clarification(state)
+
+        # Check that clarification question contains context
+        clarification_q = new_state.shared.top_qud()
+        assert clarification_q is not None
+        assert "for_question" in clarification_q.constraints
+        assert "invalid_answer" in clarification_q.constraints
+        assert clarification_q.constraints["invalid_answer"] == invalid_answer
+
+    def test_clarification_clears_flag(self):
+        """Test that accommodation clears the clarification flag."""
+        from ibdm.rules.integration_rules import _accommodate_clarification
+
+        state = InformationState()
+
+        # Setup
+        original_q = WhQuestion(variable="x", predicate="parties(x)")
+        state.shared.push_qud(original_q)
+        state.private.beliefs["_needs_clarification"] = True
+        state.private.beliefs["_clarification_question"] = original_q
+        state.private.beliefs["_invalid_answer"] = "invalid"
+
+        # Apply Rule 4.3
+        new_state = _accommodate_clarification(state)
+
+        # Flag should be cleared
+        assert not new_state.private.beliefs.get("_needs_clarification", False)
+
+
+class TestRule44DependentIssueAccommodation:
+    """Test Rule 4.4: DependentIssueAccommodation for prerequisite questions."""
+
+    def test_rule_4_4_dependent_issue_accommodation(self):
+        """Test Rule 4.4: Prerequisite question pushed to QUD when needed."""
+        from ibdm.rules.selection_rules import _accommodate_dependency
+
+        state = InformationState()
+
+        # Setup domain with dependencies
+        domain = DomainModel("travel")
+        domain.add_predicate("price", arity=1)
+        domain.add_predicate("departure_city", arity=1)
+        domain.add_dependency("price", "departure_city")  # price depends on city
+
+        state.private.beliefs["_domain"] = domain
+
+        # Setup: Question on QUD that has dependency
+        price_q = WhQuestion(variable="x", predicate="price")
+        state.shared.push_qud(price_q)
+
+        # Apply Rule 4.4
+        new_state = _accommodate_dependency(state)
+
+        # Assertions
+        assert len(new_state.shared.qud) == 2  # Original + prerequisite
+        assert new_state.shared.qud[0] == price_q  # Price at bottom (suspended)
+        prereq_q = new_state.shared.qud[-1]  # Prerequisite on top
+        assert prereq_q.predicate == "departure_city"
+        assert prereq_q.constraints.get("is_prerequisite") is True
+
+    def test_has_unanswered_dependency_precondition(self):
+        """Test precondition: detects unanswered dependencies."""
+        from ibdm.rules.selection_rules import _has_unanswered_dependency
+
+        state = InformationState()
+
+        # Setup domain with dependencies
+        domain = DomainModel("travel")
+        domain.add_predicate("price", arity=1)
+        domain.add_predicate("departure_city", arity=1)
+        domain.add_dependency("price", "departure_city")
+
+        state.private.beliefs["_domain"] = domain
+
+        # No question on QUD - should be False
+        assert not _has_unanswered_dependency(state)
+
+        # Add question with dependency
+        price_q = WhQuestion(variable="x", predicate="price")
+        state.shared.push_qud(price_q)
+
+        # Should be True (dependency not answered)
+        assert _has_unanswered_dependency(state)
+
+        # Answer the dependency
+        state.private.beliefs["departure_city"] = "London"
+
+        # Should be False (dependency answered)
+        assert not _has_unanswered_dependency(state)
+
+    def test_no_dependency_no_accommodation(self):
+        """Test that questions without dependencies are not accommodated."""
+        from ibdm.rules.selection_rules import _accommodate_dependency
+
+        state = InformationState()
+
+        # Setup domain without dependencies
+        domain = DomainModel("simple")
+        domain.add_predicate("name", arity=1)
+
+        state.private.beliefs["_domain"] = domain
+
+        # Add question with no dependencies
+        name_q = WhQuestion(variable="x", predicate="name")
+        state.shared.push_qud(name_q)
+
+        # Apply Rule 4.4
+        new_state = _accommodate_dependency(state)
+
+        # Should have no effect
+        assert len(new_state.shared.qud) == 1
+        assert new_state.shared.qud[0] == name_q
+
+    def test_multiple_dependencies_one_at_a_time(self):
+        """Test that multiple dependencies are accommodated one at a time."""
+        from ibdm.rules.selection_rules import _accommodate_dependency
+
+        state = InformationState()
+
+        # Setup domain with multiple dependencies
+        domain = DomainModel("travel")
+        domain.add_predicate("price", arity=1)
+        domain.add_predicate("departure_city", arity=1)
+        domain.add_predicate("travel_date", arity=1)
+        domain.add_dependency("price", ["departure_city", "travel_date"])
+
+        state.private.beliefs["_domain"] = domain
+
+        # Add question with multiple dependencies
+        price_q = WhQuestion(variable="x", predicate="price")
+        state.shared.push_qud(price_q)
+
+        # Apply Rule 4.4
+        new_state = _accommodate_dependency(state)
+
+        # Should only accommodate first dependency
+        assert len(new_state.shared.qud) == 2
+        assert new_state.shared.qud[0] == price_q
+        # First dependency should be on top
+        prereq_q = new_state.shared.qud[-1]
+        assert prereq_q.predicate in ["departure_city", "travel_date"]
+
+    def test_dependency_contains_context(self):
+        """Test that prerequisite question contains context about dependent question."""
+        from ibdm.rules.selection_rules import _accommodate_dependency
+
+        state = InformationState()
+
+        # Setup domain
+        domain = DomainModel("travel")
+        domain.add_predicate("price", arity=1)
+        domain.add_predicate("destination", arity=1)
+        domain.add_dependency("price", "destination")
+
+        state.private.beliefs["_domain"] = domain
+
+        # Add dependent question
+        price_q = WhQuestion(variable="x", predicate="price")
+        state.shared.push_qud(price_q)
+
+        # Apply Rule 4.4
+        new_state = _accommodate_dependency(state)
+
+        # Check prerequisite contains context
+        prereq_q = new_state.shared.top_qud()
+        assert prereq_q is not None
+        assert "for_question" in prereq_q.constraints
+        assert prereq_q.constraints["for_question"] == str(price_q)

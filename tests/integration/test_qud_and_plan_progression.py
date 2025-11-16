@@ -13,7 +13,6 @@ from ibdm.core import Answer, DialogueMove, InformationState, Plan, WhQuestion
 from ibdm.rules import (
     RuleSet,
     create_integration_rules,
-    create_selection_rules,
 )
 
 
