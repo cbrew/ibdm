@@ -513,9 +513,7 @@ class DomainModel:
         """
         return action_name in self._precond_functions
 
-    def check_preconditions(
-        self, action: Action, commitments: set[str]
-    ) -> tuple[bool, str]:
+    def check_preconditions(self, action: Action, commitments: set[str]) -> tuple[bool, str]:
         """Check if action preconditions are satisfied.
 
         Validates that an action can be executed in the current dialogue state.
@@ -732,8 +730,117 @@ class DomainModel:
 
         return propositions
 
+    # ========================================================================
+    # Dominance Relations (IBiS4 - Larsson Section 5.7.3)
+    # ========================================================================
+
+    def register_dominance_function(
+        self, predicate: str, fn: Callable[[Proposition, Proposition], bool]
+    ) -> None:
+        """Register a custom dominance checker for a predicate.
+
+        Dominance relations are used in negotiation to determine if one
+        proposition is better than another. For example:
+        - price: lower price dominates higher price
+        - rating: higher rating dominates lower rating
+
+        Based on Larsson Section 5.7.3 (Dominance and Alternatives).
+
+        Args:
+            predicate: Predicate name (e.g., "hotel_price")
+            fn: Function that takes (prop1, prop2) and returns True if prop1 dominates prop2
+
+        Example:
+            >>> def price_dominance(p1: Proposition, p2: Proposition) -> bool:
+            ...     # Lower price dominates higher price
+            ...     price1 = float(p1.arguments.get("price", float("inf")))
+            ...     price2 = float(p2.arguments.get("price", float("inf")))
+            ...     return price1 < price2
+            >>> domain.register_dominance_function("hotel_price", price_dominance)
+        """
+        if not hasattr(self, "_dominance_functions"):
+            self._dominance_functions: dict[str, Callable[[Proposition, Proposition], bool]] = {}
+        self._dominance_functions[predicate] = fn
+
+    def dominates(self, prop1: Proposition, prop2: Proposition) -> bool:
+        """Check if prop1 dominates prop2.
+
+        Dominance means prop1 is strictly better than prop2 according to
+        domain-specific criteria. Used for counter-proposal generation.
+
+        Based on Larsson Section 5.7.3 (Dominance and Alternatives).
+
+        Args:
+            prop1: First proposition
+            prop2: Second proposition
+
+        Returns:
+            True if prop1 dominates prop2
+
+        Example:
+            >>> hotel1 = Proposition(predicate="hotel", arguments={"price": "150"})
+            >>> hotel2 = Proposition(predicate="hotel", arguments={"price": "180"})
+            >>> domain.dominates(hotel1, hotel2)  # True (cheaper)
+        """
+        if not hasattr(self, "_dominance_functions"):
+            self._dominance_functions = {}
+
+        # Propositions must have same predicate to be comparable
+        if prop1.predicate != prop2.predicate:
+            return False
+
+        # Use registered dominance function if available
+        if prop1.predicate in self._dominance_functions:
+            return self._dominance_functions[prop1.predicate](prop1, prop2)
+
+        # Default: no dominance relation
+        return False
+
+    def get_better_alternative(
+        self, rejected_prop: Proposition, alternatives: set[Proposition]
+    ) -> Proposition | None:
+        """Find a better alternative that dominates the rejected proposition.
+
+        Used for counter-proposal generation in negotiation. Searches through
+        alternatives to find one that dominates the rejected proposition.
+
+        Based on Larsson Section 5.7.3.
+
+        Args:
+            rejected_prop: Proposition that was rejected
+            alternatives: Set of alternative propositions
+
+        Returns:
+            A proposition from alternatives that dominates rejected_prop,
+            or None if no dominating alternative exists
+
+        Example:
+            >>> rejected = Proposition(predicate="hotel", arguments={"price": "200"})
+            >>> alternatives = {
+            ...     Proposition(predicate="hotel", arguments={"price": "150"}),
+            ...     Proposition(predicate="hotel", arguments={"price": "250"}),
+            ... }
+            >>> better = domain.get_better_alternative(rejected, alternatives)
+            >>> # Returns the $150 hotel (dominates $200)
+        """
+        if not hasattr(self, "_dominance_functions"):
+            self._dominance_functions = {}
+
+        # Find alternatives with same predicate
+        same_predicate_alts = [
+            alt for alt in alternatives if alt.predicate == rejected_prop.predicate
+        ]
+
+        # Find first alternative that dominates rejected proposition
+        for alt in same_predicate_alts:
+            if self.dominates(alt, rejected_prop):
+                return alt
+
+        return None
+
     def __repr__(self) -> str:
         """String representation of domain model."""
+        dominance_count = len(getattr(self, "_dominance_functions", {}))
         return (
             f"DomainModel(name={self.name!r}, "
             f"predicates={len(self.predicates)}, "
@@ -741,5 +848,6 @@ class DomainModel:
             f"plan_builders={len(self._plan_builders)}, "
             f"dependencies={len(self._dependencies)}, "
             f"precond_functions={len(self._precond_functions)}, "
-            f"postcond_functions={len(self._postcond_functions)})"
+            f"postcond_functions={len(self._postcond_functions)}, "
+            f"dominance_functions={dominance_count})"
         )
