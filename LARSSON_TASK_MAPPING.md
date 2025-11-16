@@ -635,3 +635,39 @@ Larsson's thesis presents four incremental dialogue systems:
 4. New thesis sections are implemented
 
 **Last Major Update**: 2025-11-15 (Initial creation, comprehensive mapping)
+
+---
+
+## Historical Documentation
+
+### Archived Planning Documents
+These documents capture the original design and planning phases:
+
+- **Development Plan**: `docs/archive/planning/DEVELOPMENT_PLAN.md` (📋 Original 8-phase implementation roadmap)
+- **Demo Plan**: `docs/archive/planning/DEMO_PLAN.md` (✅ Comprehensive demonstration strategy)
+- **NLU Enhancement Plan**: `docs/archive/planning/NLU_ENHANCEMENT_PLAN.md` (✅ Phase 3.5 LLM integration plan)
+- **Project Structure**: `docs/archive/planning/PROJECT_STRUCTURE.md` (📋 Intended directory organization)
+
+### Analysis & Status Reports
+Detailed assessments and snapshots:
+
+- **IBD-1 Completion Analysis**: `reports/ibd-1-completion-analysis.md`
+  - Comprehensive analysis of IBD-1 vs. demonstration goals
+  - IBiS1-4 alignment assessment
+  - Larsson fidelity scoring
+
+- **Project Status (2025-11-16)**: `reports/project-status-2025-11-16.md`
+  - Complete status snapshot at IBD-1 completion
+  - Technical statistics and metrics
+  - Demo readiness assessment
+
+### Archived Reviews
+One-time technical reviews and verifications:
+
+- **Hybrid Fallback Review**: `docs/archive/reviews/ibdm-64.14-review.md` (❌ Deprecated approach)
+- **API Key Verification**: `docs/archive/reviews/IBDM_API_KEY_VERIFICATION.md` (✅ Initial setup validation)
+
+### Quick References
+- **Interpretation/Accommodation Issue**: `docs/interpretation-accommodation-quick-ref.md`
+  - Quick reference for understanding task accommodation phase boundaries
+  - Links to full analysis at `docs/architecture_interpretation_accommodation.md`
