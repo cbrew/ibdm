@@ -91,6 +91,9 @@ class DomainModel:
         self._postcond_functions: dict[
             str, Callable[[Action], list[Proposition]]
         ] = {}  # action_name -> postcond function
+        self._precond_functions: dict[
+            str, Callable[[Action, set[str]], tuple[bool, str]]
+        ] = {}  # action_name -> precond check function
 
     def add_predicate(
         self,
@@ -472,6 +475,137 @@ class DomainModel:
 
         return WhQuestion(predicate=question_str, variable="X")
 
+    def register_precond_function(
+        self,
+        action_name: str,
+        precond_fn: Callable[[Action, set[str]], tuple[bool, str]],
+    ):
+        """Register precondition checker for an action.
+
+        Based on Larsson (2002) Section 5.6.2 (Action Execution).
+
+        Args:
+            action_name: Name of the action (e.g., "book_hotel", "generate_draft")
+            precond_fn: Function that takes (Action, commitments) and returns
+                       (is_satisfied: bool, error_message: str)
+
+        Example:
+            >>> def book_hotel_precond(action: Action, commitments: set[str]) -> tuple[bool, str]:
+            ...     # Check required parameters
+            ...     if "hotel_id" not in action.parameters:
+            ...         return (False, "Missing hotel_id parameter")
+            ...     # Check required information in commitments
+            ...     if "check_in_date" not in commitments:
+            ...         return (False, "Check-in date must be known before booking")
+            ...     return (True, "")
+            >>> domain.register_precond_function("book_hotel", book_hotel_precond)
+        """
+        self._precond_functions[action_name] = precond_fn
+
+    def has_precond_function(self, action_name: str) -> bool:
+        """Check if a precondition function is registered for an action.
+
+        Args:
+            action_name: Name of the action to check
+
+        Returns:
+            True if a precondition function is registered
+        """
+        return action_name in self._precond_functions
+
+    def check_preconditions(
+        self, action: Action, commitments: set[str]
+    ) -> tuple[bool, str]:
+        """Check if action preconditions are satisfied.
+
+        Validates that an action can be executed in the current dialogue state.
+        Checks both action parameters and dialogue commitments.
+
+        Based on Larsson (2002) Section 5.6.2 (Action Execution).
+
+        Args:
+            action: Action to check preconditions for
+            commitments: Current set of commitments from shared IS
+
+        Returns:
+            Tuple of (satisfied, error_message):
+            - (True, "") if preconditions are satisfied
+            - (False, "error description") if preconditions fail
+
+        Example:
+            >>> action = Action(
+            ...     action_type=ActionType.BOOK,
+            ...     name="book_hotel",
+            ...     parameters={"hotel_id": "H123"},
+            ...     preconditions=["check_in_date", "check_out_date"]
+            ... )
+            >>> satisfied, error = domain.check_preconditions(action, commitments)
+            >>> if not satisfied:
+            ...     print(f"Cannot execute: {error}")
+        """
+        # Check if we have a registered precondition function
+        if action.name in self._precond_functions:
+            return self._precond_functions[action.name](action, commitments)
+
+        # Fallback: check action's declared preconditions
+        if action.preconditions:
+            return self._check_declared_preconditions(action, commitments)
+
+        # No preconditions - always satisfied
+        return (True, "")
+
+    def _check_declared_preconditions(
+        self, action: Action, commitments: set[str]
+    ) -> tuple[bool, str]:
+        """Check action's declared string preconditions against commitments.
+
+        Internal helper for check_preconditions().
+
+        Args:
+            action: Action with preconditions list
+            commitments: Current dialogue commitments
+
+        Returns:
+            (satisfied, error_message) tuple
+
+        Example:
+            >>> action = Action(
+            ...     action_type=ActionType.BOOK,
+            ...     name="book_hotel",
+            ...     preconditions=["check_in_date_known", "check_out_date_known"]
+            ... )
+            >>> satisfied, error = domain._check_declared_preconditions(action, commitments)
+        """
+        missing_preconditions: list[str] = []
+
+        for precond_str in action.preconditions:
+            # Check if precondition is satisfied in commitments
+            # Two strategies:
+            # 1. Exact match (commitment == precondition)
+            # 2. Prefix match (commitment starts with predicate name)
+
+            satisfied = False
+
+            # Strategy 1: Exact match
+            if precond_str in commitments:
+                satisfied = True
+            else:
+                # Strategy 2: Prefix match
+                # e.g., "check_in_date: 2025-01-05" matches "check_in_date"
+                for commitment in commitments:
+                    if commitment.startswith(precond_str):
+                        satisfied = True
+                        break
+
+            if not satisfied:
+                missing_preconditions.append(precond_str)
+
+        if missing_preconditions:
+            missing_str: str = ", ".join(missing_preconditions)
+            return (False, f"Missing required information: {missing_str}")
+
+        return (True, "")
+
     def register_postcond_function(
         self,
         action_name: str,
@@ -606,5 +740,6 @@ class DomainModel:
             f"sorts={len(self.sorts)}, "
             f"plan_builders={len(self._plan_builders)}, "
             f"dependencies={len(self._dependencies)}, "
+            f"precond_functions={len(self._precond_functions)}, "
             f"postcond_functions={len(self._postcond_functions)})"
         )

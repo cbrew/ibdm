@@ -7,6 +7,246 @@ from ibdm.core.actions import Action, ActionType, Proposition
 from ibdm.core.domain import DomainModel
 
 
+class TestDomainPreconditions:
+    """Test precondition checking in domain model."""
+
+    def test_register_precond_function(self) -> None:
+        """Test registering a precondition function."""
+        domain = DomainModel(name="test")
+
+        def book_hotel_precond(action: Action, commitments: set[str]) -> tuple[bool, str]:
+            if "check_in_date" not in commitments:
+                return (False, "Check-in date required")
+            return (True, "")
+
+        domain.register_precond_function("book_hotel", book_hotel_precond)
+
+        # Verify it's registered
+        assert domain.has_precond_function("book_hotel")
+
+    def test_check_preconditions_with_registered_function(self) -> None:
+        """Test check_preconditions() with a registered function."""
+        domain = DomainModel(name="test")
+
+        # Register precondition function
+        def book_hotel_precond(action: Action, commitments: set[str]) -> tuple[bool, str]:
+            # Check required parameters
+            if "hotel_id" not in action.parameters:
+                return (False, "Missing hotel_id parameter")
+
+            # Check required commitments
+            if "check_in_date" not in commitments and not any(
+                c.startswith("check_in_date") for c in commitments
+            ):
+                return (False, "Check-in date must be known before booking")
+
+            if "check_out_date" not in commitments and not any(
+                c.startswith("check_out_date") for c in commitments
+            ):
+                return (False, "Check-out date must be known before booking")
+
+            return (True, "")
+
+        domain.register_precond_function("book_hotel", book_hotel_precond)
+
+        # Test with satisfied preconditions
+        action = Action(
+            action_type=ActionType.BOOK,
+            name="book_hotel",
+            parameters={"hotel_id": "H123"},
+        )
+
+        commitments = {"check_in_date: 2025-01-05", "check_out_date: 2025-01-10"}
+
+        satisfied, error = domain.check_preconditions(action, commitments)
+
+        assert satisfied
+        assert error == ""
+
+    def test_check_preconditions_missing_parameter(self) -> None:
+        """Test check_preconditions() with missing parameter."""
+        domain = DomainModel(name="test")
+
+        def book_hotel_precond(action: Action, commitments: set[str]) -> tuple[bool, str]:
+            if "hotel_id" not in action.parameters:
+                return (False, "Missing hotel_id parameter")
+            return (True, "")
+
+        domain.register_precond_function("book_hotel", book_hotel_precond)
+
+        action = Action(
+            action_type=ActionType.BOOK,
+            name="book_hotel",
+            parameters={},  # Missing hotel_id
+        )
+
+        commitments: set[str] = set()
+
+        satisfied, error = domain.check_preconditions(action, commitments)
+
+        assert not satisfied
+        assert "Missing hotel_id parameter" in error
+
+    def test_check_preconditions_missing_commitment(self) -> None:
+        """Test check_preconditions() with missing commitment."""
+        domain = DomainModel(name="test")
+
+        def book_hotel_precond(action: Action, commitments: set[str]) -> tuple[bool, str]:
+            if "check_in_date" not in commitments and not any(
+                c.startswith("check_in_date") for c in commitments
+            ):
+                return (False, "Check-in date must be known")
+            return (True, "")
+
+        domain.register_precond_function("book_hotel", book_hotel_precond)
+
+        action = Action(
+            action_type=ActionType.BOOK,
+            name="book_hotel",
+            parameters={"hotel_id": "H123"},
+        )
+
+        commitments: set[str] = set()  # Empty commitments
+
+        satisfied, error = domain.check_preconditions(action, commitments)
+
+        assert not satisfied
+        assert "Check-in date must be known" in error
+
+    def test_check_preconditions_with_declared_preconditions(self) -> None:
+        """Test check_preconditions() using action's declared preconditions."""
+        domain = DomainModel(name="test")
+
+        # No registered function - will use fallback
+
+        action = Action(
+            action_type=ActionType.BOOK,
+            name="book_hotel",
+            parameters={"hotel_id": "H123"},
+            preconditions=["check_in_date", "check_out_date"],
+        )
+
+        # Test with all preconditions satisfied
+        commitments = {"check_in_date: 2025-01-05", "check_out_date: 2025-01-10"}
+
+        satisfied, error = domain.check_preconditions(action, commitments)
+
+        assert satisfied
+        assert error == ""
+
+    def test_check_preconditions_declared_preconditions_missing(self) -> None:
+        """Test check_preconditions() with missing declared preconditions."""
+        domain = DomainModel(name="test")
+
+        action = Action(
+            action_type=ActionType.BOOK,
+            name="book_hotel",
+            preconditions=["check_in_date", "check_out_date", "hotel_selected"],
+        )
+
+        # Only partial commitments
+        commitments = {"check_in_date: 2025-01-05"}
+
+        satisfied, error = domain.check_preconditions(action, commitments)
+
+        assert not satisfied
+        assert "Missing required information" in error
+        assert "check_out_date" in error or "hotel_selected" in error
+
+    def test_check_preconditions_exact_match(self) -> None:
+        """Test precondition checking with exact match."""
+        domain = DomainModel(name="test")
+
+        action = Action(
+            action_type=ActionType.EXECUTE,
+            name="complete_task",
+            preconditions=["task_ready"],
+        )
+
+        commitments = {"task_ready"}  # Exact match
+
+        satisfied, _ = domain.check_preconditions(action, commitments)
+
+        assert satisfied
+
+    def test_check_preconditions_prefix_match(self) -> None:
+        """Test precondition checking with prefix match."""
+        domain = DomainModel(name="test")
+
+        action = Action(
+            action_type=ActionType.BOOK,
+            name="book_flight",
+            preconditions=["departure_city", "destination_city"],
+        )
+
+        # Commitments with full values (prefix match)
+        commitments = {"departure_city: London", "destination_city: Paris"}
+
+        satisfied, _ = domain.check_preconditions(action, commitments)
+
+        assert satisfied
+
+    def test_check_preconditions_no_preconditions(self) -> None:
+        """Test check_preconditions() with action that has no preconditions."""
+        domain = DomainModel(name="test")
+
+        action = Action(
+            action_type=ActionType.GET,
+            name="get_status",
+            parameters={},
+        )
+
+        commitments: set[str] = set()
+
+        satisfied, error = domain.check_preconditions(action, commitments)
+
+        # No preconditions = always satisfied
+        assert satisfied
+        assert error == ""
+
+    def test_check_preconditions_registered_function_takes_precedence(self) -> None:
+        """Test that registered function takes precedence over declared preconditions."""
+        domain = DomainModel(name="test")
+
+        # Register custom precondition function
+        def custom_precond(action: Action, commitments: set[str]) -> tuple[bool, str]:
+            return (True, "")  # Always satisfied
+
+        domain.register_precond_function("book_hotel", custom_precond)
+
+        # Create action with declared preconditions that would fail
+        action = Action(
+            action_type=ActionType.BOOK,
+            name="book_hotel",
+            preconditions=["impossible_condition"],
+        )
+
+        commitments: set[str] = set()  # Empty commitments
+
+        satisfied, _ = domain.check_preconditions(action, commitments)
+
+        # Should use registered function (always satisfied), not declared preconditions
+        assert satisfied
+
+    def test_domain_repr_includes_precond_functions(self) -> None:
+        """Test that __repr__ includes precond_functions count."""
+        domain = DomainModel(name="test")
+
+        # Initially no precond functions
+        repr_str = repr(domain)
+        assert "precond_functions=0" in repr_str
+
+        # Add a precond function
+        def dummy_precond(action: Action, commitments: set[str]) -> tuple[bool, str]:
+            return (True, "")
+
+        domain.register_precond_function("dummy", dummy_precond)
+
+        # Should now show 1
+        repr_str = repr(domain)
+        assert "precond_functions=1" in repr_str
+
+
 class TestDomainPostconditions:
     """Test postcondition generation in domain model."""
 
