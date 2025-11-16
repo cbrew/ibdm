@@ -512,51 +512,87 @@ User: "Actually, april 4th"
 
 ---
 
-### 📋 Next Task: ibdm-98.5
+### ✅ ibdm-98.5: Implement Core ICM Update Rules (COMPLETED)
 
-**Task**: Implement Core ICM Update Rules (Week 4-5 IBiS2)
-**Duration**: 1-2 weeks
-**Description**: Implement the first batch of ICM update rules from Larsson Section 3.6 (Rules 3.1-3.10). These rules integrate ICM feedback into the information state.
+**Completed**: 2025-11-16
+**Duration**: 5 hours
 
-**What to Implement**:
-1. Create `src/ibdm/rules/icm_integration_rules.py`:
-   - Rule 3.1: IntegrateICM_Perception (icm:per*pos → mark as perceived)
-   - Rule 3.2: IntegrateICM_Understanding (icm:und*pos → mark as understood)
-   - Rule 3.3: IntegrateICM_Acceptance (icm:acc*pos → add to commitments)
-   - Rule 3.4: IntegrateICM_PerceptionNegative (icm:per*neg → request repetition)
-   - Rule 3.5: IntegrateICM_UnderstandingNegative (icm:und*neg → clarification)
+**What Was Done**:
+- ✅ Created `src/ibdm/rules/icm_integration_rules.py` with 6 rules:
+  - Rule 3.1: IntegrateICM_PerceptionPositive (icm:per*pos → mark perceived)
+  - Rule 3.2: IntegrateICM_UnderstandingPositive (icm:und*pos → mark understood)
+  - Rule 3.3: IntegrateICM_AcceptancePositive (icm:acc*pos → mark grounded)
+  - Rule 3.4: IntegrateICM_PerceptionNegative (icm:per*neg → request repetition)
+  - Rule 3.5: IntegrateICM_UnderstandingNegative (icm:und*neg → clarification)
+  - Generic ICM move tracking in move history
 
-2. Update `src/ibdm/rules/selection_rules.py`:
-   - Rule 3.6: SelectPerceptionCheck (low confidence → icm:per*?)
-   - Rule 3.7: SelectUnderstandingConfirmation (medium confidence → icm:und*int)
-   - Rule 3.8: SelectAcceptance (high confidence → icm:acc*pos)
+- ✅ Updated `src/ibdm/rules/selection_rules.py` with 3 rules:
+  - Rule 3.6: SelectPerceptionCheck (low confidence → icm:per*neg)
+  - Rule 3.7: SelectUnderstandingConfirmation (medium confidence → icm:und*int)
+  - Rule 3.8: SelectAcceptance (high confidence → icm:acc*pos)
 
-3. Add grounding status tracking to move history
+- ✅ Implemented grounding status tracking:
+  - Metadata updates: grounding_status (perceived/understood/grounded)
+  - Failure tracking: perception_failed, understanding_failed
+  - Action flags: needs_reutterance, needs_clarification
 
-4. Write comprehensive unit tests for each rule
+- ✅ Integration with grounding module:
+  - Uses select_grounding_strategy() for confidence-based strategies
+  - Uses requires_confirmation() for move-type specific confirmation
+  - Integrates ActionLevel and GroundingStrategy enums
 
-**Why Important**: Enables actual grounding operations in dialogue
+- ✅ Wrote 20 comprehensive unit tests (all passing):
+  - All 5 ICM integration rules tested
+  - All 3 ICM selection rules tested
+  - Complete grounding flows (pessimistic, cautious, optimistic)
+  - Grounding status progression testing
+  - Rule preconditions and priorities
+  - Edge cases (empty state, system moves, existing agenda)
+
+- ✅ Type safety verified (pyright 0 errors)
+- ✅ Committed and pushed: `feat(ibis2): implement core ICM update rules (ibdm-98.5)`
+
+**Key Achievement**: Complete ICM rule implementation enables grounding operations in dialogue!
 
 **Larsson Reference**: Section 3.6 (ICM Update Rules 3.1-3.10)
 
 ---
 
+### 📋 Next Task: ibdm-98.6
+
+**Task**: Integrate ICM Rules into Dialogue Loop
+**Duration**: 2-3 days
+**Description**: Integrate the new ICM rules into the main dialogue loop, ensuring they fire at appropriate times during dialogue state updates.
+
+**What to Implement**:
+1. Update RuleSet to include ICM integration rules
+2. Add ICM rules to dialogue engine initialization
+3. Test ICM rules in end-to-end dialogue scenarios
+4. Add confidence score handling in NLU interpretation
+5. Create example dialogues demonstrating grounding
+
+**Why Important**: Makes ICM rules actually active in dialogue processing
+
+---
+
 ## Progress Summary
 
-**IBiS2 Progress**: 10% → 25% (Week 1-3 complete!)
+**IBiS2 Progress**: 10% → 40% (Week 1-5 core complete!)
 
 **Test Coverage**:
 - Core tests: 91 passing
 - Information state tests: 37 passing (6 grounding field tests)
 - Grounding tests: 33 passing
-- ICM move tests: 32 passing (NEW!)
-- **Total**: 193+ tests passing
+- ICM move tests: 32 passing
+- ICM rules tests: 20 passing (NEW!)
+- **Total**: 213+ tests passing
 
 **Completed This Session**:
 1. ✅ `ibdm-98.1`: Add grounding fields to SharedIS - 876acd1
 2. ✅ `ibdm-98.2`: Create grounding status tracking module - e02f1c8
 3. ✅ `ibdm-98.3`: Update serialization for grounding fields - VERIFIED
 4. ✅ `ibdm-98.4`: Implement ICM move types - c0ae9a5
+5. ✅ `ibdm-98.5`: Implement core ICM update rules - 69e502b
 
 ---
 
@@ -632,42 +668,47 @@ User: "Actually, april 4th"
 
 ## Bottom Line
 
-**✅ Tasks ibdm-98.3 and ibdm-98.4 Complete!** (Week 1-3 IBiS2 foundations done)
+**✅ Tasks ibdm-98.3, ibdm-98.4, and ibdm-98.5 Complete!** (Week 1-5 IBiS2 core done)
 
 **Completed This Session**:
 - ✅ ibdm-98.3: Verified grounding field serialization already implemented
 - ✅ ibdm-98.4: Implemented full ICM taxonomy with 7 factory functions
-- ✅ 32 new ICM tests (all passing)
-- ✅ 193+ total tests passing
+- ✅ ibdm-98.5: Implemented 9 ICM update rules (integration + selection)
+- ✅ 52 new ICM tests (32 move tests + 20 rules tests, all passing)
+- ✅ 213+ total tests passing
 - ✅ Type safety verified (pyright 0 errors)
 - ✅ Updated NEXT-TASK.md with completion status
 
-**IBiS2 Week 1-3 Summary** (Information State Extensions + ICM Taxonomy):
+**IBiS2 Week 1-5 Summary** (Grounding Foundations Complete):
 1. ✅ **ibdm-98.1**: Grounding fields added to SharedIS (moves, next_moves)
-2. ✅ **ibdm-98.2**: Grounding status tracking module created (ActionLevel, Polarity, strategies)
+2. ✅ **ibdm-98.2**: Grounding status tracking module (ActionLevel, GroundingStrategy, Polarity)
 3. ✅ **ibdm-98.3**: Serialization verified and complete
 4. ✅ **ibdm-98.4**: ICM move types implemented (Polarity enum + 7 factory functions)
+5. ✅ **ibdm-98.5**: Core ICM update rules (5 integration + 3 selection rules)
 
-**Progress**: IBiS2 10% → 25% (Week 1-3 complete!)
+**Progress**: IBiS2 10% → 40% (Week 1-5 core complete!)
 
 ---
 
-## 🎯 Recommended Next Task: ibdm-98.5
+## 🎯 Recommended Next Task: ibdm-98.6
 
-**Option 1: Continue IBiS2 with ICM Update Rules** (RECOMMENDED for momentum)
-- **Task**: ibdm-98.5 - Implement Core ICM Update Rules (Rules 3.1-3.10)
-- **Duration**: 1-2 weeks
-- **Why**: Natural continuation, enables actual grounding operations
-- **Value**: Foundation for production-ready dialogue with error handling
+**Option 1: Integrate ICM Rules into Dialogue Loop** (RECOMMENDED for completion)
+- **Task**: ibdm-98.6 - Integrate ICM Rules into Dialogue Loop
+- **Duration**: 2-3 days
+- **Why**: Makes ICM rules active in dialogue processing
+- **Value**: Enables actual grounding in live dialogue
 
 **Option 2: Interactive Demo Application** (HIGH VALUE for validation)
 - Create CLI demo showcasing IBiS3 capabilities
 - Validate end-to-end system with real interaction
-- **Why**: Demonstrate research contribution tangibly
+- **Why**: Demonstrate research contribution tangibly with grounding
 - **Value**: User validation, publication material, edge case discovery
 
-**Option 3: Other IBiS2/IBiS4 Work** (see Alternative Options above)
+**Option 3: Additional ICM Rules** (optional enhancement)
+- Implement remaining ICM rules (3.9-3.27) from Larsson Section 3.6
+- **Why**: More comprehensive grounding coverage
+- **Value**: Production-ready dialogue error handling
 
-**Recommendation**: **Continue with ibdm-98.5 (ICM Update Rules)** to maintain momentum on IBiS2 implementation. The ICM taxonomy is now complete, and implementing the update rules will enable actual grounding operations in dialogue.
+**Recommendation**: **Continue with ibdm-98.6 (ICM Integration)** to activate the ICM rules in the dialogue loop. The ICM rules are now implemented and tested, they just need to be wired into the main dialogue processing!
 
-Ready for Week 4-5 IBiS2 implementation! 🚀
+Ready to activate ICM grounding in dialogue! 🚀
