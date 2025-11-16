@@ -163,7 +163,94 @@ The **Issue-Based Dialogue Management (IBDM)** system is a production-ready Pyth
 - Turn-taking framework
 - Ready for expansion in Phase 5
 
-### 1.7 Comprehensive Testing
+### 1.7 IBiS3 Issue-Based Dialogue Variant (NEW - November 2025)
+
+**Major Achievement**: Implementation of IBiS3 variant from Larsson (2002) Chapter 4, enabling incremental questioning with private issue accommodation.
+
+**Implementation Timeline** (3 weeks):
+
+**Week 1 - Foundation** (IBiS3 35% complete):
+- Added `private.issues` field to `PrivateIS` for question storage
+- Enhanced serialization with type-safe `to_dict`/`from_dict` methods
+- Phase separation verified (task plan formation in INTEGRATION phase)
+- All tests passing (97/97 core tests), zero type errors
+
+**Week 2 - Core Rules** (IBiS3 50% complete):
+- **Rule 4.1 (IssueAccommodation)**: Questions from task plans → `private.issues`
+  - Modified `_form_task_plan` to NOT push directly to QUD
+  - Questions stored privately for incremental raising
+- **Rule 4.2 (LocalQuestionAccommodation)**: Issues → QUD incrementally
+  - Raises one question at a time from `private.issues` to `shared.qud`
+  - Fires when QUD empty and issues available
+- **Volunteer Information Handling**: Process over-informative answers
+  - Modified `_integrate_answer` to check `private.issues` before QUD
+  - Accommodates volunteer answers to pending questions
+- 11 new tests added, 155 total core tests passing
+
+**Week 3 - End-to-End Verification** (IBiS3 60% complete):
+- Created comprehensive end-to-end integration tests (`test_ibis3_end_to_end.py`)
+- Verified complete rule chain: Rule 4.1 → Rule 4.2 → SelectAsk
+- **Discovered and fixed 3 critical bugs**:
+
+  1. **Rule Priority Bug**: `form_task_plan` was running AFTER `accommodate_issue_from_plan`
+     - Fix: Adjusted priorities so plan formation happens first
+     - Impact: Questions now properly flow through the accommodation chain
+
+  2. **Fallback Selection Bug**: Fallback was firing even when agenda had items
+     - Fix: Fallback only fires when `agenda` is empty
+     - Impact: System correctly processes pending actions before fallback
+
+  3. **Plan Progression Bug**: Direct QUD push bypassed Rule 4.2
+     - Fix: Removed direct QUD operations, Rule 4.2 handles all question raising
+     - Impact: Incremental questioning now works correctly
+
+- Removed obsolete IBiS1 tests expecting old behavior
+- All IBiS3 tests passing (3/3 end-to-end scenarios)
+
+**Key Insight - Rule Priority Ordering**:
+The correct rule execution order is critical for IBiS3:
+```
+1. form_task_plan (priority 12) - Create plan with questions
+2. accommodate_issue_from_plan (priority 11) - Move questions to private.issues
+3. accommodate_local_question (priority 10) - Raise one question to QUD
+4. select_ask (priority 15) - Ask the question
+5. fallback (priority 5) - Only if agenda empty
+```
+
+**Incremental Questioning Achievement**:
+```
+Turn 1:
+  User: "I need to create a contract"
+  System creates plan with 5 questions:
+    - All 5 questions → private.issues (Rule 4.1)
+    - First question → QUD (Rule 4.2)
+  System: "What are the parties to the contract?"
+
+Turn 2:
+  User: "Acme Corp and Smith Inc, effective January 1, 2025"
+  System:
+    - Answer integrated for "parties" question
+    - Date accommodated to private.issues (volunteer info)
+    - Question popped from QUD
+    - Next question raised: issues → QUD (Rule 4.2)
+  System: "What is the governing law?" ← SKIPS DATE (already answered!)
+
+✅ ONE QUESTION AT A TIME - Natural incremental dialogue!
+```
+
+**Impact**:
+- Natural dialogue flow with incremental questioning
+- Proper handling of over-informative answers
+- Foundation for advanced IBiS3 rules (clarification, dependencies, reaccommodation)
+- Fidelity to Larsson (2002) algorithms demonstrated
+
+**Next Steps** (Weeks 4-10):
+- Documentation and consolidation
+- Rule 4.3: Clarification questions
+- Rule 4.4: Dependent issue accommodation
+- Rule 4.5: Question reaccommodation
+
+### 1.8 Comprehensive Testing
 
 **Test Suite Statistics**:
 - **527 test functions** across 24 test files
@@ -172,6 +259,7 @@ The **Issue-Based Dialogue Management (IBDM)** system is a production-ready Pyth
 - **Integration tests** for multi-component scenarios
 - **Property-based tests** using Hypothesis
 - **NLU tests**: 16+ test files covering all NLU components
+- **IBiS3 end-to-end tests**: 3 comprehensive scenarios
 
 **Test Categories**:
 - Core data structures (questions, answers, moves, plans, IS)
@@ -180,11 +268,12 @@ The **Issue-Based Dialogue Management (IBDM)** system is a production-ready Pyth
 - NLU pipeline (all 11 components)
 - Burr integration
 - Accommodation mechanisms
+- IBiS3 rule chain (Rules 4.1, 4.2, volunteer info)
 - Serialization and persistence
 
 **Coverage**: High coverage across critical paths, with systematic testing of both success and failure cases.
 
-### 1.8 Development Infrastructure
+### 1.9 Development Infrastructure
 
 **Modern Python Stack**:
 - **uv**: Fast, reliable dependency management

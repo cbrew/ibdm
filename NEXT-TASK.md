@@ -100,22 +100,25 @@ Turn 2:
 
 ## Week 4 Tasks: Consolidation & Documentation (P0 Priority)
 
-### ibdm-89: Update SYSTEM_ACHIEVEMENTS.md ⚡ NEXT
+### ✅ ibdm-89: Update SYSTEM_ACHIEVEMENTS.md (COMPLETED)
 
 **Priority**: P0
 **Duration**: 1 hour
+**Status**: ✅ COMPLETED (2025-11-16)
 
-**What to Do**:
-- Document Week 3 completion (IBiS3 rule chain verified)
-- Add section on bugs discovered and fixed
-- Note the importance of rule priority ordering
-- Document incremental questioning achievement
+**What Was Done**:
+- ✅ Documented Week 3 completion (IBiS3 rule chain verified)
+- ✅ Added comprehensive section 1.7 covering all 3 weeks of IBiS3 work
+- ✅ Documented all 3 critical bugs discovered and fixed
+- ✅ Explained importance of rule priority ordering
+- ✅ Documented incremental questioning achievement with example
+- ✅ Committed and pushed: `docs(achievements): document Week 3 IBiS3 end-to-end verification`
 
-**Beads Command**: `~/go/bin/bd show ibdm-89`
+**Commit**: `955310e` on branch `claude/idbm-89-01AGAJ8KA7vxyoNTMSec1rac`
 
 ---
 
-### ibdm-90: Update LARSSON_PRIORITY_ROADMAP.md
+### ibdm-90: Update LARSSON_PRIORITY_ROADMAP.md ⚡ NEXT
 
 **Priority**: P0
 **Duration**: 30 min
