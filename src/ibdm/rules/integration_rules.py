@@ -453,8 +453,8 @@ def _integrate_answer(state: InformationState) -> InformationState:
 
     When an answer is provided:
     1. Check if it resolves the top QUD (using domain validation)
-    2. If so, pop the question from QUD
-    3. Add the answer as a shared commitment
+    2. If valid: pop the question from QUD, add commitment, progress plan
+    3. If invalid: mark as needing clarification (Larsson Section 3.4 accommodation)
 
     Note:
         Uses domain.resolves() for semantic validation (Larsson Section 2.4.3)
@@ -480,6 +480,7 @@ def _integrate_answer(state: InformationState) -> InformationState:
             # Use domain.resolves() for type checking and validation
             # This implements Larsson (2002) Section 2.4.3 semantic operation
             if domain.resolves(answer, top_question):
+                # Valid answer - integrate normally
                 # Pop the resolved question
                 new_state.shared.pop_qud()
 
@@ -497,6 +498,13 @@ def _integrate_answer(state: InformationState) -> InformationState:
                 if next_question:
                     new_state.shared.push_qud(next_question)
                 # If no next question, QUD remains empty (plan complete)
+            else:
+                # Invalid answer - needs clarification (Larsson Section 3.4)
+                # Keep question on QUD (don't pop)
+                # Mark that clarification is needed
+                new_state.private.beliefs["_needs_clarification"] = True
+                new_state.private.beliefs["_invalid_answer"] = answer.content
+                new_state.private.beliefs["_clarification_question"] = top_question
 
         # Add to last_moves
         new_state.shared.last_moves.append(move)
