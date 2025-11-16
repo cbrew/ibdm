@@ -21,6 +21,15 @@ def create_integration_rules() -> list[UpdateRule]:
         List of integration rules
     """
     return [
+        # IBiS3 Rule 4.1: IssueAccommodation - accommodate findout subplans to private.issues
+        # This must run BEFORE form_task_plan to catch newly created plans
+        UpdateRule(
+            name="accommodate_issue_from_plan",
+            preconditions=_plan_has_findout_subplan,
+            effects=_accommodate_findout_to_issues,
+            priority=14,  # Higher than form_task_plan (13)
+            rule_type="integration",
+        ),
         # Task plan formation - create plans for command/request moves
         # This is THE RIGHT PLACE for task plan formation per Larsson (2002)
         # Renamed from "accommodate_command" to clarify this is task plan formation,
@@ -92,6 +101,32 @@ def create_integration_rules() -> list[UpdateRule]:
 
 
 # Precondition functions
+
+
+def _plan_has_findout_subplan(state: InformationState) -> bool:
+    """Check if there's an active plan with findout subplans to accommodate.
+
+    This checks if we've just created a task plan that contains findout
+    subplans. These should be accommodated to private.issues first,
+    not pushed directly to shared.qud.
+
+    Larsson (2002) Section 4.6.1 - IssueAccommodation rule.
+    """
+    # Check if we have active plans with findout subplans
+    for plan in state.private.plan:
+        if not plan.is_active():
+            continue
+
+        # Check if plan has unaccommodated findout subplans
+        for subplan in plan.subplans:
+            if subplan.plan_type == "findout" and subplan.is_active():
+                # Check if this question is already in issues or QUD
+                question = subplan.content
+                if isinstance(question, Question):
+                    if question not in state.private.issues and question not in state.shared.qud:
+                        return True
+
+    return False
 
 
 def _is_task_request_move(state: InformationState) -> bool:
@@ -179,6 +214,44 @@ def _is_quit_move(state: InformationState) -> bool:
 # Effect functions
 
 
+def _accommodate_findout_to_issues(state: InformationState) -> InformationState:
+    """Accommodate findout subplans to private.issues.
+
+    IBiS3 Rule 4.1 (IssueAccommodation):
+    Instead of pushing questions directly to QUD, accommodate them
+    to private.issues first. They'll be raised to QUD later by
+    Rule 4.2 (LocalQuestionAccommodation) when contextually appropriate.
+
+    Args:
+        state: Current information state
+
+    Returns:
+        New state with findout questions accommodated to private.issues
+
+    Larsson (2002) Section 4.6.1 - IssueAccommodation rule.
+    """
+    new_state = state.clone()
+
+    # Find active plans with findout subplans
+    for plan in new_state.private.plan:
+        if not plan.is_active():
+            continue
+
+        # Accommodate each findout subplan to private.issues
+        for subplan in plan.subplans:
+            if subplan.plan_type == "findout" and subplan.is_active():
+                question = subplan.content
+                if isinstance(question, Question):
+                    # Only accommodate if not already in issues or QUD
+                    if (
+                        question not in new_state.private.issues
+                        and question not in new_state.shared.qud
+                    ):
+                        new_state.private.issues.append(question)
+
+    return new_state
+
+
 def _form_task_plan(state: InformationState) -> InformationState:
     """Form execution plan for user's task.
 
@@ -226,11 +299,8 @@ def _form_task_plan(state: InformationState) -> InformationState:
         # Add plan to state
         new_state.private.plan.append(plan)
 
-        # Push first question to QUD
-        if plan.subplans and len(plan.subplans) > 0:
-            first_subplan = plan.subplans[0]
-            if first_subplan.content and isinstance(first_subplan.content, Question):
-                new_state.shared.push_qud(first_subplan.content)
+        # IBiS3: Do NOT push to QUD here - Rule 4.1 will accommodate to private.issues
+        # Rule 4.2 will then raise to QUD when appropriate
 
     # Check for travel booking requests (Larsson 2002 travel agency domain)
     elif (
@@ -253,11 +323,8 @@ def _form_task_plan(state: InformationState) -> InformationState:
         # Add plan to state
         new_state.private.plan.append(plan)
 
-        # Push first question to QUD
-        if plan.subplans and len(plan.subplans) > 0:
-            first_subplan = plan.subplans[0]
-            if first_subplan.content and isinstance(first_subplan.content, Question):
-                new_state.shared.push_qud(first_subplan.content)
+        # IBiS3: Do NOT push to QUD here - Rule 4.1 will accommodate to private.issues
+        # Rule 4.2 will then raise to QUD when appropriate
 
     # Add move to history
     new_state.shared.last_moves.append(move)
