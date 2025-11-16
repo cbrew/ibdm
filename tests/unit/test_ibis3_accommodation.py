@@ -98,3 +98,83 @@ class TestRule41IssueAccommodation:
 
         # Should not accommodate completed subplan
         assert len(new_state.private.issues) == 0
+
+
+class TestRule42LocalQuestionAccommodation:
+    """Test Rule 4.2: LocalQuestionAccommodation from private.issues to QUD."""
+
+    def test_rule_4_2_local_question_accommodation(self):
+        """Test Rule 4.2: Issues raised to QUD when appropriate."""
+        from ibdm.rules.selection_rules import _raise_issue_to_qud
+
+        state = InformationState()
+
+        # Setup: Questions in private.issues, QUD empty
+        q1 = WhQuestion(variable="x", predicate="parties(x)")
+        q2 = WhQuestion(variable="y", predicate="effective_date(y)")
+        state.private.issues = [q1, q2]
+
+        # Apply Rule 4.2
+        new_state = _raise_issue_to_qud(state)
+
+        # Assertions
+        assert len(new_state.shared.qud) == 1
+        assert new_state.shared.qud[0] == q1  # First issue raised
+        assert len(new_state.private.issues) == 1
+        assert new_state.private.issues[0] == q2  # Second issue remains
+
+    def test_has_raisable_issue_precondition(self):
+        """Test precondition: detects raisable issues."""
+        from ibdm.rules.selection_rules import _has_raisable_issue
+
+        state = InformationState()
+
+        # No issues - should be False
+        assert not _has_raisable_issue(state)
+
+        # Add issue, QUD empty - should be True
+        q1 = WhQuestion(variable="x", predicate="parties(x)")
+        state.private.issues.append(q1)
+        assert _has_raisable_issue(state)
+
+        # Add question to QUD - should be False (QUD not empty)
+        state.shared.push_qud(WhQuestion(variable="z", predicate="test(z)"))
+        assert not _has_raisable_issue(state)
+
+    def test_raise_multiple_issues_incrementally(self):
+        """Test that issues are raised one at a time."""
+        from ibdm.rules.selection_rules import _raise_issue_to_qud
+
+        state = InformationState()
+
+        # Setup: Three questions in private.issues
+        q1 = WhQuestion(variable="x", predicate="parties(x)")
+        q2 = WhQuestion(variable="y", predicate="effective_date(y)")
+        q3 = WhQuestion(variable="z", predicate="governing_law(z)")
+        state.private.issues = [q1, q2, q3]
+
+        # First raise
+        new_state = _raise_issue_to_qud(state)
+        assert len(new_state.shared.qud) == 1
+        assert new_state.shared.qud[0] == q1
+        assert len(new_state.private.issues) == 2
+
+        # Clear QUD and raise again
+        new_state.shared.qud.clear()
+        new_state2 = _raise_issue_to_qud(new_state)
+        assert len(new_state2.shared.qud) == 1
+        assert new_state2.shared.qud[0] == q2
+        assert len(new_state2.private.issues) == 1
+
+    def test_empty_issues_no_effect(self):
+        """Test that rule has no effect when issues list is empty."""
+        from ibdm.rules.selection_rules import _raise_issue_to_qud
+
+        state = InformationState()
+
+        # No issues
+        new_state = _raise_issue_to_qud(state)
+
+        # Should have no effect
+        assert len(new_state.shared.qud) == 0
+        assert len(new_state.private.issues) == 0
