@@ -21,6 +21,18 @@ from ibdm.nlu.answer_parser import (
 from ibdm.nlu.answer_parser import (
     create_parser as create_answer_parser,
 )
+
+# Import base NLU service interface
+from ibdm.nlu.base_nlu_service import (  # noqa: I001
+    ActionRequest,
+    AmbiguityInfo,
+    BaseNLUService,
+    ExtractedFact,
+    MultiFact,
+    NLUConfidence,
+    RequestType,
+    UserPreference,
+)
 from ibdm.nlu.context_interpreter import (
     ContextInterpreter,
     ContextInterpreterConfig,
@@ -56,18 +68,6 @@ from ibdm.nlu.llm_adapter import (
     LLMResponse,
     ModelType,
     create_adapter,
-)
-
-# Import base NLU service interface
-from ibdm.nlu.base_nlu_service import (  # noqa: I001
-    ActionRequest,
-    AmbiguityInfo,
-    BaseNLUService,
-    ExtractedFact,
-    MultiFact,
-    NLUConfidence,
-    RequestType,
-    UserPreference,
 )
 
 # Import at end to avoid circular import with nlu_engine

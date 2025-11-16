@@ -3,10 +3,11 @@
 Tests the complete IBiS3 dialogue flow:
 1. Rule 4.1 (IssueAccommodation): Task plan questions → private.issues
 2. Rule 4.2 (LocalQuestionAccommodation): private.issues → QUD incrementally
-3. Volunteer information: User answers unasked questions
-4. Natural dialogue: System skips already-answered questions
+3. Rule 4.3 (IssueClarification): Clarification questions for invalid answers
+4. Volunteer information: User answers unasked questions
+5. Natural dialogue: System skips already-answered questions
 
-Based on Larsson (2002) Sections 4.6.1 and 4.6.2.
+Based on Larsson (2002) Sections 4.6.1, 4.6.2, and 4.6.3.
 """
 
 from ibdm.core import Answer, DialogueMove, InformationState, WhQuestion
@@ -248,4 +249,79 @@ class TestIBiS3MultiTurnDialogue:
 
         print("\n" + "=" * 60)
         print("🎉 IBiS3 working: Incremental questioning achieved!")
+        print("=" * 60)
+
+    def test_clarification_question_accommodation(self):
+        """Test Rule 4.3: Clarification question when user gives invalid answer.
+
+        Flow:
+        1. System asks a question (on QUD)
+        2. User provides invalid answer
+        3. INTEGRATION: Rule 4.3 pushes clarification question to QUD
+        4. SELECTION: System asks clarification question
+        5. User provides valid answer to clarification
+        6. System pops clarification, returns to original question
+        """
+        # Setup rulesets
+        integration_ruleset = RuleSet()
+        for rule in create_integration_rules():
+            integration_ruleset.add_rule(rule)
+
+        selection_ruleset = RuleSet()
+        for rule in create_selection_rules():
+            selection_ruleset.add_rule(rule)
+
+        state = InformationState(agent_id="system")
+
+        # Setup: Question on QUD
+        original_q = WhQuestion(variable="x", predicate="parties(x)")
+        state.shared.push_qud(original_q)
+
+        print("\n" + "=" * 60)
+        print("Testing Rule 4.3: IssueClarification")
+        print("=" * 60)
+
+        # Turn 1: User provides invalid answer
+        print("\n📥 Turn 1: User provides invalid answer")
+        invalid_answer = Answer(content="blue", question_ref=original_q)  # Invalid!
+        answer_move = DialogueMove(move_type="answer", content=invalid_answer, speaker="user")
+        state.private.beliefs["_temp_move"] = answer_move
+
+        # Process: INTEGRATION
+        # The _integrate_answer should detect invalid answer and set clarification flags
+        # But first we need to manually set the flags to test Rule 4.3
+        # (In real system, NLU or domain validation would set these)
+        state.private.beliefs["_needs_clarification"] = True
+        state.private.beliefs["_clarification_question"] = original_q
+        state.private.beliefs["_invalid_answer"] = "blue"
+
+        # Apply Rule 4.3 via integration phase
+        state = integration_ruleset.apply_rules("integration", state)
+
+        # Verify: Clarification question added to QUD
+        assert len(state.shared.qud) == 2, "QUD should have original + clarification"
+        clarification_q = state.shared.top_qud()
+        assert clarification_q is not None
+        assert clarification_q.constraints.get("is_clarification") is True
+        assert original_q in state.shared.qud, "Original question suspended on stack"
+
+        print(f"  ✅ QUD length: {len(state.shared.qud)} (clarification added)")
+        print("  ✅ Clarification question on top of QUD")
+        print("  ✅ Original question suspended below")
+        clarification_cleared = not state.private.beliefs.get("_needs_clarification", False)
+        print(f"  ✅ Clarification flag cleared: {clarification_cleared}")
+
+        # SELECTION phase - system should ask clarification question
+        state = selection_ruleset.apply_rules("selection", state)
+
+        # Verify: System selected to ask clarification question
+        assert len(state.private.agenda) > 0, "Agenda should have a move"
+        agenda_move = state.private.agenda[-1]
+        assert agenda_move.move_type == "ask"
+        assert agenda_move.content == clarification_q
+
+        print("  ✅ System selected to ask clarification question")
+
+        print("\n" + "=" * 60)
+        print("🎉 Rule 4.3 working: Clarification question accommodated!")
         print("=" * 60)

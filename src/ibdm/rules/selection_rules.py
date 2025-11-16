@@ -126,12 +126,24 @@ def _has_raisable_issue(state: InformationState) -> bool:
 def _needs_clarification(state: InformationState) -> bool:
     """Check if clarification is needed for invalid answer.
 
-    IBiS3 Rule: SelectClarification (Section 3.4 - Accommodation)
+    IBiS2 Rule: SelectClarification (Section 3.4 - Accommodation)
     Pre: Invalid answer received, needs clarification
+
+    Note: If Rule 4.3 (IssueClarification) has already pushed a clarification
+    question to QUD, don't use this ICM-based clarification. Let SelectAsk
+    handle asking the clarification question from QUD instead.
     """
     # Don't trigger if there's already something on the agenda
     if state.private.agenda:
         return False
+
+    # Don't trigger if Rule 4.3 has already pushed clarification question to QUD
+    top_qud = state.shared.top_qud()
+    if top_qud:
+        constraints = getattr(top_qud, "constraints", {})
+        if constraints.get("is_clarification"):
+            # Clarification question already on QUD - let SelectAsk handle it
+            return False
 
     # Check if clarification marker is set
     return state.private.beliefs.get("_needs_clarification", False)

@@ -35,7 +35,6 @@ if TYPE_CHECKING:
 
 from ibdm.core import InformationState
 
-
 # ============================================================================
 # Confidence and Metadata Types (IBiS2+)
 # ============================================================================
@@ -70,9 +69,7 @@ class NLUConfidence:
         Returns:
             NLUConfidence with all fields set to same value
         """
-        return NLUConfidence(
-            perception=confidence, understanding=confidence, overall=confidence
-        )
+        return NLUConfidence(perception=confidence, understanding=confidence, overall=confidence)
 
 
 def _empty_interp_list() -> list[dict[str, Any]]:
@@ -261,9 +258,7 @@ class BaseNLUService(ABC):
     # ========================================================================
 
     @abstractmethod
-    def classify_dialogue_act(
-        self, utterance: str, state: InformationState
-    ) -> tuple[str, float]:
+    def classify_dialogue_act(self, utterance: str, state: InformationState) -> tuple[str, float]:
         """Classify utterance into dialogue act type (IBiS1 requirement).
 
         Dialogue act types from Larsson Section 2.4.1:
@@ -319,9 +314,7 @@ class BaseNLUService(ABC):
         ...
 
     @abstractmethod
-    def parse_answer(
-        self, utterance: str, state: InformationState
-    ) -> tuple[Answer | None, float]:
+    def parse_answer(self, utterance: str, state: InformationState) -> tuple[Answer | None, float]:
         """Parse utterance into Answer object (IBiS1 requirement).
 
         Extracts answer content and associates with question from QUD if possible.
@@ -341,9 +334,7 @@ class BaseNLUService(ABC):
         ...
 
     @abstractmethod
-    def extract_entities(
-        self, utterance: str, state: InformationState
-    ) -> list[dict[str, Any]]:
+    def extract_entities(self, utterance: str, state: InformationState) -> list[dict[str, Any]]:
         """Extract named entities from utterance (IBiS1 requirement).
 
         Entity types from NDA domain:
@@ -375,9 +366,7 @@ class BaseNLUService(ABC):
     # IBiS2: Grounding & Confidence Requirements (OPTIONAL)
     # ========================================================================
 
-    def get_confidence(
-        self, utterance: str, state: InformationState
-    ) -> NLUConfidence:
+    def get_confidence(self, utterance: str, state: InformationState) -> NLUConfidence:
         """Get confidence scores for utterance interpretation (IBiS2 requirement).
 
         IBiS2 uses confidence scores to select grounding strategy:
@@ -398,9 +387,7 @@ class BaseNLUService(ABC):
         """
         return NLUConfidence(perception=1.0, understanding=1.0, overall=1.0)
 
-    def detect_ambiguity(
-        self, utterance: str, state: InformationState
-    ) -> AmbiguityInfo:
+    def detect_ambiguity(self, utterance: str, state: InformationState) -> AmbiguityInfo:
         """Detect if utterance has ambiguous interpretations (IBiS2 requirement).
 
         Ambiguity types:
@@ -422,9 +409,7 @@ class BaseNLUService(ABC):
         """
         return AmbiguityInfo(is_ambiguous=False)
 
-    def recognize_icm(
-        self, utterance: str, state: InformationState
-    ) -> tuple[str | None, float]:
+    def recognize_icm(self, utterance: str, state: InformationState) -> tuple[str | None, float]:
         """Recognize Interactive Communication Management moves (IBiS2 requirement).
 
         ICM types from Larsson Section 3.4:
@@ -451,9 +436,7 @@ class BaseNLUService(ABC):
     # IBiS3: Accommodation Requirements (OPTIONAL)
     # ========================================================================
 
-    def extract_multiple_facts(
-        self, utterance: str, state: InformationState
-    ) -> MultiFact:
+    def extract_multiple_facts(self, utterance: str, state: InformationState) -> MultiFact:
         """Extract multiple facts from single utterance (IBiS3 requirement).
 
         IBiS3's key capability: handle volunteer information by extracting ALL facts
@@ -588,9 +571,7 @@ class BaseNLUService(ABC):
         """
         return None, 0.0
 
-    def extract_preferences(
-        self, utterance: str, state: InformationState
-    ) -> list[UserPreference]:
+    def extract_preferences(self, utterance: str, state: InformationState) -> list[UserPreference]:
         """Extract user preferences and constraints (IBiS4 requirement).
 
         Identifies both hard constraints (must satisfy) and soft preferences (nice to have).
@@ -649,9 +630,7 @@ class BaseNLUService(ABC):
     # ========================================================================
 
     @abstractmethod
-    def process(
-        self, utterance: str, speaker: str, state: InformationState
-    ) -> DialogueMove:
+    def process(self, utterance: str, speaker: str, state: InformationState) -> DialogueMove:
         """Process utterance and return DialogueMove (main entry point).
 
         This is the primary method called by the dialogue manager. It should:

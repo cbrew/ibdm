@@ -1,10 +1,11 @@
-"""Tests for IBiS3 accommodation rules (Rules 4.1 and 4.2).
+"""Tests for IBiS3 accommodation rules (Rules 4.1, 4.2, and 4.3).
 
-Tests issue accommodation (Rule 4.1) and local question accommodation (Rule 4.2)
-per Larsson (2002) Section 4.6.
+Tests issue accommodation (Rule 4.1), local question accommodation (Rule 4.2),
+and issue clarification (Rule 4.3) per Larsson (2002) Section 4.6.
 
 IBiS3 Enhancement: Questions from task plans are accommodated to private.issues
 first, then raised to QUD incrementally when contextually appropriate.
+Clarification questions are pushed to QUD to suspend original questions.
 """
 
 from ibdm.core import (
@@ -255,3 +256,136 @@ class TestVolunteerInformationHandling:
         # Assertions
         assert len(new_state.shared.qud) == 0  # QUD popped
         assert len(new_state.shared.commitments) > 0  # Answer committed
+
+
+class TestRule43IssueClarification:
+    """Test Rule 4.3: IssueClarification for ambiguous/invalid utterances."""
+
+    def test_rule_4_3_issue_clarification(self):
+        """Test Rule 4.3: Clarification question pushed to QUD when needed."""
+        from ibdm.rules.integration_rules import _accommodate_clarification
+
+        state = InformationState()
+
+        # Setup: Original question on QUD, invalid answer detected
+        original_q = WhQuestion(variable="x", predicate="parties(x)")
+        state.shared.push_qud(original_q)
+        state.private.beliefs["_needs_clarification"] = True
+        state.private.beliefs["_clarification_question"] = original_q
+        state.private.beliefs["_invalid_answer"] = "some invalid value"
+
+        # Apply Rule 4.3
+        new_state = _accommodate_clarification(state)
+
+        # Assertions
+        assert len(new_state.shared.qud) == 2  # Original + clarification
+        # Stack: index 0 is bottom (first pushed), index -1 is top (last pushed)
+        assert new_state.shared.qud[0] == original_q  # Original at bottom (suspended)
+        clarification_q = new_state.shared.qud[-1]  # Clarification on top
+        assert clarification_q.constraints.get("is_clarification") is True
+        assert not new_state.private.beliefs.get("_needs_clarification", False)
+
+    def test_needs_clarification_question_precondition(self):
+        """Test precondition: detects when clarification is needed."""
+        from ibdm.rules.integration_rules import _needs_clarification_question
+
+        state = InformationState()
+
+        # No clarification marker - should be False
+        assert not _needs_clarification_question(state)
+
+        # Add clarification marker but no question - should be False
+        state.private.beliefs["_needs_clarification"] = True
+        assert not _needs_clarification_question(state)
+
+        # Add question needing clarification - should be True
+        q = WhQuestion(variable="x", predicate="parties(x)")
+        state.private.beliefs["_clarification_question"] = q
+        assert _needs_clarification_question(state)
+
+    def test_clarification_question_suspends_original(self):
+        """Test that clarification question suspends (doesn't remove) original question."""
+        from ibdm.rules.integration_rules import _accommodate_clarification
+
+        state = InformationState()
+
+        # Setup: Original question on QUD
+        original_q = WhQuestion(variable="x", predicate="effective_date(x)")
+        state.shared.push_qud(original_q)
+        state.private.beliefs["_needs_clarification"] = True
+        state.private.beliefs["_clarification_question"] = original_q
+        state.private.beliefs["_invalid_answer"] = "invalid date"
+
+        # Apply Rule 4.3
+        new_state = _accommodate_clarification(state)
+
+        # Assertions
+        assert len(new_state.shared.qud) == 2
+        # Original question should still be on stack (suspended, not removed)
+        assert original_q in new_state.shared.qud
+        # Clarification question should be on top
+        clarification_q = new_state.shared.top_qud()
+        assert clarification_q is not None
+        assert clarification_q.constraints.get("is_clarification") is True
+
+    def test_no_duplicate_clarification_questions(self):
+        """Test that clarification questions are not re-raised if already on QUD."""
+        from ibdm.rules.integration_rules import _needs_clarification_question
+
+        state = InformationState()
+
+        # Setup: Clarification question already on QUD
+        clarification_q = WhQuestion(
+            variable="X",
+            predicate="clarification",
+            constraints={"is_clarification": True},
+        )
+        state.shared.push_qud(clarification_q)
+        state.private.beliefs["_needs_clarification"] = True
+        state.private.beliefs["_clarification_question"] = clarification_q
+
+        # Precondition should be False (already have clarification on QUD)
+        assert not _needs_clarification_question(state)
+
+    def test_clarification_question_contains_context(self):
+        """Test that clarification question contains context about the error."""
+        from ibdm.rules.integration_rules import _accommodate_clarification
+
+        state = InformationState()
+
+        # Setup with specific original question and invalid answer
+        original_q = WhQuestion(variable="x", predicate="governing_law(x)")
+        invalid_answer = "blue"  # Invalid for governing law
+        state.shared.push_qud(original_q)
+        state.private.beliefs["_needs_clarification"] = True
+        state.private.beliefs["_clarification_question"] = original_q
+        state.private.beliefs["_invalid_answer"] = invalid_answer
+
+        # Apply Rule 4.3
+        new_state = _accommodate_clarification(state)
+
+        # Check that clarification question contains context
+        clarification_q = new_state.shared.top_qud()
+        assert clarification_q is not None
+        assert "for_question" in clarification_q.constraints
+        assert "invalid_answer" in clarification_q.constraints
+        assert clarification_q.constraints["invalid_answer"] == invalid_answer
+
+    def test_clarification_clears_flag(self):
+        """Test that accommodation clears the clarification flag."""
+        from ibdm.rules.integration_rules import _accommodate_clarification
+
+        state = InformationState()
+
+        # Setup
+        original_q = WhQuestion(variable="x", predicate="parties(x)")
+        state.shared.push_qud(original_q)
+        state.private.beliefs["_needs_clarification"] = True
+        state.private.beliefs["_clarification_question"] = original_q
+        state.private.beliefs["_invalid_answer"] = "invalid"
+
+        # Apply Rule 4.3
+        new_state = _accommodate_clarification(state)
+
+        # Flag should be cleared
+        assert not new_state.private.beliefs.get("_needs_clarification", False)
