@@ -5,7 +5,9 @@ Showcases IBiS3 question accommodation and IBiS2 grounding in action.
 
 from __future__ import annotations
 
-from ibdm.core import DialogueMove, InformationState, WhQuestion
+from typing import Any
+
+from ibdm.core import Answer, DialogueMove, InformationState, WhQuestion
 from ibdm.domains.nda_domain import get_nda_domain
 from ibdm.engine import DialogueMoveEngine
 from ibdm.rules import RuleSet, create_integration_rules, create_selection_rules
@@ -201,6 +203,30 @@ class InteractiveDemo:
 
         return True
 
+    def _generate_question_text(self, question: Any) -> str:
+        """Generate natural language text for a question.
+
+        Args:
+            question: Question object to generate text for
+
+        Returns:
+            Natural language question string
+        """
+        if isinstance(question, WhQuestion):
+            # Map predicates to natural language questions
+            predicate_questions = {
+                "legal_entities": "What are the parties to the NDA?",
+                "date": "What is the effective date?",
+                "time_period": "What is the duration of confidentiality obligations?",
+                "jurisdiction": "What is the governing law jurisdiction?",
+            }
+
+            # Get custom question or generate default
+            return predicate_questions.get(question.predicate, f"What is the {question.predicate}?")
+        else:
+            # For other question types (AltQuestion, YNQuestion)
+            return str(question)
+
     def simulate_confidence(self, utterance: str) -> float:
         """Simulate confidence score for grounding demonstration.
 
@@ -243,11 +269,11 @@ class InteractiveDemo:
         confidence = self.simulate_confidence(utterance)
 
         # Process through dialogue engine
-        # The engine will handle NLU interpretation through rules
-        # For now, we manually create a move based on the utterance
+        # For now, use simple heuristics to create moves
 
-        # Detect command (simple pattern matching - will be replaced by NLU)
+        # Detect command (simple pattern matching)
         if "draft" in utterance.lower() or "nda" in utterance.lower():
+            # Command to initiate NDA drafting
             user_move = DialogueMove(
                 move_type="command",
                 content=utterance,
@@ -255,13 +281,27 @@ class InteractiveDemo:
                 metadata={"confidence": confidence},
             )
         else:
-            # Assume it's an answer for now
-            user_move = DialogueMove(
-                move_type="answer",
-                content=utterance,
-                speaker=self.user_id,
-                metadata={"confidence": confidence},
-            )
+            # Assume it's an answer - create Answer object with question reference
+            # Get the top question from QUD (if any)
+            top_question = self.state.shared.qud[-1] if self.state.shared.qud else None
+
+            if top_question:
+                # Create proper Answer object
+                answer = Answer(content=utterance, question_ref=top_question)
+                user_move = DialogueMove(
+                    move_type="answer",
+                    content=answer,
+                    speaker=self.user_id,
+                    metadata={"confidence": confidence},
+                )
+            else:
+                # No question to answer - treat as assertion
+                user_move = DialogueMove(
+                    move_type="assert",
+                    content=utterance,
+                    speaker=self.user_id,
+                    metadata={"confidence": confidence},
+                )
 
         # Store move for rules to process
         self.state.private.beliefs["_temp_move"] = user_move
@@ -278,11 +318,11 @@ class InteractiveDemo:
             response_move = self.state.private.agenda[-1]
 
             # Generate natural language for the response
-            # For now, simple generation based on move type
+            # Simple generation based on move type
             if response_move.move_type == "ask":
                 question = self.state.shared.qud[-1] if self.state.shared.qud else None
-                if question and isinstance(question, WhQuestion):
-                    response_text = f"What {question.predicate}?"
+                if question:
+                    response_text = self._generate_question_text(question)
                     response_move.content = response_text
 
                     # Add to history
