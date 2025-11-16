@@ -118,18 +118,22 @@ Turn 2:
 
 ---
 
-### ibdm-90: Update LARSSON_PRIORITY_ROADMAP.md ⚡ NEXT
+### ✅ ibdm-90: Update LARSSON_PRIORITY_ROADMAP.md (COMPLETED)
 
 **Priority**: P0
 **Duration**: 30 min
+**Status**: ✅ COMPLETED (2025-11-16)
 
-**What to Do**:
-- Mark Rules 4.1 (IssueAccommodation) and 4.2 (LocalQuestionAccommodation) as complete
-- Update IBiS3 progress: 60% → 65%
-- Document volunteer information handling
-- Note test coverage improvements
+**What Was Done**:
+- ✅ Added IBiS3 progress section to roadmap (Week 1-3 achievements)
+- ✅ Marked Rules 4.1 (IssueAccommodation) and 4.2 (LocalQuestionAccommodation) as complete
+- ✅ Updated IBiS3 progress documentation: 30% → 60%
+- ✅ Documented volunteer information handling
+- ✅ Documented 3 critical bugs discovered and fixed in Week 3
+- ✅ Noted test coverage improvements (155 core tests passing)
+- ✅ Committed and pushed: `docs(roadmap): update with IBiS3 Week 1-3 progress`
 
-**Beads Command**: `~/go/bin/bd show ibdm-90`
+**Commit**: `8f71715` on branch `claude/ibdm-90-task-update-01JFezWoFyPhY64VPA9SNBFM`
 
 ---
 
@@ -261,15 +265,22 @@ Turn 2:
 
 ## Bottom Line
 
+**Completed Week 4 Tasks** (2/4 complete):
+1. ✅ **ibdm-89**: Update SYSTEM_ACHIEVEMENTS.md - DONE (commit `955310e`)
+2. ✅ **ibdm-90**: Update LARSSON_PRIORITY_ROADMAP.md - DONE (commit `8f71715`)
+
 **Immediate Next Steps** (Week 4 - P0 Priority):
-1. ⚡ **ibdm-89**: Update SYSTEM_ACHIEVEMENTS.md - 1 hour
-2. ⚡ **ibdm-90**: Update LARSSON_PRIORITY_ROADMAP.md - 30 min
-3. 📋 **ibdm-91**: Create IBiS3 implementation guide - 2 hours
-4. ⚡ **ibdm-92**: NLU Interface Adoption - 4-6 hours
+3. ⚡ **ibdm-92**: NLU Interface Adoption - 4-6 hours ⬅️ **RECOMMENDED NEXT**
    - Create NLUServiceAdapter wrapping current NLUEngine
    - Create Mock NLU for testing
    - Use interface in dialogue manager tests
    - Document IBiS3 NLU requirements
+   - **Why Next**: Enables testing dialogue managers independently of NLU complexity
+   - **Impact**: Clear contract for NLU, progressive enhancement path (IBiS1 → IBiS3 → IBiS2 → IBiS4)
+
+4. 📋 **ibdm-91**: Create IBiS3 implementation guide - 2 hours
+   - Can be done after NLU interface is in place
+   - Will benefit from concrete interface examples
 
 **After Week 4** (P1 Priority):
 5. 🔮 **ibdm-93**: Implement Rule 4.3 (IssueClarification) - 3-5 days
