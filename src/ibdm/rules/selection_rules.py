@@ -139,6 +139,36 @@ def create_selection_rules() -> list[UpdateRule]:
             priority=12,  # Medium - acceptance after processing content
             rule_type="selection",
         ),
+        # IBiS2 Rule 3.2: SelectIcmOther
+        # Pre: ICM move on agenda
+        # Effect: Move ICM from agenda to next_moves
+        UpdateRule(
+            name="select_icm_other",
+            preconditions=_has_icm_on_agenda,
+            effects=_select_icm_from_agenda,
+            priority=16,  # High - ICM should be selected promptly
+            rule_type="selection",
+        ),
+        # IBiS2 Rule 3.3: SelectIcmUndIntAsk
+        # Pre: User ask-move with low confidence on last_moves
+        # Effect: Select interrogative understanding feedback (icm:und*int)
+        UpdateRule(
+            name="select_icm_und_int_ask",
+            preconditions=_needs_understanding_confirmation_for_ask,
+            effects=_select_understanding_confirmation_ask,
+            priority=19,  # Very high - confirm before processing
+            rule_type="selection",
+        ),
+        # IBiS2 Rule 3.5: SelectIcmUndIntAnswer
+        # Pre: User answer-move with low confidence on last_moves
+        # Effect: Select interrogative understanding feedback (icm:und*int)
+        UpdateRule(
+            name="select_icm_und_int_answer",
+            preconditions=_needs_understanding_confirmation_for_answer,
+            effects=_select_understanding_confirmation_answer,
+            priority=19,  # Very high - confirm before processing
+            rule_type="selection",
+        ),
         # Fallback: Generic response if nothing else applies
         # Only fires when no other rule has selected an action
         UpdateRule(
@@ -868,6 +898,177 @@ def _select_acceptance(state: InformationState) -> InformationState:
     # Create acceptance positive ICM move
     move = create_icm_acceptance_positive(
         content="Okay",
+        speaker=new_state.agent_id,
+        target_move_index=target_index,
+    )
+
+    new_state.private.agenda.append(move)
+
+    return new_state
+
+
+# IBiS2 Rule 3.2, 3.3, 3.5 functions
+
+
+def _has_icm_on_agenda(state: InformationState) -> bool:
+    """Check if there's an ICM move on the agenda.
+
+    IBiS2 Rule 3.2: SelectIcmOther
+    Pre: ICM move on agenda that hasn't been selected yet
+
+    Args:
+        state: Current information state
+
+    Returns:
+        True if agenda has ICM move
+    """
+    return any(move.is_icm() for move in state.private.agenda)
+
+
+def _select_icm_from_agenda(state: InformationState) -> InformationState:
+    """Move ICM from agenda to next_moves.
+
+    IBiS2 Rule 3.2: SelectIcmOther
+    Effect: push(nextmoves, icm:A), del(/private/agenda, icm:A)
+
+    Args:
+        state: Current information state
+
+    Returns:
+        Updated state with ICM moved from agenda to next_moves
+    """
+    new_state = state.clone()
+
+    # Find first ICM move on agenda
+    for i, move in enumerate(new_state.private.agenda):
+        if move.is_icm():
+            # Remove from agenda and add to next_moves
+            icm_move = new_state.private.agenda.pop(i)
+            new_state.private.agenda.insert(0, icm_move)  # Move to front for selection
+            break
+
+    return new_state
+
+
+def _needs_understanding_confirmation_for_ask(state: InformationState) -> bool:
+    """Check if user ask-move needs understanding confirmation.
+
+    IBiS2 Rule 3.3: SelectIcmUndIntAsk
+    Pre: User ask-move with low/medium confidence AND no agenda
+
+    Args:
+        state: Current information state
+
+    Returns:
+        True if last move is ask with low confidence
+    """
+    # Don't apply if there's already something on the agenda
+    if state.private.agenda:
+        return False
+
+    if not state.shared.last_moves:
+        return False
+
+    last_move = state.shared.last_moves[-1]
+
+    # Check if it's a user ask move
+    if last_move.move_type != "ask" or last_move.speaker == state.agent_id:
+        return False
+
+    # Check confidence (if available)
+    confidence = last_move.metadata.get("confidence", 0.8)  # Default medium-high
+    # Request confirmation if confidence is low/medium (< 0.7)
+    return confidence < 0.7
+
+
+def _select_understanding_confirmation_ask(state: InformationState) -> InformationState:
+    """Select interrogative understanding feedback for ask.
+
+    IBiS2 Rule 3.3: SelectIcmUndIntAsk
+    Effect: push(nextmoves, icm:und*int:usr*issue(Q))
+
+    Args:
+        state: Current information state
+
+    Returns:
+        Updated state with understanding confirmation on agenda
+    """
+    new_state = state.clone()
+    last_move = new_state.shared.last_moves[-1]
+
+    # Get index for target reference
+    target_index = len(new_state.shared.moves) - 1 if new_state.shared.moves else None
+
+    # Create understanding interrogative ICM move
+    question_content = str(last_move.content) if last_move.content else "that question"
+    confirmation_text = f"{question_content}, is that what you're asking?"
+
+    move = create_icm_understanding_interrogative(
+        content=confirmation_text,
+        speaker=new_state.agent_id,
+        target_move_index=target_index,
+    )
+
+    new_state.private.agenda.append(move)
+
+    return new_state
+
+
+def _needs_understanding_confirmation_for_answer(state: InformationState) -> bool:
+    """Check if user answer-move needs understanding confirmation.
+
+    IBiS2 Rule 3.5: SelectIcmUndIntAnswer
+    Pre: User answer-move with low/medium confidence AND no agenda
+
+    Args:
+        state: Current information state
+
+    Returns:
+        True if last move is answer with low confidence
+    """
+    # Don't apply if there's already something on the agenda
+    if state.private.agenda:
+        return False
+
+    if not state.shared.last_moves:
+        return False
+
+    last_move = state.shared.last_moves[-1]
+
+    # Check if it's a user answer move
+    if last_move.move_type != "answer" or last_move.speaker == state.agent_id:
+        return False
+
+    # Check confidence (if available)
+    confidence = last_move.metadata.get("confidence", 0.8)  # Default medium-high
+    # Request confirmation if confidence is low/medium (< 0.7)
+    return confidence < 0.7
+
+
+def _select_understanding_confirmation_answer(state: InformationState) -> InformationState:
+    """Select interrogative understanding feedback for answer.
+
+    IBiS2 Rule 3.5: SelectIcmUndIntAnswer
+    Effect: push(nextmoves, icm:und*int:usr*C)
+
+    Args:
+        state: Current information state
+
+    Returns:
+        Updated state with understanding confirmation on agenda
+    """
+    new_state = state.clone()
+    last_move = new_state.shared.last_moves[-1]
+
+    # Get index for target reference
+    target_index = len(new_state.shared.moves) - 1 if new_state.shared.moves else None
+
+    # Create understanding interrogative ICM move
+    answer_content = str(last_move.content) if last_move.content else "that"
+    confirmation_text = f"{answer_content}, is that correct?"
+
+    move = create_icm_understanding_interrogative(
+        content=confirmation_text,
         speaker=new_state.agent_id,
         target_move_index=target_index,
     )
