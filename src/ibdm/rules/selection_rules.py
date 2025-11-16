@@ -4,17 +4,25 @@ Selection rules choose the next system action based on the information state.
 They implement strategies for answering, raising questions, etc.
 
 Based on Larsson (2002) Issue-based Dialogue Management, Chapter 2, Section 2.9.
-Implements IBiS1 selection rules.
+Implements IBiS1 selection rules and IBiS2 ICM (grounding) selection rules.
 """
 
 from ibdm.core import Answer, DialogueMove, InformationState, WhQuestion
+from ibdm.core.grounding import GroundingStrategy, requires_confirmation, select_grounding_strategy
+from ibdm.core.moves import (
+    create_icm_acceptance_positive,
+    create_icm_perception_negative,
+    create_icm_understanding_interrogative,
+)
 from ibdm.rules.update_rules import UpdateRule
 
 
 def create_selection_rules() -> list[UpdateRule]:
-    """Create IBiS1 selection rules.
+    """Create IBiS1 and IBiS2 selection rules.
 
-    Implements the selection rules from Larsson (2002) Section 2.9:
+    Implements the selection rules from Larsson (2002):
+
+    IBiS1 Rules (Section 2.9):
     1. SelectClarification (Section 3.4) - Request clarification for invalid answer
     2. SelectFromPlan (Section 2.9.1) - Select action from plan
     3. SelectAnswer (Section 2.9.4) - Answer top QUD question
@@ -22,8 +30,13 @@ def create_selection_rules() -> list[UpdateRule]:
     5. SelectGreet (Section 2.9) - Greet at dialogue start
     6. Fallback - Generic response
 
+    IBiS2 ICM Rules (Section 3.6):
+    7. SelectPerceptionCheck (Rule 3.6) - Request perception check for low confidence
+    8. SelectUnderstandingConfirmation (Rule 3.7) - Request understanding confirmation
+    9. SelectAcceptance (Rule 3.8) - Provide acceptance feedback
+
     Returns:
-        List of IBiS1 selection rules
+        List of selection rules
     """
     return [
         # Rule: SelectClarification (Section 3.4 - Accommodation)
@@ -94,6 +107,36 @@ def create_selection_rules() -> list[UpdateRule]:
             preconditions=_should_greet,
             effects=_select_greeting,
             priority=5,
+            rule_type="selection",
+        ),
+        # IBiS2 Rule 3.6: SelectPerceptionCheck
+        # Pre: User utterance has very low confidence (pessimistic grounding)
+        # Effect: add(shared.next_moves, icm:per*neg) - request repetition
+        UpdateRule(
+            name="select_perception_check",
+            preconditions=_needs_perception_check,
+            effects=_select_perception_check,
+            priority=18,  # High - perception check before other moves
+            rule_type="selection",
+        ),
+        # IBiS2 Rule 3.7: SelectUnderstandingConfirmation
+        # Pre: User utterance has medium confidence (cautious grounding)
+        # Effect: add(shared.next_moves, icm:und*int) - request confirmation
+        UpdateRule(
+            name="select_understanding_confirmation",
+            preconditions=_needs_understanding_confirmation,
+            effects=_select_understanding_confirmation,
+            priority=17,  # High - confirmation before processing answer
+            rule_type="selection",
+        ),
+        # IBiS2 Rule 3.8: SelectAcceptance
+        # Pre: User utterance has high confidence (optimistic grounding)
+        # Effect: add(shared.next_moves, icm:acc*pos) - acknowledge acceptance
+        UpdateRule(
+            name="select_acceptance",
+            preconditions=_should_give_acceptance,
+            effects=_select_acceptance,
+            priority=12,  # Medium - acceptance after processing content
             rule_type="selection",
         ),
         # Fallback: Generic response if nothing else applies
@@ -601,6 +644,234 @@ def _select_fallback_response(state: InformationState) -> InformationState:
         content="I understand.",
         speaker=new_state.agent_id,
     )
+    new_state.private.agenda.append(move)
+
+    return new_state
+
+
+# IBiS2 ICM Selection - Precondition functions
+
+
+def _needs_perception_check(state: InformationState) -> bool:
+    """Check if perception check is needed for low confidence utterance.
+
+    IBiS2 Rule 3.6: SelectPerceptionCheck
+    Pre: User utterance has very low confidence (< 0.5)
+         Grounding strategy is PESSIMISTIC
+
+    Args:
+        state: Current information state
+
+    Returns:
+        True if perception check should be requested
+    """
+    # Don't trigger if there's already something on the agenda
+    if state.private.agenda:
+        return False
+
+    # Check if last move has low confidence
+    if not state.shared.last_moves:
+        return False
+
+    last_move = state.shared.last_moves[-1]
+
+    # Only check user moves
+    if last_move.speaker == state.agent_id:
+        return False
+
+    # Check confidence score in metadata
+    confidence = last_move.metadata.get("confidence", 1.0)
+
+    # Determine if we need perception check
+    strategy = select_grounding_strategy(last_move.move_type, confidence)
+
+    return strategy == GroundingStrategy.PESSIMISTIC
+
+
+def _needs_understanding_confirmation(state: InformationState) -> bool:
+    """Check if understanding confirmation is needed for medium confidence utterance.
+
+    IBiS2 Rule 3.7: SelectUnderstandingConfirmation
+    Pre: User utterance has medium confidence (0.5-0.7)
+         OR requires confirmation (e.g., quit, request)
+         Grounding strategy is CAUTIOUS
+
+    Args:
+        state: Current information state
+
+    Returns:
+        True if understanding confirmation should be requested
+    """
+    # Don't trigger if there's already something on the agenda
+    if state.private.agenda:
+        return False
+
+    # Check if last move needs confirmation
+    if not state.shared.last_moves:
+        return False
+
+    last_move = state.shared.last_moves[-1]
+
+    # Only check user moves
+    if last_move.speaker == state.agent_id:
+        return False
+
+    # Check confidence score
+    confidence = last_move.metadata.get("confidence", 1.0)
+
+    # Check if move type requires confirmation or has medium confidence
+    needs_confirm = requires_confirmation(last_move.move_type, confidence)
+    strategy = select_grounding_strategy(last_move.move_type, confidence)
+
+    return needs_confirm or strategy == GroundingStrategy.CAUTIOUS
+
+
+def _should_give_acceptance(state: InformationState) -> bool:
+    """Check if acceptance feedback should be given for high confidence utterance.
+
+    IBiS2 Rule 3.8: SelectAcceptance
+    Pre: User utterance has high confidence (>= 0.7)
+         Grounding strategy is OPTIMISTIC
+         Content has been successfully integrated
+
+    Args:
+        state: Current information state
+
+    Returns:
+        True if acceptance feedback should be provided
+    """
+    # Don't trigger if there's already something on the agenda
+    if state.private.agenda:
+        return False
+
+    # Check if last move has high confidence
+    if not state.shared.last_moves:
+        return False
+
+    last_move = state.shared.last_moves[-1]
+
+    # Only check user moves
+    if last_move.speaker == state.agent_id:
+        return False
+
+    # Don't give acceptance for greetings (handled by greet rule)
+    if last_move.move_type == "greet":
+        return False
+
+    # Check confidence score
+    confidence = last_move.metadata.get("confidence", 1.0)
+
+    # Determine if we should give acceptance
+    strategy = select_grounding_strategy(last_move.move_type, confidence)
+
+    # Only give acceptance for optimistic grounding and substantive moves
+    return strategy == GroundingStrategy.OPTIMISTIC and last_move.move_type in [
+        "answer",
+        "assert",
+        "request",
+    ]
+
+
+# IBiS2 ICM Selection - Effect functions
+
+
+def _select_perception_check(state: InformationState) -> InformationState:
+    """Select perception check ICM move (icm:per*neg).
+
+    IBiS2 Rule 3.6: SelectPerceptionCheck
+    Effect: add(shared.next_moves, icm:per*neg)
+
+    Request the user to repeat their utterance due to low confidence.
+
+    Args:
+        state: Current information state
+
+    Returns:
+        Updated state with perception check move on agenda
+    """
+    new_state = state.clone()
+
+    # Get index of last move for target reference
+    target_index = len(new_state.shared.moves) - 1 if new_state.shared.moves else None
+
+    # Create perception negative ICM move
+    move = create_icm_perception_negative(
+        content="Pardon? I didn't quite catch that.",
+        speaker=new_state.agent_id,
+        target_move_index=target_index,
+    )
+
+    new_state.private.agenda.append(move)
+
+    return new_state
+
+
+def _select_understanding_confirmation(state: InformationState) -> InformationState:
+    """Select understanding confirmation ICM move (icm:und*int).
+
+    IBiS2 Rule 3.7: SelectUnderstandingConfirmation
+    Effect: add(shared.next_moves, icm:und*int)
+
+    Request confirmation of understanding for medium confidence utterance.
+
+    Args:
+        state: Current information state
+
+    Returns:
+        Updated state with understanding confirmation move on agenda
+    """
+    new_state = state.clone()
+
+    if not new_state.shared.last_moves:
+        return new_state
+
+    last_move = new_state.shared.last_moves[-1]
+
+    # Get index of last move for target reference
+    target_index = len(new_state.shared.moves) - 1 if new_state.shared.moves else None
+
+    # Create understanding interrogative ICM move
+    # Content should be reformulation of what was understood
+    content_str = str(last_move.content) if last_move.content else "that"
+    confirmation_text = f"{content_str}, is that correct?"
+
+    move = create_icm_understanding_interrogative(
+        content=confirmation_text,
+        speaker=new_state.agent_id,
+        target_move_index=target_index,
+    )
+
+    new_state.private.agenda.append(move)
+
+    return new_state
+
+
+def _select_acceptance(state: InformationState) -> InformationState:
+    """Select acceptance ICM move (icm:acc*pos).
+
+    IBiS2 Rule 3.8: SelectAcceptance
+    Effect: add(shared.next_moves, icm:acc*pos)
+
+    Provide acceptance feedback for high confidence utterance.
+
+    Args:
+        state: Current information state
+
+    Returns:
+        Updated state with acceptance move on agenda
+    """
+    new_state = state.clone()
+
+    # Get index of last move for target reference
+    target_index = len(new_state.shared.moves) - 1 if new_state.shared.moves else None
+
+    # Create acceptance positive ICM move
+    move = create_icm_acceptance_positive(
+        content="Okay",
+        speaker=new_state.agent_id,
+        target_move_index=target_index,
+    )
+
     new_state.private.agenda.append(move)
 
     return new_state
