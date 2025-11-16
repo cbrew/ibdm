@@ -1,8 +1,8 @@
 # Next Recommended Task
 
-**Date**: 2025-11-16 (Updated - Week 3 Complete + NLU Interface Defined!)
-**Basis**: IBIS_VARIANTS_PRIORITY.md, IBiS3 end-to-end verified, NLU requirements analyzed
-**Status**: 🎉 Week 3 complete, IBiS3 rule chain verified and working! NLU interface defined!
+**Date**: 2025-11-16 (Updated - Beads Synchronized!)
+**Basis**: IBIS_VARIANTS_PRIORITY.md, IBiS3 end-to-end verified, beads tasks reprioritized
+**Status**: 🎉 Week 3 complete, IBiS3 rule chain verified! Beads tasks created and prioritized!
 
 ---
 
@@ -94,105 +94,69 @@ Turn 2:
 **Duration**: 1-2 days
 **Blockers**: None - IBiS3 core working!
 
----
-
-## Week 4 Tasks: Consolidation & Documentation
-
-### Task 1: Update Documentation ⚡ NEXT
-
-**Goal**: Document IBiS3 implementation and update roadmap with lessons learned
-
-**What to Do**:
-
-1. **Update SYSTEM_ACHIEVEMENTS.md**:
-   - Document Week 3 completion (IBiS3 rule chain verified)
-   - Add section on bugs discovered and fixed
-   - Note the importance of rule priority ordering
-   - Document incremental questioning achievement
-
-2. **Update LARSSON_PRIORITY_ROADMAP.md**:
-   - Mark Rules 4.1 and 4.2 as complete
-   - Update IBiS3 progress percentage (60%)
-   - Document volunteer information handling
-   - Note test coverage improvements
-
-3. **Create IBiS3 implementation guide** (`docs/ibis3_implementation.md`):
-   - Overview of Rules 4.1 and 4.2
-   - How questions flow: plan → issues → QUD
-   - Volunteer information handling
-   - Testing approach
-   - Common pitfalls (rule priorities, fallback behavior)
-
-**Expected Outcome**:
-- Clear documentation of what's been achieved
-- Lessons learned captured for future work
-- Roadmap updated with accurate progress
+**✅ Beads Tasks Created**: ibdm-89, ibdm-90, ibdm-91, ibdm-92, ibdm-93, ibdm-94, ibdm-95
 
 ---
 
-### Task 2: Prepare for Next Feature (Optional)
+## Week 4 Tasks: Consolidation & Documentation (P0 Priority)
 
-**Goal**: Choose and plan next IBiS3 feature to implement
+### ibdm-89: Update SYSTEM_ACHIEVEMENTS.md ⚡ NEXT
 
-**Options**:
-1. **Clarification Questions (Rule 4.3)** - Handle ambiguous utterances
-2. **Dependent Issues (Rule 4.4)** - Questions that depend on other questions
-3. **Question Reaccommodation (Rule 4.5)** - Re-prioritize unresolved questions
-
-**Recommendation**: Start with clarification questions (Rule 4.3)
-- Natural next step after volunteer information
-- Complements existing accommodation rules
-- Improves dialogue robustness
+**Priority**: P0
+**Duration**: 1 hour
 
 **What to Do**:
-- Review Larsson Section 4.6.3 (clarification)
-- Design precondition and effect functions
-- Plan test scenarios
-- Create task breakdown in NEXT-TASK.md
+- Document Week 3 completion (IBiS3 rule chain verified)
+- Add section on bugs discovered and fixed
+- Note the importance of rule priority ordering
+- Document incremental questioning achievement
+
+**Beads Command**: `~/go/bin/bd show ibdm-89`
 
 ---
 
-### Task 3: NLU Interface Adoption ⚡ RECOMMENDED
+### ibdm-90: Update LARSSON_PRIORITY_ROADMAP.md
 
-**Goal**: Adopt BaseNLUService interface to separate NLU requirements from implementation
-
-**Context**:
-- ✅ Completed IBiS NLU requirements analysis (`reports/ibis-nlu-requirements-analysis.md`)
-- ✅ Defined abstract interface (`src/ibdm/nlu/base_nlu_service.py`)
-- ✅ Created specification document (`docs/nlu_interface_specification.md`)
+**Priority**: P0
+**Duration**: 30 min
 
 **What to Do**:
+- Mark Rules 4.1 (IssueAccommodation) and 4.2 (LocalQuestionAccommodation) as complete
+- Update IBiS3 progress: 60% → 65%
+- Document volunteer information handling
+- Note test coverage improvements
 
-1. **Create NLUServiceAdapter** (2-3 hours):
-   - Create `src/ibdm/nlu/nlu_service_adapter.py`
-   - Wrap current `NLUEngine` to implement `BaseNLUService`
-   - Implement all IBiS1 required methods
-   - Report `get_supported_ibis_level() → "IBiS1"`
-   - Add unit tests for adapter
+**Beads Command**: `~/go/bin/bd show ibdm-90`
 
-2. **Create Mock NLU for Testing** (1-2 hours):
-   - Create `tests/mocks/mock_nlu_service.py`
-   - Simple mock implementing `BaseNLUService`
-   - Configurable responses for test scenarios
-   - Enables dialogue manager testing without full NLU
+---
 
-3. **Use Interface in Dialogue Manager Tests** (1 hour):
-   - Update existing tests to use `BaseNLUService` interface
-   - Add tests using mock NLU
-   - Verify dialogue managers work with interface
+### ibdm-91: Create IBiS3 Implementation Guide
 
-4. **Document IBiS3 NLU Requirements** (1 hour):
-   - List specific enhancements needed for Rules 4.3-4.5
-   - Multi-fact extraction requirements
-   - Volunteer information detection
-   - Answer-question matching improvements
-   - Plan for implementation (future work)
+**Priority**: P0
+**Duration**: 2 hours
 
-**Expected Outcome**:
-- Clear separation between NLU interface and implementation
-- Mock implementations enable dialogue manager testing
-- Path forward for IBiS3 NLU enhancements documented
-- Current NLU wrapped in standard interface
+**What to Do**:
+- Create `docs/ibis3_implementation.md`
+- Overview of Rules 4.1 and 4.2
+- How questions flow: plan → issues → QUD
+- Volunteer information handling
+- Testing approach
+- Common pitfalls (rule priorities, fallback behavior)
+
+**Beads Command**: `~/go/bin/bd show ibdm-91`
+
+---
+
+### ibdm-92: NLU Interface Adoption ⚡ RECOMMENDED
+
+**Priority**: P0
+**Duration**: 4-6 hours
+
+**What to Do**:
+1. Create `src/ibdm/nlu/nlu_service_adapter.py` wrapping current `NLUEngine`
+2. Create `tests/mocks/mock_nlu_service.py` for testing
+3. Use interface in dialogue manager tests
+4. Document IBiS3 NLU requirements
 
 **Benefits**:
 - Test dialogue managers independently of NLU complexity
@@ -200,11 +164,59 @@ Turn 2:
 - Easy to compare different NLU approaches
 - Progressive enhancement path (IBiS1 → IBiS3 → IBiS2 → IBiS4)
 
-**Why Now**:
-- Interface defined and type-safe ✅
-- Enables testing of future IBiS features
-- Aligns with priority: build/test IBiS variants first, enhance NLU later
-- Low effort, high value for future work
+**Beads Command**: `~/go/bin/bd show ibdm-92`
+
+---
+
+## Week 5+ Tasks: Next IBiS3 Features (P1 Priority)
+
+### ibdm-93: Implement Rule 4.3 (IssueClarification)
+
+**Priority**: P1 (after Week 4 documentation)
+**Duration**: 3-5 days
+**Goal**: Handle ambiguous utterances with clarification questions
+
+**What to Do**:
+- Review Larsson Section 4.6.3 (clarification)
+- Design precondition and effect functions
+- Implement clarification question accommodation
+- Add tests for ambiguous utterance handling
+
+**Why Next**: Natural complement to Rules 4.1, 4.2; improves dialogue robustness
+
+**Beads Command**: `~/go/bin/bd show ibdm-93`
+
+---
+
+### ibdm-94: Implement Rule 4.4 (DependentIssueAccommodation)
+
+**Priority**: P1
+**Duration**: 3-5 days
+**Goal**: Handle questions that depend on other questions being answered first
+
+**What to Do**:
+- Review Larsson Section 4.6.4 (dependent issues)
+- Design dependency detection and ordering
+- Implement dependent issue accommodation
+- Add tests for question dependencies
+
+**Beads Command**: `~/go/bin/bd show ibdm-94`
+
+---
+
+### ibdm-95: Implement Rule 4.5 (QuestionReaccommodation)
+
+**Priority**: P1
+**Duration**: 3-5 days
+**Goal**: Re-prioritize unresolved questions based on dialogue context
+
+**What to Do**:
+- Review Larsson Section 4.6.5 (reaccommodation)
+- Design reaccommodation triggers and logic
+- Implement question re-prioritization
+- Add tests for dynamic question ordering
+
+**Beads Command**: `~/go/bin/bd show ibdm-95`
 
 ---
 
@@ -214,14 +226,20 @@ Turn 2:
 - Week 1: ✅ Foundation (30% → 35%)
 - Week 2: ✅ Rules 4.1-4.2 (35% → 50%)
 - Week 3: ✅ End-to-end testing (50% → 60%)
-- Week 4: 📋 Documentation + next feature planning (60% → 65%)
-- Week 5-6: Clarification questions (65% → 75%)
-- Week 7-8: Dependent issues (75% → 85%)
-- Week 9-10: Question reaccommodation (85% → 95%)
-- Week 11: Integration tests + polish (95% → 100%)
+- Week 4: 📋 Documentation + NLU interface (60% → 65%)
+- Week 5-6: 📋 Rule 4.3 - Clarification (65% → 75%)
+- Week 7-8: 📋 Rule 4.4 - Dependent issues (75% → 85%)
+- Week 9-10: 📋 Rule 4.5 - Reaccommodation (85% → 95%)
+- Week 11: 📋 Integration tests + polish (95% → 100%)
 
 **Current**: 60% complete
 **Target**: 65% by end of Week 4
+
+**Beads Status**:
+- **P0 Tasks**: 4 (Week 4 documentation + NLU interface)
+- **P1 Tasks**: 3 (IBiS3 Rules 4.3-4.5)
+- **P2 Tasks**: 108 (demos, refactoring, NLU/NLG separation - deferred)
+- **P3 Tasks**: 37 (metrics framework - deferred)
 
 ---
 
@@ -240,21 +258,29 @@ Turn 2:
 
 ## Bottom Line
 
-**Immediate Next Steps** (in order):
-1. ⚡ Update SYSTEM_ACHIEVEMENTS.md - 1 hour
-2. ⚡ Update LARSSON_PRIORITY_ROADMAP.md - 30 min
-3. 📋 Create IBiS3 implementation guide - 2 hours
-4. ⚡ **NEW: NLU Interface Adoption** - 4-6 hours
+**Immediate Next Steps** (Week 4 - P0 Priority):
+1. ⚡ **ibdm-89**: Update SYSTEM_ACHIEVEMENTS.md - 1 hour
+2. ⚡ **ibdm-90**: Update LARSSON_PRIORITY_ROADMAP.md - 30 min
+3. 📋 **ibdm-91**: Create IBiS3 implementation guide - 2 hours
+4. ⚡ **ibdm-92**: NLU Interface Adoption - 4-6 hours
    - Create NLUServiceAdapter wrapping current NLUEngine
    - Create Mock NLU for testing
    - Use interface in dialogue manager tests
    - Document IBiS3 NLU requirements
-5. 🔮 Plan clarification questions (Rule 4.3) - 1 day
 
-**Total Effort**: 2-3 days
+**After Week 4** (P1 Priority):
+5. 🔮 **ibdm-93**: Implement Rule 4.3 (IssueClarification) - 3-5 days
+6. 🔮 **ibdm-94**: Implement Rule 4.4 (DependentIssueAccommodation) - 3-5 days
+7. 🔮 **ibdm-95**: Implement Rule 4.5 (QuestionReaccommodation) - 3-5 days
+
+**Total Week 4 Effort**: 2-3 days
 **Goal**: IBiS3 60% → 65% + NLU interface adoption
-**Outcome**: Documented achievements, NLU interface in use, ready for next feature
+**Outcome**: Documented achievements, NLU interface in use, ready for Rules 4.3-4.5
+
+**Beads Integration**: ✅ All tasks created, old tasks winnowed, priorities aligned with IBiS3 focus
 
 **Key Insight**: NLU interface enables testing IBiS variants independently of NLU complexity!
+
+**Use Beads**: Run `~/go/bin/bd ready --priority 0` to see P0 tasks, or `~/go/bin/bd show ibdm-89` to start!
 
 Ready to consolidate! 📚
