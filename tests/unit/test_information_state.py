@@ -23,6 +23,7 @@ class TestPrivateIS:
         assert private.agenda == []
         assert private.beliefs == {}
         assert private.last_utterance is None
+        assert private.issues == []  # IBiS3
 
     def test_creation_with_plans(self):
         """Test creating a PrivateIS with plans."""
@@ -45,11 +46,47 @@ class TestPrivateIS:
         private = PrivateIS(beliefs=beliefs)
         assert private.beliefs == beliefs
 
+    def test_creation_with_issues(self):
+        """Test creating a PrivateIS with issues (IBiS3)."""
+        q1 = WhQuestion(variable="x", predicate="parties(x)")
+        q2 = WhQuestion(variable="y", predicate="effective_date(y)")
+        private = PrivateIS(issues=[q1, q2])
+        assert len(private.issues) == 2
+        assert private.issues[0] == q1
+        assert private.issues[1] == q2
+
     def test_str_representation(self):
         """Test string representation."""
         private = PrivateIS()
         s = str(private)
         assert "PrivateIS" in s
+
+    def test_str_representation_with_issues(self):
+        """Test string representation with issues (IBiS3)."""
+        q = WhQuestion(variable="x", predicate="parties(x)")
+        private = PrivateIS(issues=[q])
+        s = str(private)
+        assert "PrivateIS" in s
+        assert "issues=1" in s
+
+    def test_serialization_with_issues(self):
+        """Test serialization and deserialization of PrivateIS with issues (IBiS3)."""
+        q1 = WhQuestion(variable="x", predicate="parties(x)")
+        q2 = YNQuestion(proposition="is_nda")
+        private = PrivateIS(issues=[q1, q2], beliefs={"test": "value"})
+
+        # Serialize
+        data = private.to_dict()
+        assert "issues" in data
+        assert len(data["issues"]) == 2
+
+        # Deserialize
+        reconstructed = PrivateIS.from_dict(data)
+        assert len(reconstructed.issues) == 2
+        assert reconstructed.beliefs == {"test": "value"}
+        # Questions should be reconstructed correctly
+        assert isinstance(reconstructed.issues[0], WhQuestion)
+        assert isinstance(reconstructed.issues[1], YNQuestion)
 
 
 class TestSharedIS:
