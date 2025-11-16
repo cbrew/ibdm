@@ -977,34 +977,650 @@ Confidence modes:
 
 ---
 
-## 🎯 NEXT PRIORITY: Finalize and Push
+## 🎯 NEXT PRIORITY: Begin IBIS-4 Implementation
 
-**Current Focus**: Final commit and push
-**Duration**: Minutes
+**Decision**: Defer remaining 6 IBIS-2 rules (edge case robustness) and **begin IBIS-4 implementation**
+
+**Rationale**:
+- Current IBIS-2 implementation (78%, 21/27 rules) covers **all essential grounding functionality**
+- Remaining 6 rules handle edge cases and advanced features (Rules 3.9, 3.12-3.15, 3.17, 3.22-3.24, 3.26-3.27)
+- IBIS-4 provides more value: transforms system from information-gathering to **task-execution**
+- IBIS-4 action execution requires the grounding we already have (confirmation, error handling)
+- Edge case robustness can be added later if needed
+
+**Current Focus**: Week 1 IBIS-4 tasks (Information State Extensions)
+**Duration**: 3-4 days for Week 1
 **Blockers**: None
 
-**Remaining Tasks**:
-- Update NEXT-TASK.md with final summary
-- Push all commits to remote
+**Week 1 Tasks - COMPLETE** ✅:
+1. ✅ ibdm-99.1: Add action fields to PrivateIS (completed)
+2. ✅ ibdm-99.2: Create Action and Proposition classes (completed)
+3. ✅ ibdm-99.3: Update serialization for action fields (completed)
 
-**Progress**: Demo Application 100% complete! 🎉
+**Progress**: Week 1 complete! 18 new tests, 101 core tests passing 🎉
+**Commit**: `0bc1ad9` - feat(ibis4): implement Week 1 - Information State Extensions
+
+---
+
+## 🚀 IBiS-4 Implementation Plan: Actions & Negotiative Dialogue
+
+**Epic**: `ibdm-99`
+**Status**: 📋 **PLANNED** (10% - infrastructure defined, not yet implemented)
+**Priority**: P2 (Post-IBiS2 completion)
+**Duration**: 8-10 weeks
+**Larsson Reference**: Chapter 5 (Action-Oriented and Negotiative Dialogue)
+
+### What IBiS-4 Adds
+
+**Core Capabilities**:
+- **Action Execution**: Perform non-communicative actions (book tickets, control devices)
+- **Device Interfaces**: Connect to external systems and APIs
+- **Action Accommodation**: Handle implicit action requests
+- **Negotiative Dialogue**: Discuss alternatives, preferences, and trade-offs
+- **Issues Under Negotiation (IUN)**: Track propositions being debated
+
+**Value Proposition**:
+- Enables real-world task execution (not just information gathering)
+- Supports multi-alternative exploration and comparison
+- Handles action preconditions and postconditions
+- Enables collaborative decision-making through negotiation
+
+### Information State Extensions (Larsson Figure 5.1)
+
+**New Fields**:
+```python
+@dataclass
+class PrivateIS:
+    plan: list[Plan]
+    agenda: list[DialogueMove]
+    beliefs: dict[str, Any]
+    last_utterance: DialogueMove | None
+    issues: list[Question]           # IBiS3
+    # NEW for IBiS4:
+    actions: list[Action]            # Pending device actions
+    iun: set[Proposition]            # Issues Under Negotiation
+
+@dataclass
+class SharedIS:
+    qud: list[Question]
+    commitments: set[str]
+    moves: list[DialogueMove]        # IBiS2
+    next_moves: list[DialogueMove]   # IBiS2
+    # NEW for IBiS4:
+    actions: list[Action]            # Shared action queue
+```
+
+### Week 1-2: Information State Extensions (3 tasks)
+
+#### ibdm-99.1: Add action fields to PrivateIS 📋
+
+**Priority**: P2
+**Duration**: 1 day
+**Status**: Not started
+
+**What to Do**:
+- Add `actions: list[Action]` to PrivateIS
+- Add `iun: set[Proposition]` to PrivateIS for negotiation
+- Add `actions: list[Action]` to SharedIS
+- Design Action and Proposition data structures
+
+**Larsson Reference**: Section 5.3.1 (Enhancing the Information State)
+
+---
+
+#### ibdm-99.2: Create Action and Proposition classes 📋
+
+**Priority**: P2
+**Duration**: 2 days
+**Status**: Not started
+
+**What to Do**:
+- Create `src/ibdm/core/actions.py` module
+- Implement `Action` dataclass with type, parameters, preconditions
+- Implement `Proposition` dataclass for negotiable statements
+- Add serialization methods (to_dict/from_dict)
+- Create action type enum (book, cancel, set, get, etc.)
+
+**Larsson Reference**: Section 5.2 (Issues and Actions in AOD)
+
+---
+
+#### ibdm-99.3: Update serialization for action fields 📋
+
+**Priority**: P2
+**Duration**: 1 day
+**Status**: Not started
+
+**What to Do**:
+- Update InformationState.to_dict() for action fields
+- Update InformationState.from_dict() for action fields
+- Add unit tests for action serialization
+- Verify backward compatibility with existing state
+
+**Larsson Reference**: Section 5.3.1
+
+---
+
+### Week 3-4: Device Interface & Actions (4 tasks)
+
+#### ibdm-99.4: Define device interface protocol 📋
+
+**Priority**: P2
+**Duration**: 2 days
+**Status**: Not started
+
+**What to Do**:
+- Create `src/ibdm/interfaces/device.py` module
+- Define `DeviceInterface` abstract base class
+- Methods: `execute_action()`, `check_preconditions()`, `get_postconditions()`
+- Error handling for action failures
+- Async support for long-running actions
+
+**Larsson Reference**: Section 5.3.2 (Device Actions), Section 5.6.2
+
+**Example**:
+```python
+class DeviceInterface(ABC):
+    @abstractmethod
+    async def execute_action(self, action: Action) -> ActionResult:
+        """Execute action on device, return result"""
+        pass
+
+    @abstractmethod
+    def check_preconditions(self, action: Action, state: InformationState) -> bool:
+        """Check if action can be executed"""
+        pass
+```
+
+---
+
+#### ibdm-99.5: Implement postcond() function 📋
+
+**Priority**: P2
+**Duration**: 2 days
+**Status**: Not started
+
+**What to Do**:
+- Add `postcond(action: Action) -> Proposition` to domain.py
+- Define postconditions for each action type in domains
+- Map actions to resulting propositions
+- Add to commitments after successful execution
+
+**Larsson Reference**: Section 5.3.2 (Actions and Postconditions)
+
+**Example**:
+```python
+postcond(book_hotel(hotel_id="H123")) → booked(hotel_id="H123")
+postcond(cancel_reservation(id="R456")) → cancelled(id="R456")
+```
+
+---
+
+#### ibdm-99.6: Implement action precondition checking 📋
+
+**Priority**: P2
+**Duration**: 2 days
+**Status**: Not started
+
+**What to Do**:
+- Define precondition predicates for actions
+- Implement `check_preconditions()` in domain module
+- Validate state before action execution
+- Generate informative error messages on failure
+
+**Larsson Reference**: Section 5.6.2 (Action Execution)
+
+**Example**:
+```python
+# Can't book hotel without knowing dates
+precond(book_hotel) → answered(check_in_date) ∧ answered(check_out_date)
+```
+
+---
+
+#### ibdm-99.7: Create mock device for testing 📋
+
+**Priority**: P2
+**Duration**: 1 day
+**Status**: Not started
+
+**What to Do**:
+- Create `tests/mocks/mock_device.py`
+- Implement `MockDevice` class following DeviceInterface
+- Simulate successful and failed action executions
+- Track action history for test assertions
+- Configurable delays and error scenarios
+
+**Larsson Reference**: Testing infrastructure for Section 5.6
+
+---
+
+### Week 5-6: Negotiation (4 tasks)
+
+#### ibdm-99.8: Implement Issues Under Negotiation (IUN) 📋
+
+**Priority**: P2
+**Duration**: 3 days
+**Status**: Not started
+
+**What to Do**:
+- Add IUN state management to integration rules
+- Detect conflicting propositions
+- Track alternatives under negotiation
+- Move resolved propositions to commitments
+
+**Larsson Reference**: Section 5.7 (Negotiative Dialogue), Section 5.7.1
+
+**Example**:
+```
+System: "Hotel A is $180, Hotel B is $150"
+[Both added to IUN]
+User: "Which is closer to the Eiffel Tower?"
+[Adds new criterion to IUN]
+System: "Hotel B is 5 minutes away"
+User: "Book Hotel B"
+[Resolves IUN, removes alternatives, commits choice]
+```
+
+---
+
+#### ibdm-99.9: Implement negotiation accommodation rules 📋
+
+**Priority**: P2
+**Duration**: 3 days
+**Status**: Not started
+
+**What to Do**:
+- Create `accommodate_alternative` integration rule
+- Handle multi-alternative proposals from user/system
+- Add alternatives to IUN
+- Track preference criteria (price, location, rating)
+
+**Larsson Reference**: Section 5.7.4 (Accommodation of Alternatives)
+
+---
+
+#### ibdm-99.10: Implement accept/reject negotiation moves 📋
+
+**Priority**: P2
+**Duration**: 2 days
+**Status**: Not started
+
+**What to Do**:
+- Add `accept_proposal` and `reject_proposal` integration rules
+- Handle user acceptance (move from IUN to commitments)
+- Handle user rejection (remove from IUN, may trigger counter-proposal)
+- Generate appropriate system responses
+
+**Larsson Reference**: Section 5.7.2 (Negotiation Moves)
+
+---
+
+#### ibdm-99.11: Implement counter-proposal generation 📋
+
+**Priority**: P2
+**Duration**: 3 days
+**Status**: Not started
+
+**What to Do**:
+- Implement `dominates(P1, P2)` relation in domain.py
+- Generate counter-proposals when user rejects
+- Use domain knowledge to suggest better alternatives
+- Selection rule for proposing counter-offers
+
+**Larsson Reference**: Section 5.7.3 (Dominance and Alternatives)
+
+**Example**:
+```python
+dominates(hotel_price_150, hotel_price_180) → True  # Cheaper is better
+dominates(hotel_rating_4star, hotel_rating_3star) → True  # Higher rating
+```
+
+---
+
+### Week 7-8: Action Execution (4 tasks)
+
+#### ibdm-99.12: Implement action execution integration rule 📋
+
+**Priority**: P2
+**Duration**: 3 days
+**Status**: Not started
+
+**What to Do**:
+- Create `execute_action` integration rule (Rule 5.3)
+- Check preconditions before execution
+- Execute action via device interface
+- Add postconditions to commitments on success
+- Handle execution failures gracefully
+
+**Larsson Reference**: Section 5.6.2 (ExecuteAction rule)
+
+---
+
+#### ibdm-99.13: Implement action confirmation selection rule 📋
+
+**Priority**: P2
+**Duration**: 2 days
+**Status**: Not started
+
+**What to Do**:
+- Create `request_action_confirmation` selection rule
+- Request user confirmation before executing critical actions
+- Generate natural confirmation prompts
+- Handle yes/no responses to confirmation requests
+
+**Larsson Reference**: Section 5.6.4 (Confirmation before Action)
+
+**Example**:
+```
+System: "Booking Hotel du Louvre in Paris from Jan 5-10, is that correct?"
+User: "Yes"
+System: [Executes booking action]
+```
+
+---
+
+#### ibdm-99.14: Implement action result handling 📋
+
+**Priority**: P2
+**Duration**: 2 days
+**Status**: Not started
+
+**What to Do**:
+- Handle successful action results (add postconditions, notify user)
+- Handle failed actions (explain error, suggest alternatives)
+- Handle partial results (some preconditions met, others not)
+- Generate informative feedback messages
+
+**Larsson Reference**: Section 5.6.2
+
+---
+
+#### ibdm-99.15: Implement action rollback on failure 📋
+
+**Priority**: P2
+**Duration**: 3 days
+**Status**: Not started
+
+**What to Do**:
+- Define rollback mechanisms for failed actions
+- Track action dependencies
+- Undo committed actions if dependent actions fail
+- Update information state to reflect rollback
+- Notify user of rollback and reason
+
+**Larsson Reference**: Section 5.6.3 (Error Recovery)
+
+---
+
+### Week 9-10: Domain Integration & Testing (10 tasks)
+
+#### ibdm-99.16: Add actions to NDA domain 📋
+
+**Priority**: P2
+**Duration**: 2 days
+**Status**: Not started
+
+**What to Do**:
+- Define NDA-specific actions (generate_draft, send_for_review, execute_agreement)
+- Add action preconditions (all required fields collected)
+- Define postconditions (document_generated, sent_to_parties)
+- Update NDA domain plan builders to include action steps
+
+**Larsson Reference**: Domain-specific implementation of Chapter 5 concepts
+
+---
+
+#### ibdm-99.17: Add actions to travel domain 📋
+
+**Priority**: P2
+**Duration**: 2 days
+**Status**: Not started
+
+**What to Do**:
+- Define travel-specific actions (book_flight, book_hotel, reserve_car)
+- Add preconditions (dates, destinations, preferences known)
+- Define postconditions (booking_confirmed, confirmation_number)
+- Implement multi-step action plans (flight → hotel → car)
+
+**Larsson Reference**: Domain-specific implementation of Chapter 5 concepts
+
+---
+
+#### ibdm-99.18: Create action execution unit tests 📋
+
+**Priority**: P2
+**Duration**: 2 days
+**Status**: Not started
+
+**What to Do**:
+- Unit tests for Action and Proposition classes
+- Tests for precondition checking
+- Tests for postcondition application
+- Tests for action serialization
+- Tests for device interface contract
+
+**Test Coverage**:
+- Action creation and validation
+- Precondition evaluation (met/unmet)
+- Postcondition generation
+- Device interface mocking
+
+---
+
+#### ibdm-99.19: Create negotiation integration tests 📋
+
+**Priority**: P2
+**Duration**: 2 days
+**Status**: Not started
+
+**What to Do**:
+- Integration tests for IUN management
+- Tests for alternative accommodation
+- Tests for accept/reject flows
+- Tests for counter-proposal generation
+- Tests for dominance relations
+
+**Test Scenarios**:
+- User compares multiple alternatives
+- User accepts proposal → IUN resolved
+- User rejects → counter-proposal generated
+- System suggests better alternative
+
+---
+
+#### ibdm-99.20: Create end-to-end action tests 📋
+
+**Priority**: P2
+**Duration**: 3 days
+**Status**: Not started
+
+**What to Do**:
+- Complete action-oriented dialogue flows
+- Multi-turn action planning and execution
+- Error recovery scenarios
+- Confirmation flows
+- Rollback scenarios
+
+**Example Test**:
+```
+User: "Book a hotel in Paris"
+System: [Forms plan, asks for dates]
+User: "January 5 to 10"
+System: "Booking hotel in Paris from Jan 5-10, is that correct?"
+User: "Yes"
+System: [Executes action, adds postconditions]
+System: "Booking confirmed. Confirmation number: ABC123"
+```
+
+---
+
+#### ibdm-99.21: Update SYSTEM_ACHIEVEMENTS.md with IBiS4 completion 📋
+
+**Priority**: P2
+**Duration**: 2 hours
+**Status**: Not started
+
+**What to Do**:
+- Document IBiS4 implementation journey (Weeks 1-10)
+- Add section on action execution achievements
+- Add section on negotiation capabilities
+- Document device interface architecture
+- Include example action-oriented dialogues
+
+---
+
+#### ibdm-99.22: Update LARSSON_PRIORITY_ROADMAP.md with IBiS4 progress 📋
+
+**Priority**: P2
+**Duration**: 1 hour
+**Status**: Not started
+
+**What to Do**:
+- Update roadmap with IBiS4 completion status
+- Mark all Chapter 5 rules as implemented
+- Document progression: IBiS1 → IBiS3 → IBiS2 → IBiS4 complete
+- Update overall Larsson fidelity score
+
+---
+
+#### ibdm-99.23: Create IBiS4 implementation guide 📋
+
+**Priority**: P2
+**Duration**: 4 hours
+**Status**: Not started
+
+**What to Do**:
+- Create `docs/ibis4_implementation.md` (similar to ibis3_implementation.md)
+- Document action-oriented dialogue architecture
+- Explain IUN and negotiation mechanisms
+- Provide code examples for device integration
+- Document testing patterns for actions
+
+**Key Sections**:
+1. Overview (action vs. information-oriented dialogue)
+2. Information state extensions
+3. Action execution flow
+4. Negotiation flow
+5. Device interface implementation
+6. Testing patterns
+7. Common pitfalls
+
+---
+
+#### ibdm-99.24: Measure IBiS4 Larsson fidelity 📋
+
+**Priority**: P2
+**Duration**: 1 day
+**Status**: Not started
+
+**What to Do**:
+- Run Larsson fidelity metrics for Chapter 5
+- Verify all action-oriented rules implemented
+- Verify all negotiation rules implemented
+- Document compliance score
+- Identify any gaps or deviations
+
+---
+
+#### ibdm-99.25: Create IBiS4 demo application 📋
+
+**Priority**: P2
+**Duration**: 3 days
+**Status**: Not started
+
+**What to Do**:
+- Create interactive demo showcasing IBiS4 capabilities
+- Implement travel booking scenario with real action execution
+- Demonstrate negotiation with multiple hotel alternatives
+- Show action confirmation and rollback
+- Include visualization of IUN state
+
+**Demo Features**:
+- Action planning and execution visualization
+- IUN tracking (alternatives under consideration)
+- Preference elicitation dialogue
+- Counter-proposal generation
+- Confirmation flows
+
+---
+
+## Progress Tracking
+
+**IBiS Implementation Status**:
+- ✅ **IBiS1 (Core)**: 100% complete
+- ✅ **IBiS3 (Question Accommodation)**: 100% complete
+- ⚠️ **IBiS2 (Grounding)**: 78% complete (21/27 rules)
+- 📋 **IBiS4 (Actions)**: 10% complete (planned, not started)
+
+**Test Coverage**:
+- Core tests: 91 passing
+- Information state tests: 37 passing
+- Grounding tests: 33 passing
+- ICM tests: 85 passing
+- Demo tests: 47 passing
+- **Total**: 224+ tests passing
+- **IBiS4 tests**: 0 (not yet implemented)
+
+**Next Milestone**: Complete remaining 6 IBiS-2 rules (22% remaining), then begin IBiS-4 implementation
 
 ---
 
 ## Alternative Options
 
-**Option 1: Additional ICM Rules** (extends grounding coverage)
-- Implement remaining ICM rules (3.9-3.27) from Larsson Section 3.6
+**Option 1: Complete Remaining IBiS-2 Rules** (extends grounding coverage to 100%)
+- Implement remaining 6 ICM rules from Larsson Section 3.6
 - Add more sophisticated grounding strategies
-- **Why**: More comprehensive grounding coverage
+- **Why**: Achieve 100% IBiS-2 compliance before moving to IBiS-4
 - **Value**: Production-ready dialogue error handling
+- **Duration**: 1-2 weeks
 
-**Option 2: IBiS4 Implementation** (new capabilities)
+**Option 2: Begin IBiS-4 Implementation** (new capabilities)
+- Start with Week 1-2 tasks (Information State Extensions)
 - Add action execution and device interfaces
 - Implement negotiation state (IUN - Issues Under Negotiation)
-- **Why**: Advanced dialogue capabilities
-- **Value**: Enable real-world applications
+- **Why**: Advanced dialogue capabilities, enable real-world applications
+- **Value**: Transform from information-gathering to task-execution system
+- **Duration**: 8-10 weeks
+- **Prerequisite**: Should complete IBiS-2 first for robust foundation
 
-**Recommendation**: **Complete Interactive Demo Application** to showcase the complete IBDM system with IBiS3 question accommodation and IBiS2 grounding working together!
+**Option 3: Enhanced NLU for IBiS-4** (infrastructure)
+- Improve action request recognition
+- Add entity extraction for action parameters
+- Better preference understanding for negotiation
+- **Why**: IBiS-4 requires richer NLU for action-oriented dialogue
+- **Value**: Natural language action requests, not just commands
+- **Duration**: 2-3 weeks
 
-🎉 Demo framework is ready! Working demo showcases IBiS3 + IBiS2! 🚀
+**Recommendation (UPDATED 2025-11-16)**:
+1. ✅ **Defer**: Remaining 6 IBiS-2 rules handle edge cases only - defer for now
+2. 🚀 **Begin**: IBiS-4 implementation starting with information state extensions (Week 1-2)
+3. 📋 **Future**: Enhance NLU as needed to support natural action requests (Week 3+)
+
+**Rationale**:
+- Current IBiS-2 (78%, 21/27 rules) provides sufficient grounding for action execution
+- Core grounding features complete: perception checks, understanding confirmations, acceptance feedback, user corrections
+- Remaining 6 rules are advanced edge cases that can be added later if needed
+- IBiS-4 provides more immediate value: action execution and negotiation
+- The grounding we have (confirmation requests, error handling) is what IBiS-4 needs most
+
+---
+
+## Bottom Line
+
+**Current State** (2025-11-16):
+- ✅ IBiS1: 100% complete (core dialogue management)
+- ✅ IBiS3: 100% complete (question accommodation)
+- ⚠️ IBiS2: 78% complete (grounding & ICM)
+- 📋 IBiS4: 10% complete (infrastructure defined, tasks created)
+- ✅ Demo Application: 100% complete
+
+**IBiS-4 Tasks Created**: 25 tasks (ibdm-99.1 through ibdm-99.25) ready in beads system
+
+**Recommended Path Forward**:
+1. Complete final 6 IBiS-2 rules → 100% grounding
+2. Begin IBiS-4 Week 1-2 (Information State Extensions)
+3. Progress through IBiS-4 implementation in 10-week plan
+4. Create IBiS-4 demo showcasing action execution and negotiation
+
+🎉 All IBDM variants now have comprehensive implementation plans! 🚀

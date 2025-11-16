@@ -10,6 +10,7 @@ import copy
 from dataclasses import dataclass, field
 from typing import Any, cast
 
+from ibdm.core.actions import Action, Proposition
 from ibdm.core.moves import DialogueMove
 from ibdm.core.plans import Plan
 from ibdm.core.questions import Question
@@ -24,6 +25,9 @@ class PrivateIS:
 
     IBiS3 Extension: The 'issues' field supports question accommodation.
     Questions are accommodated to issues before being raised to the QUD.
+
+    IBiS4 Extension: The 'actions' and 'iun' fields support action-oriented
+    and negotiative dialogue. Based on Larsson Figure 5.1.
     """
 
     plan: list[Plan] = field(default_factory=lambda: [])
@@ -41,6 +45,12 @@ class PrivateIS:
     issues: list[Question] = field(default_factory=lambda: [])
     """Accommodated questions not yet raised to QUD (IBiS3 - Larsson Section 4.6)"""
 
+    actions: list[Action] = field(default_factory=lambda: [])
+    """Pending device actions to be executed (IBiS4 - Larsson Figure 5.1)"""
+
+    iun: set[Proposition] = field(default_factory=lambda: set())
+    """Issues Under Negotiation - propositions being debated (IBiS4 - Larsson Section 5.7)"""
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to JSON-serializable dict."""
         return {
@@ -53,6 +63,8 @@ class PrivateIS:
                 else None
             ),
             "issues": [getattr(q, "to_dict", lambda: str(q))() for q in self.issues],
+            "actions": [a.to_dict() for a in self.actions],  # IBiS4
+            "iun": [p.to_dict() for p in self.iun],  # IBiS4 (set -> list for JSON)
         }
 
     @classmethod
@@ -65,6 +77,7 @@ class PrivateIS:
         Returns:
             Reconstructed PrivateIS object
         """
+        from ibdm.core.actions import Action, Proposition
         from ibdm.core.moves import DialogueMove
         from ibdm.core.plans import Plan
         from ibdm.core.questions import Question
@@ -92,12 +105,32 @@ class PrivateIS:
             else:
                 issues.append(q)
 
+        # Reconstruct actions (IBiS4)
+        actions_data: list[Any] = data.get("actions", [])
+        actions: list[Action] = []
+        for a in actions_data:
+            if isinstance(a, dict):
+                actions.append(Action.from_dict(cast(dict[str, Any], a)))
+            elif isinstance(a, Action):
+                actions.append(a)
+
+        # Reconstruct iun (IBiS4) - list back to set
+        iun_data: list[Any] = data.get("iun", [])
+        iun: set[Proposition] = set()
+        for p in iun_data:
+            if isinstance(p, dict):
+                iun.add(Proposition.from_dict(cast(dict[str, Any], p)))
+            elif isinstance(p, Proposition):
+                iun.add(p)
+
         return cls(
             plan=plans,
             agenda=agenda,
             beliefs=data.get("beliefs", {}).copy(),
             last_utterance=last_utterance,
             issues=issues,
+            actions=actions,
+            iun=iun,
         )
 
     def __str__(self) -> str:
@@ -106,7 +139,9 @@ class PrivateIS:
             f"PrivateIS(plans={len(self.plan)}, "
             f"agenda={len(self.agenda)}, "
             f"beliefs={len(self.beliefs)}, "
-            f"issues={len(self.issues)})"
+            f"issues={len(self.issues)}, "
+            f"actions={len(self.actions)}, "
+            f"iun={len(self.iun)})"
         )
 
 
@@ -120,6 +155,9 @@ class SharedIS:
     IBiS2 Extension: The 'moves' and 'next_moves' fields support grounding.
     Moves tracks complete dialogue history with grounding status, next_moves
     contains pending system moves. Based on Larsson Figure 3.1.
+
+    IBiS4 Extension: The 'actions' field supports shared action queue for
+    action-oriented dialogue. Based on Larsson Figure 5.1.
     """
 
     qud: list[Question] = field(default_factory=lambda: [])
@@ -137,6 +175,9 @@ class SharedIS:
     next_moves: list[DialogueMove] = field(default_factory=lambda: [])
     """Pending system moves to be performed (IBiS2 - Larsson Figure 3.1)"""
 
+    actions: list[Action] = field(default_factory=lambda: [])
+    """Shared action queue for coordinated execution (IBiS4 - Larsson Figure 5.1)"""
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to JSON-serializable dict.
 
@@ -152,6 +193,7 @@ class SharedIS:
             "next_moves": [
                 m.to_dict() if hasattr(m, "to_dict") else str(m) for m in self.next_moves
             ],
+            "actions": [a.to_dict() for a in self.actions],  # IBiS4
         }
 
     @classmethod
@@ -166,6 +208,7 @@ class SharedIS:
         Returns:
             Reconstructed SharedIS
         """
+        from ibdm.core.actions import Action
         from ibdm.core.moves import DialogueMove
         from ibdm.core.questions import Question
 
@@ -209,12 +252,22 @@ class SharedIS:
                 next_moves.append(m)
             # Skip string representations
 
+        # Reconstruct actions (IBiS4)
+        actions_data: list[Any] = data.get("actions", [])
+        actions: list[Action] = []
+        for a in actions_data:
+            if isinstance(a, dict):
+                actions.append(Action.from_dict(cast(dict[str, Any], a)))
+            elif isinstance(a, Action):
+                actions.append(a)
+
         return cls(
             qud=qud,
             commitments=set(data.get("commitments", [])),  # Convert list back to set
             last_moves=last_moves,
             moves=moves,
             next_moves=next_moves,
+            actions=actions,
         )
 
     def __str__(self) -> str:
