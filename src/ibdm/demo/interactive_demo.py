@@ -5,9 +5,11 @@ Showcases IBiS3 question accommodation and IBiS2 grounding in action.
 
 from __future__ import annotations
 
+import random
 from typing import Any
 
 from ibdm.core import Answer, DialogueMove, InformationState, WhQuestion
+from ibdm.core.grounding import select_grounding_strategy
 from ibdm.domains.nda_domain import get_nda_domain
 from ibdm.engine import DialogueMoveEngine
 from ibdm.rules import RuleSet, create_integration_rules, create_selection_rules
@@ -31,6 +33,7 @@ class InteractiveDemo:
         user_id: str = "user",
         show_state: bool = True,
         show_moves: bool = True,
+        confidence_mode: str = "heuristic",
     ) -> None:
         """Initialize the interactive demo.
 
@@ -39,11 +42,18 @@ class InteractiveDemo:
             user_id: ID of the user
             show_state: Whether to show internal state after each turn
             show_moves: Whether to show dialogue moves
+            confidence_mode: Confidence simulation mode:
+                - "heuristic": Length-based heuristic (default)
+                - "random": Random confidence scores
+                - "optimistic": Fixed high confidence (0.9)
+                - "cautious": Fixed medium confidence (0.65)
+                - "pessimistic": Fixed low confidence (0.4)
         """
         self.agent_id = agent_id
         self.user_id = user_id
         self.show_state = show_state
         self.show_moves = show_moves
+        self.confidence_mode = confidence_mode
 
         # Setup domain
         self.domain = get_nda_domain()
@@ -76,11 +86,12 @@ class InteractiveDemo:
         print("  - IBiS3: Question Accommodation (incremental questioning, volunteer info)")
         print("  - IBiS2: Grounding & ICM (confidence-based grounding strategies)")
         print("\nCommands:")
-        print("  /help     - Show this help")
-        print("  /state    - Toggle state display")
-        print("  /history  - Show dialogue history")
-        print("  /reset    - Reset the dialogue")
-        print("  /quit     - Exit the demo")
+        print("  /help       - Show this help")
+        print("  /state      - Toggle state display")
+        print("  /history    - Show dialogue history")
+        print("  /confidence - Change confidence mode")
+        print("  /reset      - Reset the dialogue")
+        print("  /quit       - Exit the demo")
         print("\nType your message and press Enter to interact.")
         print("=" * 70 + "\n")
 
@@ -189,6 +200,8 @@ class InteractiveDemo:
             print(f"\nState display: {'ON' if self.show_state else 'OFF'}")
         elif command == "/history":
             self.display_history()
+        elif command == "/confidence":
+            self._change_confidence_mode()
         elif command == "/reset":
             self.state = InformationState(agent_id=self.agent_id)
             self.history = []
@@ -202,6 +215,33 @@ class InteractiveDemo:
             print("Type /help for available commands.")
 
         return True
+
+    def _change_confidence_mode(self) -> None:
+        """Change the confidence simulation mode."""
+        print("\nConfidence Modes:")
+        print("  1. heuristic   - Length-based heuristic (default)")
+        print("  2. random      - Random confidence scores")
+        print("  3. optimistic  - Fixed high confidence (0.9)")
+        print("  4. cautious    - Fixed medium confidence (0.65)")
+        print("  5. pessimistic - Fixed low confidence (0.4)")
+        print(f"\nCurrent mode: {self.confidence_mode}")
+
+        try:
+            choice = input("\nSelect mode (1-5): ").strip()
+            modes = {
+                "1": "heuristic",
+                "2": "random",
+                "3": "optimistic",
+                "4": "cautious",
+                "5": "pessimistic",
+            }
+            if choice in modes:
+                self.confidence_mode = modes[choice]
+                print(f"\nConfidence mode set to: {self.confidence_mode}")
+            else:
+                print("\nInvalid choice. Mode unchanged.")
+        except (EOFError, KeyboardInterrupt):
+            print("\nMode unchanged.")
 
     def _generate_question_text(self, question: Any) -> str:
         """Generate natural language text for a question.
@@ -230,8 +270,12 @@ class InteractiveDemo:
     def simulate_confidence(self, utterance: str) -> float:
         """Simulate confidence score for grounding demonstration.
 
-        This will be enhanced in ibdm-100.3 to support different strategies.
-        For now, return high confidence.
+        Uses different strategies based on confidence_mode:
+        - heuristic: Length-based heuristic
+        - random: Random confidence scores
+        - optimistic: Fixed high confidence (0.9)
+        - cautious: Fixed medium confidence (0.65)
+        - pessimistic: Fixed low confidence (0.4)
 
         Args:
             utterance: User utterance
@@ -239,14 +283,30 @@ class InteractiveDemo:
         Returns:
             Confidence score (0.0-1.0)
         """
-        # Simple heuristic: longer utterances have higher confidence
-        # This is just for demo purposes
-        if len(utterance) > 20:
-            return 0.9  # High confidence
-        elif len(utterance) > 10:
-            return 0.65  # Medium confidence
-        else:
-            return 0.4  # Low confidence
+        if self.confidence_mode == "random":
+            # Random confidence between 0.3 and 1.0
+            return 0.3 + random.random() * 0.7
+
+        elif self.confidence_mode == "optimistic":
+            # Fixed high confidence
+            return 0.9
+
+        elif self.confidence_mode == "cautious":
+            # Fixed medium confidence
+            return 0.65
+
+        elif self.confidence_mode == "pessimistic":
+            # Fixed low confidence
+            return 0.4
+
+        else:  # "heuristic" (default)
+            # Simple heuristic: longer utterances have higher confidence
+            if len(utterance) > 20:
+                return 0.9  # High confidence
+            elif len(utterance) > 10:
+                return 0.65  # Medium confidence
+            else:
+                return 0.4  # Low confidence
 
     def process_user_input(self, utterance: str) -> DialogueMove | None:
         """Process user input and generate system response.
@@ -267,6 +327,18 @@ class InteractiveDemo:
 
         # Simulate confidence for grounding
         confidence = self.simulate_confidence(utterance)
+
+        # Determine move type for grounding strategy calculation
+        if "draft" in utterance.lower() or "nda" in utterance.lower():
+            move_type_for_grounding = "command"
+        else:
+            move_type_for_grounding = "answer"
+
+        # Calculate grounding strategy
+        grounding_strategy = select_grounding_strategy(move_type_for_grounding, confidence)
+
+        # Display confidence and grounding info
+        print(f"[Confidence: {confidence:.2f}, Strategy: {grounding_strategy.value}]")
 
         # Process through dialogue engine
         # For now, use simple heuristics to create moves
