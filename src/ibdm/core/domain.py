@@ -12,6 +12,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from ibdm.core.actions import Action, Proposition
 from ibdm.core.answers import Answer
 from ibdm.core.plans import Plan
 from ibdm.core.questions import Question
@@ -87,6 +88,9 @@ class DomainModel:
         self.sorts: dict[str, list[str]] = {}
         self._plan_builders: dict[str, Callable[[dict[str, Any]], Plan]] = {}
         self._dependencies: dict[str, set[str]] = {}  # predicate -> {prerequisite predicates}
+        self._postcond_functions: dict[
+            str, Callable[[Action], list[Proposition]]
+        ] = {}  # action_name -> postcond function
 
     def add_predicate(
         self,
@@ -468,6 +472,132 @@ class DomainModel:
 
         return WhQuestion(predicate=question_str, variable="X")
 
+    def register_postcond_function(
+        self,
+        action_name: str,
+        postcond_fn: Callable[[Action], list[Proposition]],
+    ):
+        """Register postcondition generator for an action.
+
+        Based on Larsson (2002) Section 5.3.2 (Actions and Postconditions).
+
+        Args:
+            action_name: Name of the action (e.g., "book_hotel", "generate_draft")
+            postcond_fn: Function that takes Action and returns list of Propositions
+
+        Example:
+            >>> def book_hotel_postconds(action: Action) -> list[Proposition]:
+            ...     hotel_id = action.parameters.get("hotel_id", "unknown")
+            ...     return [Proposition(
+            ...         predicate="booked",
+            ...         arguments={"hotel_id": hotel_id}
+            ...     )]
+            >>> domain.register_postcond_function("book_hotel", book_hotel_postconds)
+        """
+        self._postcond_functions[action_name] = postcond_fn
+
+    def has_postcond_function(self, action_name: str) -> bool:
+        """Check if a postcondition function is registered for an action.
+
+        Args:
+            action_name: Name of the action to check
+
+        Returns:
+            True if a postcondition function is registered
+        """
+        return action_name in self._postcond_functions
+
+    def postcond(self, action: Action) -> list[Proposition]:
+        """Get postconditions for an action.
+
+        Returns propositions that become true after successful action execution.
+        These are typically added to commitments after the action executes.
+
+        Based on Larsson (2002) Section 5.3.2 (Actions and Postconditions).
+
+        Args:
+            action: Action to get postconditions for
+
+        Returns:
+            List of Propositions that will be true after action execution.
+            Returns empty list if no postcondition function registered.
+
+        Example:
+            >>> action = Action(
+            ...     action_type=ActionType.BOOK,
+            ...     name="book_hotel",
+            ...     parameters={"hotel_id": "H123", "check_in": "2025-01-05"}
+            ... )
+            >>> postconds = domain.postcond(action)
+            >>> # [Proposition(predicate="booked", arguments={"hotel_id": "H123"})]
+        """
+        # Check if we have a registered postcondition function
+        if action.name in self._postcond_functions:
+            return self._postcond_functions[action.name](action)
+
+        # Fallback: use action's declared postconditions
+        if action.postconditions:
+            return self._parse_postconditions_to_propositions(action)
+
+        # No postconditions available
+        return []
+
+    def _parse_postconditions_to_propositions(self, action: Action) -> list[Proposition]:
+        """Convert action's string postconditions to Proposition objects.
+
+        Internal helper for postcond() method.
+
+        Args:
+            action: Action with postconditions list
+
+        Returns:
+            List of Proposition objects parsed from action.postconditions
+
+        Example:
+            >>> action = Action(
+            ...     action_type=ActionType.BOOK,
+            ...     name="book_hotel",
+            ...     postconditions=["booked(hotel_id=H123)", "confirmed(booking=true)"]
+            ... )
+            >>> props = domain._parse_postconditions_to_propositions(action)
+            >>> len(props)  # 2
+        """
+        propositions: list[Proposition] = []
+
+        for postcond_str in action.postconditions:
+            # Parse postcondition string (e.g., "booked(hotel_id=H123)")
+            # Simple parser for predicate(arg=value) format
+            if "(" in postcond_str and postcond_str.endswith(")"):
+                # Extract predicate and arguments
+                parts = postcond_str.split("(", 1)
+                predicate = parts[0].strip()
+                args_str = parts[1].rstrip(")")
+
+                # Parse arguments
+                arguments: dict[str, Any] = {}
+                if args_str:
+                    # Simple key=value parser
+                    for arg in args_str.split(","):
+                        arg = arg.strip()
+                        if "=" in arg:
+                            key, value = arg.split("=", 1)
+                            arguments[key.strip()] = value.strip()
+
+                prop = Proposition(
+                    predicate=predicate,
+                    arguments=arguments,
+                )
+                propositions.append(prop)
+            else:
+                # Simple predicate without arguments
+                prop = Proposition(
+                    predicate=postcond_str.strip(),
+                    arguments={},
+                )
+                propositions.append(prop)
+
+        return propositions
+
     def __repr__(self) -> str:
         """String representation of domain model."""
         return (
@@ -475,5 +605,6 @@ class DomainModel:
             f"predicates={len(self.predicates)}, "
             f"sorts={len(self.sorts)}, "
             f"plan_builders={len(self._plan_builders)}, "
-            f"dependencies={len(self._dependencies)})"
+            f"dependencies={len(self._dependencies)}, "
+            f"postcond_functions={len(self._postcond_functions)})"
         )
