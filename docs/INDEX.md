@@ -20,12 +20,17 @@ Quick navigation to all IBDM documentation, organized by purpose and currency.
 
 | Document | Purpose |
 |----------|---------|
-| [PROJECT_STATUS.md](../PROJECT_STATUS.md) | **Current implementation status** - What's working, what's missing, demo readiness |
 | [IBIS_PROGRESSION_GUIDE.md](../IBIS_PROGRESSION_GUIDE.md) | **IBiS1→2→3→4 roadmap** - How to progress through Larsson's stages (ESSENTIAL READ) |
 | [LARSSON_TASK_MAPPING.md](../LARSSON_TASK_MAPPING.md) | Task-to-thesis mapping - All beads tasks mapped to thesis chapters |
 | [LARSSON_PRIORITY_ROADMAP.md](../LARSSON_PRIORITY_ROADMAP.md) | Current priorities, tier-based task breakdown |
 | [SYSTEM_ACHIEVEMENTS.md](../SYSTEM_ACHIEVEMENTS.md) | What's been built - 10,893 LOC, 527 tests, Phase 3.5 complete |
-| [ARCHITECTURE_ISSUE_SUMMARY.md](../ARCHITECTURE_ISSUE_SUMMARY.md) | Known architectural issues (accommodation phase separation) |
+
+### Status Reports & Analysis
+
+| Document | Purpose |
+|----------|---------|
+| [Project Status (2025-11-16)](../reports/project-status-2025-11-16.md) | Snapshot at IBD-1 completion - comprehensive status, gaps, demo readiness |
+| [IBD-1 Completion Analysis](../reports/ibd-1-completion-analysis.md) | Detailed assessment vs. demonstration goals and Larsson thesis |
 
 ---
 
@@ -38,7 +43,8 @@ Quick navigation to all IBDM documentation, organized by purpose and currency.
 | [architecture_principles.md](architecture_principles.md) | **Policy #0** - Clarity, simplicity, no fallbacks |
 | [LARSSON_ALGORITHMS.md](LARSSON_ALGORITHMS.md) | **Authoritative reference** - IBiS1-4 algorithms, rules, state structures |
 | [burr_state_refactoring.md](burr_state_refactoring.md) | Stateless engine design (ibdm-bsr epic) |
-| [architecture_interpretation_accommodation.md](architecture_interpretation_accommodation.md) | Accommodation phase separation analysis |
+| [architecture_interpretation_accommodation.md](architecture_interpretation_accommodation.md) | Full analysis: accommodation phase separation |
+| [interpretation-accommodation-quick-ref.md](interpretation-accommodation-quick-ref.md) | Quick reference: task accommodation phase boundaries |
 
 ### Domain & Semantics
 
@@ -77,16 +83,19 @@ See [archive/README.md](archive/README.md) for organization of historical docs.
 |-----------|----------|
 | [archive/design-discussions/](archive/design-discussions/) | Architectural analysis, framework critiques |
 | [archive/refactoring-plans/](archive/refactoring-plans/) | Completed refactoring plans |
-| [archive/planning/](archive/planning/) | Original planning documents |
-| [archive/reviews/](archive/reviews/) | One-time reviews and assessments |
+| [archive/planning/](archive/planning/) | Original planning documents (8-phase plan, demo plan, NLU plan, structure) |
+| [archive/reviews/](archive/reviews/) | One-time reviews and assessments (API key verification, deprecated approaches) |
 
-### Notable Historical Docs
+### Notable Archived Docs
 
 | Document | Status | Location |
 |----------|--------|----------|
-| NLU_ENHANCEMENT_PLAN.md | ✅ COMPLETED | Top-level (Phase 3.5 done) |
-| DEVELOPMENT_PLAN.md | 📋 HISTORICAL | Top-level (original 8-phase plan) |
-| PROJECT_STRUCTURE.md | 📋 HISTORICAL | Top-level (ideal structure) |
+| DEVELOPMENT_PLAN.md | 📋 HISTORICAL | archive/planning/ (original 8-phase plan) |
+| DEMO_PLAN.md | ✅ COMPLETED | archive/planning/ (comprehensive demo strategy) |
+| NLU_ENHANCEMENT_PLAN.md | ✅ COMPLETED | archive/planning/ (Phase 3.5 done) |
+| PROJECT_STRUCTURE.md | 📋 HISTORICAL | archive/planning/ (ideal directory structure) |
+| ibdm-64.14-review.md | ❌ DEPRECATED | archive/reviews/ (hybrid fallback review) |
+| IBDM_API_KEY_VERIFICATION.md | 📖 REFERENCE | archive/reviews/ (initial setup validation) |
 | PYTRINDIKIT_VERDICT.md | 📖 REFERENCE | archive/design-discussions/ |
 
 ---
@@ -116,13 +125,14 @@ Documents use these status markers in headers:
 | Start development | [CLAUDE.md](../CLAUDE.md) → [GETTING_STARTED.md](../GETTING_STARTED.md) |
 | Understand architecture | [architecture_principles.md](architecture_principles.md) → [LARSSON_ALGORITHMS.md](LARSSON_ALGORITHMS.md) |
 | **Plan next steps** | **[IBIS_PROGRESSION_GUIDE.md](../IBIS_PROGRESSION_GUIDE.md)** ← **Start here for roadmap** |
-| Check current status | [PROJECT_STATUS.md](../PROJECT_STATUS.md) |
+| Check IBD-1 status | [IBD-1 Completion Analysis](../reports/ibd-1-completion-analysis.md) |
+| Check detailed status | [Project Status (2025-11-16)](../reports/project-status-2025-11-16.md) |
 | Set up environment | [environment_setup.md](environment_setup.md) → [llm_configuration.md](llm_configuration.md) |
 | See what's built | [SYSTEM_ACHIEVEMENTS.md](../SYSTEM_ACHIEVEMENTS.md) |
 | Find current priorities | [LARSSON_PRIORITY_ROADMAP.md](../LARSSON_PRIORITY_ROADMAP.md) |
 | Map tasks to thesis | [LARSSON_TASK_MAPPING.md](../LARSSON_TASK_MAPPING.md) |
 | Understand Larsson | [LARSSON_ALGORITHMS.md](LARSSON_ALGORITHMS.md) → [larsson_thesis/](larsson_thesis/) |
-| Fix known issues | [ARCHITECTURE_ISSUE_SUMMARY.md](../ARCHITECTURE_ISSUE_SUMMARY.md) |
+| Understand phase boundaries | [interpretation-accommodation-quick-ref.md](interpretation-accommodation-quick-ref.md) |
 
 ### By Larsson System
 

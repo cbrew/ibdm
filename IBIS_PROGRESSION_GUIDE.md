@@ -970,3 +970,20 @@ Feature involves:
 **Current Position**: ✅ IBiS1 complete, 🔧 IBiS3 foundation laid, ⚠️ IBiS2 partial
 
 **Next Steps**: Polish demo → Implement IBiS3 accommodation → Complete IBiS2 grounding → Add IBiS4 actions
+
+---
+
+## Historical Documentation
+
+### Archived Planning Documents
+- **Development Plan**: `docs/archive/planning/DEVELOPMENT_PLAN.md` (📋 Original 8-phase plan)
+- **Demo Plan**: `docs/archive/planning/DEMO_PLAN.md` (✅ Completed demo strategy)
+- **NLU Enhancement Plan**: `docs/archive/planning/NLU_ENHANCEMENT_PLAN.md` (✅ Phase 3.5 completed)
+- **Project Structure**: `docs/archive/planning/PROJECT_STRUCTURE.md` (📋 Ideal structure from design phase)
+
+### Analysis & Status Reports
+- **IBD-1 Completion Analysis**: `reports/ibd-1-completion-analysis.md` (Detailed assessment vs. Larsson thesis)
+- **Project Status Snapshot**: `reports/project-status-2025-11-16.md` (Comprehensive status at IBD-1 completion)
+
+### Reference Documents
+- **Interpretation/Accommodation Issue**: `docs/interpretation-accommodation-quick-ref.md` (Quick reference for phase boundaries)
