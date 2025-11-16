@@ -1,324 +1,276 @@
 # Next Recommended Task
 
-**Date**: 2025-11-16 (Updated)
-**Basis**: Code verification, LARSSON_PRIORITY_ROADMAP.md, test suite analysis
+**Date**: 2025-11-16 (Updated for IBiS Variants Priority)
+**Basis**: IBIS_VARIANTS_PRIORITY.md, code verification, Larsson thesis compliance
 
 ---
 
-## Status Update: TIER 1 Architecture Complete ✅
+## Status Update: New Priority - Complete IBiS-2, 3, 4 Variants 🎯
 
-### Verification Results (2025-11-16)
+### Current IBiS Status
 
-After comprehensive code and test review, **ALL TIER 1 Core Larsson Architecture tasks are COMPLETE**:
+**Current State** (Verified from IBIS_PROGRESSION_GUIDE.md):
+- ✅ **IBiS1**: 100% complete (Core QUD, Plans, Four-phase control loop)
+- ⚠️ **IBiS2**: 60% complete (Basic grounding, missing advanced ICM)
+- 🔧 **IBiS3**: 30% complete (Architecture ready, accommodation incomplete)
+- 📋 **IBiS4**: 10% complete (Structure defined, not yet implemented)
 
-#### ✅ ibdm-loop (Complete Interactive Dialogue Loop)
-- **ibdm-loop.2**: Domain validation in answer integration ✅
-  - Implemented in `integration_rules.py:476-482`
-  - Uses `domain.resolves(answer, question)` for semantic validation
-  - Tested in `test_nda_with_domain.py`, `test_domain_model.py`
-
-- **ibdm-loop.3**: Handle invalid answers with clarification ✅
-  - Implemented in `integration_rules.py:501-507`
-  - Sets `_needs_clarification` flag, keeps question on QUD
-  - Tested in `test_clarification_handling.py`
-
-- **ibdm-loop.4**: Mark subplan complete after valid answer ✅
-  - Implemented in `integration_rules.py:492-493`
-  - Calls `_complete_subplan_for_question()`
-  - Tested in `test_qud_and_plan_progression.py`
-
-- **ibdm-loop.5**: Push next question to QUD after answer ✅
-  - Implemented in `integration_rules.py:496-500`
-  - Gets next question from plan and pushes to QUD
-  - Tested in `test_qud_and_plan_progression.py`
-
-- **ibdm-loop.11**: Verify QUD management across turns ✅
-  - Comprehensive tests in `test_qud_and_plan_progression.py`
-  - Tests LIFO behavior, multi-turn dialogues, invalid answer handling
-
-- **ibdm-loop.12**: Verify plan progress tracking ✅
-  - Comprehensive tests in `test_qud_and_plan_progression.py`
-  - Tests subplan completion, plan progression, multi-turn scenarios
-
-**Test Results**: 90/90 core tests passing (100%)
-
-#### ✅ ibdm-accom (Accommodation in Integration Phase)
-- **Status**: COMPLETE
-- Task plan formation is in `integration_rules.py` (`form_task_plan` rule)
-- NO accommodation in interpretation phase (verified via grep)
-- Architecture properly separates INTERPRET (syntax) from INTEGRATE (pragmatics)
-
-#### ✅ ibdm-bsr (Burr-Centric State Refactoring)
-- **Status**: COMPLETE
-- Engine is stateless (verified: no `self.state` in engine code)
-- All methods accept `InformationState` as parameter
-- Methods are pure functions: `interpret()`, `integrate()`, `select_action()`, `generate()`
+**New Goal**: Complete all IBiS variants to achieve full Larsson (2002) compliance
 
 ---
 
-## Updated Recommendation: Larsson Fidelity Metrics
+## HIGHEST PRIORITY: Unblock IBiS3 Accommodation
 
-**Priority**: P0 (Foundation for Validation)
-**Estimated Duration**: 2-3 days
-**Epic**: ibdm-metrics
+**Task**: Fix architectural violation blocking IBiS3 implementation
+**Duration**: 1 week
+**Blockers**: None (this IS the blocker removal)
 
-### Why This Task Now?
+### Critical Blocker
 
-With TIER 1 complete, we need **objective validation** before moving to demos:
+**Current Issue**: Task plan formation is in INTERPRET phase (architectural violation)
+- **What's Wrong**: Accommodation happens in wrong phase
+- **Larsson Violation**: Interpretation = syntactic, Integration = pragmatic
+- **Impact**: Blocks all IBiS3 accommodation work
+- **Fix**: `ibdm-accom` epic - move to integration phase
 
-1. **Verify Larsson Compliance**: Quantitatively measure how well our implementation matches Larsson (2002)
-2. **Baseline for Future Work**: Establish metrics before adding complexity
-3. **Support Demo Claims**: Back up "Larsson-faithful" claims with measurements
-4. **Guide Next Steps**: Metrics will reveal any gaps in implementation
+### Week 1: Unblock IBiS3 (IMMEDIATE)
 
-### Current State
+**1. Fix Phase Separation Violation**
+- **Task**: `ibdm-accom` - Move accommodation to integration
+- **What**:
+  - Verify task plan formation is in `integration_rules.py`
+  - Ensure NO accommodation in interpretation phase
+  - Update all tests
+- **Why**: BLOCKS all IBiS3 work
+- **Effort**: 1 week
+- **Code**: `src/ibdm/rules/integration_rules.py`
 
-**What's Complete**:
-- ✅ Core Larsson algorithms (QUD, plans, domain validation, clarification)
-- ✅ Four-phase architecture (INTERPRET → INTEGRATE → SELECT → GENERATE)
-- ✅ Domain abstraction layer with semantic operations
-- ✅ Stateless engine with explicit state passing
+**2. Add private.issues Field**
+- **Task**: Update `src/ibdm/core/information_state.py`
+- **What**: Add `issues: list[Question]` to PrivateIS
+- **Why**: Foundation for two-phase accommodation (issues → qud)
+- **Larsson**: Figure 4.1 - Information State Extensions
+- **Effort**: 1 day
+- **Tests**: Update serialization, state management tests
 
-**What's Missing**:
-- ❌ Quantitative Larsson fidelity measurement
-- ❌ Architectural compliance metrics
-- ❌ Baseline for tracking improvements/regressions
+**3. Update Serialization**
+- **Task**: Update `to_dict()` and `from_dict()` methods
+- **What**: Handle new `issues` field in serialization
+- **Why**: State persistence must work
+- **Effort**: Half day
 
-### Specific Tasks
+### Week 2-3: Implement IBiS3 Core Rules
 
-#### Task 1: Define Architectural Compliance Metrics (ibdm-metrics.1.1)
+**4. Implement Rule 4.1 (IssueAccommodation)**
+- **Task**: Create `accommodate_issue_from_plan` update rule
+- **What**: Plan findout actions → private.issues (not directly to QUD)
+- **Why**: Separates accommodation from raising
+- **Larsson**: Section 4.6.1 - IssueAccommodation rule
+- **Code**: `src/ibdm/rules/integration_rules.py`
+- **Priority**: 14 (before form_task_plan)
+- **Effort**: 2-3 days
 
-**Actions**:
-1. Create metrics module: `src/ibdm/metrics/architectural_compliance.py`
-2. Define metrics for:
-   - Four-phase separation (interpretation, integration, selection, generation)
-   - Rule organization and priority handling
-   - Control loop structure
-3. Implement measurement functions
-4. Add tests for metric calculation
+**5. Implement Rule 4.2 (LocalQuestionAccommodation)**
+- **Task**: Create `raise_accommodated_question` selection rule
+- **What**: private.issues → shared.qud (when contextually appropriate)
+- **Why**: Incremental questioning, not dumping all questions at once
+- **Larsson**: Section 4.6.2 - LocalQuestionAccommodation rule
+- **Code**: `src/ibdm/rules/selection_rules.py`
+- **Priority**: 20 (high)
+- **Effort**: 2-3 days
 
-**Success Criteria**:
-- Metrics module with clear API
-- Can measure phase separation quantitatively
-- Tests verify metric calculations
+**6. Handle Answers to Unasked Questions**
+- **Task**: Modify `integrate_answer` rule
+- **What**: Check if answer resolves question in private.issues
+- **Why**: Users can volunteer information before asked
+- **Larsson**: Core IBiS3 capability
+- **Effort**: 3-5 days
 
-**Code Location**: Implementation lives in `integration_rules.py:451-522` (answer integration)
+---
 
-#### Task 2: Define Information State Structure Metrics (ibdm-metrics.1.2)
+## Complete Roadmap: IBIS_VARIANTS_PRIORITY.md
 
-**Actions**:
-1. Verify InformationState structure matches Larsson
-   - private/shared separation
-   - QUD as stack (LIFO)
-   - agenda structure
-   - plan structure
-2. Create structural validation metrics
-3. Add tests for structure compliance
+**See**: [IBIS_VARIANTS_PRIORITY.md](IBIS_VARIANTS_PRIORITY.md) for full 22-28 week plan
 
-**Success Criteria**:
-- Can verify QUD is LIFO (not set/list)
-- Can validate private/shared separation
-- Structural metrics pass for current implementation
+**Optimal Completion Order**: IBiS3 → IBiS2 → IBiS4
 
-#### Task 3: Define Semantic Operations Coverage (ibdm-metrics.1.3)
+**Rationale**:
+1. **IBiS3 first**: Biggest user experience improvement (natural dialogue, volunteer information)
+2. **IBiS2 second**: Robustness features (grounding, error handling)
+3. **IBiS4 last**: Advanced features (actions, negotiation)
 
-**Actions**:
-1. Verify all Larsson semantic operations implemented:
-   - `resolves(answer, question)` ✅ (already verified)
-   - `relevant(proposition, question)` (check implementation)
-   - `combines(answer1, answer2)` (verify if needed)
-   - `depends(question1, question2)` (verify if needed)
-2. Create coverage metrics
-3. Test operation correctness
+---
 
-**Success Criteria**:
-- Metric shows which operations are implemented
-- Can verify operation correctness
-- Coverage report generated
+## Timeline Overview
 
-**Code Location**: `src/ibdm/core/domain.py:151-204` (resolves, relevant methods)
+### Phase 1: IBiS3 Completion (Weeks 1-10)
+- **Target**: 30% → 100%
+- **Key Features**:
+  - private.issues field
+  - Rules 4.1-4.5 (accommodation, raising, clarification, dependencies, reaccommodation)
+  - Volunteer information handling
+  - Dependent issue accommodation
 
-#### Task 4: Define Update Rules Coverage (ibdm-metrics.1.4)
+### Phase 2: IBiS2 Completion (Weeks 11-18)
+- **Target**: 60% → 100%
+- **Key Features**:
+  - Complete ICM taxonomy (27 rules)
+  - Grounding strategies (optimistic/cautious/pessimistic)
+  - Perception checking (ASR confidence)
+  - Evidence requirements
 
-**Actions**:
-1. Map implemented rules to Larsson algorithms:
-   - Integration rules (8 rules in `integration_rules.py`)
-   - Selection rules (check `selection_rules.py`)
-   - Generation rules (check `generation_rules.py`)
-2. Create rule coverage metrics
-3. Verify single-rule application per cycle
+### Phase 3: IBiS4 Implementation (Weeks 19-28)
+- **Target**: 10% → 100%
+- **Key Features**:
+  - Device actions and interface
+  - Action accommodation
+  - Negotiation and dominates() relation
+  - Multi-alternative handling
 
-**Success Criteria**:
-- Coverage report of Larsson algorithms implemented
-- Verification that rules fire correctly
-- Documentation of any intentional deviations
+---
 
-**Code Location**: `src/ibdm/rules/integration_rules.py:17-91` (8 integration rules)
+## Success Criteria
 
-#### Task 5: Generate Baseline Report (ibdm-metrics.1.5)
+### IBiS3 Complete (Week 10)
+- [x] `private.issues` field in InformationState
+- [x] Rule 4.1: Plan → private.issues (accommodation)
+- [x] Rule 4.2: private.issues → shared.qud (raising)
+- [x] Rule 4.3: Clarification questions
+- [x] Rule 4.4: Dependent issue accommodation
+- [x] Rule 4.5: Question reaccommodation
+- [x] Answers to unasked questions handled
+- [x] Integration tests passing
+- [x] IBiS3 fidelity: 100% (up from 30%)
 
-**Actions**:
-1. Run all metrics on current codebase
-2. Generate baseline report: `reports/larsson-fidelity-baseline-2025-11-16.md`
-3. Document current compliance level (estimate 85-95%)
-4. Identify any gaps for future work
+### IBiS2 Complete (Week 18)
+- [x] All 27 ICM rules implemented
+- [x] Grounding status tracking
+- [x] Strategy selection working
+- [x] Perception checking integrated
+- [x] IBiS2 fidelity: 100% (up from 60%)
 
-**Success Criteria**:
-- Comprehensive baseline report
-- Quantitative compliance score
-- Clear documentation for stakeholders
+### IBiS4 Complete (Week 28)
+- [x] Device actions working
+- [x] Action accommodation implemented
+- [x] Negotiation dialogue working
+- [x] IBiS4 fidelity: 100% (up from 10%)
 
-### Implementation Plan
+### Overall Target
+- **Larsson Fidelity**: 95%+ (from current ~70%)
+- **Test Coverage**: 90%+
+- **All Tests**: Passing
+
+---
+
+## How to Start
+
+### 1. Review IBiS Variants Documentation
 
 ```bash
-# 1. Create metrics module structure
-mkdir -p src/ibdm/metrics tests/unit/metrics
+# Read comprehensive IBiS progression guide
+cat IBIS_PROGRESSION_GUIDE.md
 
-# 2. Implement metrics (red-green-refactor)
-# - Write failing test
-# - Implement metric
-# - Refactor and commit
+# Read new priority roadmap
+cat IBIS_VARIANTS_PRIORITY.md
 
-# 3. Generate baseline report
-python -m ibdm.metrics.generate_report > reports/larsson-fidelity-baseline.md
-
-# 4. Review and document
-# Update SYSTEM_ACHIEVEMENTS.md with quantitative metrics
-```
-
-### Why Not Domain Completeness?
-
-Domain completeness (previous recommendation) is **still important** but:
-
-1. **Metrics First**: Need to establish baseline BEFORE adding complexity
-2. **Validation Foundation**: Metrics will help verify domain switching works correctly
-3. **Risk Mitigation**: Quantify current state before changing architecture
-4. **Better Demos**: Can claim "95% Larsson-compliant" with evidence
-
-**Revised Timeline**:
-1. **This Week**: Larsson fidelity metrics (ibdm-metrics) - 2-3 days
-2. **Next Week**: Domain completeness & switching (ibdm-84, ibdm-85) - 3-5 days
-3. **Following**: End-to-end validation with metrics tracking
-
-### Expected Outcome
-
-After completing metrics:
-- **Quantitative Larsson Fidelity Score**: 85-95% (estimated)
-- **Baseline Documentation**: For tracking future changes
-- **Gap Analysis**: Clear list of remaining work
-- **Demo Credibility**: Evidence-based claims
-- **Clear Path**: To domain completeness and end-to-end validation
-
----
-
-## Alternative: Continue with Domain Completeness
-
-If metrics implementation is deferred, the **previous recommendation remains valid**:
-
-### Domain Completeness & Runtime Switching (ibdm-84, ibdm-85)
-
-**Why**: Demonstrates architectural soundness and domain portability
-**Priority**: P0 for demo readiness
-**Estimated**: 3-5 days
-
-**Tasks**:
-1. Verify NDA domain completeness (ibdm-84.1)
-2. Complete Travel domain (ibdm-85)
-3. Implement runtime domain switching
-4. Create side-by-side demo
-
-**Outcome**: Goal 3 (Domain Portability) 90% → 100%
-
----
-
-## Recommended Path: Metrics → Domains → Validation
-
-```
-Week 1 (Current): Larsson Fidelity Metrics
-  ├─ Define metrics (architectural, structural, semantic, rules)
-  ├─ Implement measurement
-  ├─ Generate baseline report
-  └─ Document compliance level
-
-Week 2: Domain Completeness
-  ├─ Verify NDA domain
-  ├─ Complete Travel domain
-  ├─ Runtime switching
-  └─ Side-by-side demo
-
-Week 3-4: End-to-End Validation
-  ├─ Full workflow validation (both domains)
-  ├─ Metrics tracking through dialogues
-  ├─ Performance benchmarks
-  └─ Demo polish
-```
-
----
-
-## How to Start (Metrics Path)
-
-### 1. Review Larsson Compliance Documentation
-
-```bash
-# Read Larsson algorithms reference
+# Review Larsson algorithms
 cat docs/LARSSON_ALGORITHMS.md
-
-# Review implementation
-cat LARSSON_PRIORITY_ROADMAP.md
 ```
 
-### 2. Examine Current Implementation
+### 2. Verify Current Implementation
 
 ```bash
-# Check integration rules (answer validation logic)
-cat src/ibdm/rules/integration_rules.py
+# Check if accommodation is in correct phase
+grep -r "accommodate" src/ibdm/rules/integration_rules.py
+grep -r "accommodate" src/ibdm/rules/interpretation_rules.py
 
-# Check domain semantic operations
-cat src/ibdm/core/domain.py
-
-# Check test coverage
-pytest tests/integration/test_qud_and_plan_progression.py -v
+# Check InformationState structure
+cat src/ibdm/core/information_state.py
 ```
 
-### 3. Create Metrics Module
+### 3. Start Week 1 Tasks
 
 ```bash
-# Create module structure
-mkdir -p src/ibdm/metrics tests/unit/metrics
+# 1. Fix phase separation (if needed)
+# Review ibdm-accom epic
 
-# Start with architectural metrics
-touch src/ibdm/metrics/__init__.py
-touch src/ibdm/metrics/architectural_compliance.py
-touch tests/unit/metrics/test_architectural_compliance.py
+# 2. Add private.issues field
+# Edit src/ibdm/core/information_state.py
+
+# 3. Follow development workflow
+ruff format src/ tests/
+ruff check --fix src/ tests/
+pyright src/
+pytest
 ```
 
-### 4. Follow Development Workflow
+### 4. Development Workflow
 
 Per `CLAUDE.md`:
-1. Use beads for tracking: `.claude/beads-larsson.sh start ibdm-metrics.1.1`
-2. Red-Green-Refactor: Test → Implement → Refactor
-3. Quality checks: `ruff format && ruff check --fix && pyright && pytest`
-4. Commit: `feat(metrics): add architectural compliance metrics`
+1. Red-Green-Refactor: Test → Implement → Refactor
+2. Quality checks before each commit
+3. Commit: `feat(ibis3): add private.issues field`
+4. Push regularly
+
+---
+
+## Why IBiS3 First?
+
+**User Experience Impact**:
+
+**Without IBiS3** (Current):
+```
+System: "What are the parties to the agreement?"
+User: "Acme and Smith, effective January 1, 2025"
+System: [Only processes parties, ignores date]
+System: "What's the effective date?"
+User: "I just told you, January 1, 2025"  ← BAD UX
+```
+
+**With IBiS3** (Target):
+```
+System: "What are the parties to the agreement?"
+User: "Acme and Smith, effective January 1, 2025"
+System: [Accommodates date answer to unasked question]
+System: [Removes date question from private.issues]
+System: "What's the governing law?"  ← NATURAL DIALOGUE
+```
+
+**Bottom Line**: IBiS3 makes dialogue feel intelligent and natural. This is more important than robustness (IBiS2) or advanced features (IBiS4).
+
+---
+
+## Alternative Path: Metrics First
+
+If you prefer to establish baseline metrics before IBiS variants:
+
+**Task**: Larsson Fidelity Metrics (ibdm-metrics)
+**Duration**: 2-3 days
+**Why**: Quantitative validation before adding complexity
+
+**Then**: Proceed to IBiS3 with baseline established
 
 ---
 
 ## Alignment with Project Goals
 
-**Metrics-First Path**:
-- ✅ **Larsson Fidelity**: Quantitatively verify compliance
-- ✅ **Validation Foundation**: Establish baseline before complexity
-- ✅ **Demo Credibility**: Evidence-based claims
-- ✅ **Risk Mitigation**: Measure before changing
+**IBiS Variants Completion**:
+- ✅ **Larsson Fidelity**: Full compliance with thesis (95%+)
+- ✅ **User Experience**: Natural, intelligent dialogue (IBiS3)
+- ✅ **Robustness**: Error handling, grounding (IBiS2)
+- ✅ **Advanced Features**: Actions, negotiation (IBiS4)
+- ✅ **Research Contribution**: Complete Larsson implementation
 
-**Bottom Line**: Metrics provide the **foundation for confident progress**. With TIER 1 complete, we need quantitative validation before adding domain switching complexity or creating demos.
+**Bottom Line**: Completing all IBiS variants achieves the full vision of Larsson (2002) thesis, demonstrating a complete, production-ready issue-based dialogue management system.
 
 ---
 
 ## Summary
 
-**Status**: TIER 1 (Core Larsson Architecture) ✅ COMPLETE
-**Recommendation**: Implement Larsson Fidelity Metrics (ibdm-metrics)
-**Alternative**: Domain Completeness & Runtime Switching (ibdm-84, ibdm-85)
-**Rationale**: Establish quantitative baseline before adding complexity
+**Status**: IBiS1 ✅ COMPLETE, Need to complete IBiS-2, 3, 4
+**Immediate Task**: Fix phase separation blocker, add private.issues field
+**Week 1 Goal**: Unblock IBiS3, implement Rules 4.1-4.2
+**Overall Goal**: Complete all IBiS variants (22-28 weeks)
+**Target Fidelity**: 95%+ Larsson compliance
 
-**Key Finding**: The core dialogue loop with domain validation, QUD management, plan progression, and clarification handling is **fully implemented and tested**. Next step is to measure how well it matches Larsson (2002) before proceeding.
+**Key Action**: Start with Week 1 tasks in IBIS_VARIANTS_PRIORITY.md

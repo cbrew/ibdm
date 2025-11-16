@@ -21,8 +21,10 @@ Quick navigation to all IBDM documentation, organized by purpose and currency.
 | Document | Purpose |
 |----------|---------|
 | [IBIS_PROGRESSION_GUIDE.md](../IBIS_PROGRESSION_GUIDE.md) | **IBiS1→2→3→4 roadmap** - How to progress through Larsson's stages (ESSENTIAL READ) |
+| [IBIS_VARIANTS_PRIORITY.md](../IBIS_VARIANTS_PRIORITY.md) | **NEW: IBiS-2,3,4 completion plan** - 22-28 week roadmap to complete all variants (CURRENT PRIORITY) |
+| [NEXT-TASK.md](../NEXT-TASK.md) | **Next recommended task** - Start here for immediate work |
 | [LARSSON_TASK_MAPPING.md](../LARSSON_TASK_MAPPING.md) | Task-to-thesis mapping - All beads tasks mapped to thesis chapters |
-| [LARSSON_PRIORITY_ROADMAP.md](../LARSSON_PRIORITY_ROADMAP.md) | Current priorities, tier-based task breakdown |
+| [LARSSON_PRIORITY_ROADMAP.md](../LARSSON_PRIORITY_ROADMAP.md) | Original priorities, tier-based task breakdown |
 | [SYSTEM_ACHIEVEMENTS.md](../SYSTEM_ACHIEVEMENTS.md) | What's been built - 10,893 LOC, 527 tests, Phase 3.5 complete |
 
 ### Status Reports & Analysis
@@ -122,14 +124,16 @@ Documents use these status markers in headers:
 
 | Task | Read |
 |------|------|
+| **Start work NOW** | **[NEXT-TASK.md](../NEXT-TASK.md)** ← **Immediate next task** |
+| **Complete IBiS variants** | **[IBIS_VARIANTS_PRIORITY.md](../IBIS_VARIANTS_PRIORITY.md)** ← **22-28 week roadmap** |
 | Start development | [CLAUDE.md](../CLAUDE.md) → [GETTING_STARTED.md](../GETTING_STARTED.md) |
 | Understand architecture | [architecture_principles.md](architecture_principles.md) → [LARSSON_ALGORITHMS.md](LARSSON_ALGORITHMS.md) |
-| **Plan next steps** | **[IBIS_PROGRESSION_GUIDE.md](../IBIS_PROGRESSION_GUIDE.md)** ← **Start here for roadmap** |
+| Understand IBiS progression | [IBIS_PROGRESSION_GUIDE.md](../IBIS_PROGRESSION_GUIDE.md) |
 | Check IBD-1 status | [IBD-1 Completion Analysis](../reports/ibd-1-completion-analysis.md) |
 | Check detailed status | [Project Status (2025-11-16)](../reports/project-status-2025-11-16.md) |
 | Set up environment | [environment_setup.md](environment_setup.md) → [llm_configuration.md](llm_configuration.md) |
 | See what's built | [SYSTEM_ACHIEVEMENTS.md](../SYSTEM_ACHIEVEMENTS.md) |
-| Find current priorities | [LARSSON_PRIORITY_ROADMAP.md](../LARSSON_PRIORITY_ROADMAP.md) |
+| Find original priorities | [LARSSON_PRIORITY_ROADMAP.md](../LARSSON_PRIORITY_ROADMAP.md) |
 | Map tasks to thesis | [LARSSON_TASK_MAPPING.md](../LARSSON_TASK_MAPPING.md) |
 | Understand Larsson | [LARSSON_ALGORITHMS.md](LARSSON_ALGORITHMS.md) → [larsson_thesis/](larsson_thesis/) |
 | Understand phase boundaries | [interpretation-accommodation-quick-ref.md](interpretation-accommodation-quick-ref.md) |
