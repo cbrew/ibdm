@@ -2,8 +2,112 @@
 
 **Goal**: Achieve Larsson-compliant IBDM dialogue management + Modern LLM NLU/NLG
 
-**Date**: 2025-11-14
-**Basis**: Larsson (2002) thesis, CLAUDE.md policies, current implementation analysis
+**Date**: 2025-11-16 (Updated with IBiS3 progress)
+**Basis**: Larsson (2002) thesis, CLAUDE.md policies, IBiS3 implementation results
+
+---
+
+## 🎯 CURRENT FOCUS: IBiS3 Question Accommodation
+
+**Status**: ✅ Week 3 Complete (60% progress)
+**Active Work**: Weeks 1-3 completed, Week 4 consolidation in progress
+**Next**: Documentation and NLU interface tasks
+
+### ✅ Completed IBiS3 Work
+
+#### Week 1: Foundation (30% → 35%) - COMPLETE
+**Completed**: 2025-11-16
+
+- ✅ Added `private.issues: list[Question]` field to PrivateIS
+- ✅ Updated serialization (to_dict/from_dict with type safety)
+- ✅ Phase separation verified (task plan formation in INTEGRATION phase)
+- ✅ Tests written and passing (97/97 core tests)
+- ✅ Type checks clean (pyright 0 errors)
+- ✅ Commit: `feat(ibis3): add private.issues field to InformationState`
+
+**Larsson Alignment**: Figure 4.1 - Information State Extensions
+
+#### Week 2: Rules 4.1 & 4.2 (35% → 50%) - COMPLETE
+**Completed**: 2025-11-16
+
+- ✅ **Rule 4.1 (IssueAccommodation)**: Questions from plans → private.issues
+  - Priority 14 in integration rules
+  - Plans no longer push directly to QUD
+  - All task questions accommodated to issues first
+
+- ✅ **Rule 4.2 (LocalQuestionAccommodation)**: Issues → QUD incrementally
+  - Priority 20 in selection rules
+  - Questions raised one at a time from private.issues
+  - Enables incremental questioning behavior
+
+- ✅ **Volunteer Information Handling**: Modified integrate_answer
+  - Checks private.issues before QUD
+  - Removes answered questions from issues
+  - Prevents re-asking already-answered questions
+
+- ✅ Tests: 11 new tests added (155 total core tests passing)
+- ✅ Type checks clean (pyright 0 errors)
+- ✅ Commits:
+  - `feat(ibis3): implement Rule 4.1 (IssueAccommodation)`
+  - `feat(ibis3): implement Rule 4.2 (LocalQuestionAccommodation)`
+  - `feat(ibis3): handle volunteer information in integrate_answer`
+
+**Larsson Alignment**:
+- Section 4.6.1 - IssueAccommodation rule
+- Section 4.6.2 - LocalQuestionAccommodation rule
+
+#### Week 3: End-to-End Testing (50% → 60%) - COMPLETE
+**Completed**: 2025-11-16
+
+- ✅ Created comprehensive end-to-end integration tests
+  - `test_ibis3_end_to_end.py` with 3 major scenarios
+  - Verified complete rule chain: Rule 4.1 → Rule 4.2 → SelectAsk
+  - Tests passing (3/3 end-to-end tests)
+
+- ✅ **Discovered and Fixed 3 Critical Bugs**:
+  1. **Rule Priority Bug**: form_task_plan now runs BEFORE accommodate_issue_from_plan
+     - Ensures plans exist before accommodation attempts
+  2. **Fallback Selection Bug**: Fallback only fires when agenda is empty
+     - Prevents fallback from bypassing Rule 4.2
+  3. **Plan Progression Bug**: Removed direct QUD push from task plan formation
+     - Rule 4.2 now exclusively handles raising questions to QUD
+
+- ✅ Removed obsolete IBiS1 tests expecting old behavior
+- ✅ Commits:
+  - `test(ibis3): add end-to-end integration tests for IBiS3 rule chain`
+  - `fix(ibis3): fix rule priorities and implement incremental questioning`
+
+**Key Achievement**: Incremental questioning verified end-to-end!
+```
+Turn 1: System asks "What are the parties?" (1 question at a time)
+Turn 2: User answers, system asks next question from issues
+Turn 3: User volunteers extra info, system skips that question
+✅ ONE QUESTION AT A TIME (incremental questioning working!)
+```
+
+**Test Coverage**: 155 core tests passing, 3 end-to-end integration tests
+
+### 📋 Remaining IBiS3 Work (60% → 100%)
+
+**Week 4**: Documentation + NLU Interface (60% → 65%)
+- ibdm-89: ✅ Update SYSTEM_ACHIEVEMENTS.md (COMPLETED)
+- ibdm-90: ⚡ Update LARSSON_PRIORITY_ROADMAP.md (IN PROGRESS)
+- ibdm-91: Create IBiS3 implementation guide
+- ibdm-92: NLU Interface Adoption
+
+**Week 5-6**: Rule 4.3 - IssueClarification (65% → 75%)
+- Handle ambiguous utterances with clarification questions
+- Larsson Section 4.6.3
+
+**Week 7-8**: Rule 4.4 - DependentIssueAccommodation (75% → 85%)
+- Handle questions that depend on other questions
+- Larsson Section 4.6.4
+
+**Week 9-10**: Rule 4.5 - QuestionReaccommodation (85% → 95%)
+- Re-prioritize unresolved questions based on context
+- Larsson Section 4.6.5
+
+**Week 11**: Integration tests + polish (95% → 100%)
 
 ---
 

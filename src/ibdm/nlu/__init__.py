@@ -58,11 +58,29 @@ from ibdm.nlu.llm_adapter import (
     create_adapter,
 )
 
+# Import base NLU service interface
+from ibdm.nlu.base_nlu_service import (  # noqa: I001
+    ActionRequest,
+    AmbiguityInfo,
+    BaseNLUService,
+    ExtractedFact,
+    MultiFact,
+    NLUConfidence,
+    RequestType,
+    UserPreference,
+)
+
 # Import at end to avoid circular import with nlu_engine
 from ibdm.nlu.nlu_engine import NLUEngine, NLUEngineConfig, create_nlu_engine  # noqa: E402, I001
 
 # Import nlu_result first (nlu_engine import moved to end to avoid circular import)
 from ibdm.nlu.nlu_result import NLUResult  # noqa: I001
+
+# Import NLU service adapter
+from ibdm.nlu.nlu_service_adapter import (  # noqa: I001, E402
+    NLUServiceAdapter,
+    create_nlu_service,
+)
 from ibdm.nlu.prompts import (
     Example,
     PromptTemplate,
@@ -102,6 +120,18 @@ from ibdm.nlu.semantic_parser import (
 )
 
 __all__ = [
+    # Base NLU Service Interface
+    "BaseNLUService",
+    "NLUConfidence",
+    "AmbiguityInfo",
+    "ExtractedFact",
+    "MultiFact",
+    "ActionRequest",
+    "RequestType",
+    "UserPreference",
+    # NLU Service Adapter
+    "NLUServiceAdapter",
+    "create_nlu_service",
     # LLM Adapter
     "LLMAdapter",
     "LLMConfig",
