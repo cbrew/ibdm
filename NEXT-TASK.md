@@ -449,27 +449,75 @@ User: "Actually, april 4th"
 
 ---
 
-### 📋 Next Task: ibdm-98.3
+### ✅ ibdm-98.3: Update serialization for grounding fields (COMPLETED)
 
-**Task**: Update serialization for grounding fields
-**Duration**: ~1 hour
-**Description**: Update to_dict/from_dict methods in information_state.py to handle new grounding fields (moves, next_moves). Add type safety and validation.
+**Completed**: 2025-11-16
+**Duration**: 1 hour (verified existing implementation)
+
+**What Was Done**:
+- ✅ Verified SharedIS.to_dict() properly serializes moves and next_moves fields
+- ✅ Verified SharedIS.from_dict() properly deserializes DialogueMove objects
+- ✅ Confirmed type safety with proper reconstruction of complex content (Questions, Answers)
+- ✅ All 37 information_state tests passing (including 6 grounding field tests)
+- ✅ Type checks clean (pyright 0 errors)
+
+**Key Finding**: Serialization was already fully implemented in ibdm-98.1! The to_dict/from_dict methods in SharedIS (lines 140-218) already handle grounding fields with proper type safety and validation.
+
+**Tests Verified**:
+- `test_serialization_with_grounding_fields` - Serialization works
+- `test_deserialization_with_grounding_fields` - Complex content (Question, Answer) properly reconstructed
+- `test_grounding_move_history_tracking` - Move history tracking works
+- `test_next_moves_queue` - Pending moves queue management works
+
+**Larsson Reference**: Figure 3.1 (IBiS2 Information State structure)
+
+---
+
+### 📋 Next Task: ibdm-98.4
+
+**Task**: Implement ICM Move Types (Week 3-5 IBiS2)
+**Duration**: 3-4 days
+**Description**: Extend DialogueMove to support full ICM (Interactive Communication Management) taxonomy from Larsson Section 3.4. Add ICM move types for perception, understanding, and acceptance feedback.
+
+**What to Implement**:
+1. Extend `src/ibdm/core/moves.py` with ICM move types:
+   - `icm:per*pos` - Positive perception ("I heard you")
+   - `icm:per*neg` - Negative perception ("Sorry, I didn't hear that")
+   - `icm:und*pos` - Positive understanding ("OK, Paris")
+   - `icm:und*neg` - Negative understanding ("Paris? Did you say Paris?")
+   - `icm:und*int` - Understanding confirmation ("Paris, is that correct?")
+   - `icm:acc*pos` - Acceptance ("Good, I'll book that")
+   - `icm:acc*neg` - Rejection ("No, I can't do that")
+
+2. Add ICM-specific attributes to DialogueMove:
+   - `feedback_level`: ActionLevel enum (con, per, sem, und, acc)
+   - `polarity`: Polarity enum (positive, negative, interrogative)
+   - `target_move`: Reference to move being grounded
+
+3. Create ICM factory functions for common patterns
+
+4. Write comprehensive unit tests for all ICM types
+
+**Why Important**: Foundation for all grounding operations (IBiS2 Rules 3.1-3.27)
+
+**Larsson Reference**: Section 3.4 (ICM Taxonomy), Section 3.6 (ICM Update Rules)
 
 ---
 
 ## Progress Summary
 
-**IBiS2 Progress**: 10% → 15% (Week 1-2 foundations started)
+**IBiS2 Progress**: 10% → 20% (Week 1-2 foundations complete!)
 
 **Test Coverage**:
 - Core tests: 91 passing
-- Information state tests: 37 passing
+- Information state tests: 37 passing (6 grounding field tests)
 - Grounding tests: 33 passing
 - **Total**: 161+ tests passing
 
-**Commits This Session**:
-1. `feat(ibis2): add grounding fields to SharedIS (ibdm-98.1)` - 876acd1
-2. `feat(ibis2): create grounding status tracking module (ibdm-98.2)` - e02f1c8
+**Completed This Session**:
+1. ✅ `ibdm-98.1`: Add grounding fields to SharedIS - 876acd1
+2. ✅ `ibdm-98.2`: Create grounding status tracking module - e02f1c8
+3. ✅ `ibdm-98.3`: Update serialization for grounding fields - VERIFIED
 
 ---
 
@@ -545,17 +593,39 @@ User: "Actually, april 4th"
 
 ## Bottom Line
 
+**✅ Task ibdm-98.3 Complete!** (Week 1-2 IBiS2 foundations done)
+
 **Completed This Session**:
-- ✅ Verified ibdm-loop.2-5 tasks are fully implemented
-- ✅ Confirmed 151 core tests passing
-- ✅ Validated IBiS3 integration with core loop
+- ✅ Verified grounding field serialization already implemented
+- ✅ Confirmed all 37 information_state tests passing
+- ✅ Validated type safety (pyright 0 errors)
+- ✅ Updated NEXT-TASK.md with completion status
 
-**Recommendation**: **Start with Demo Application (Option 1)** to:
-1. Validate IBiS3 implementation works end-to-end
-2. Create tangible demonstration of research contribution
-3. Identify any edge cases or usability issues
-4. Provide foundation for user studies or publication
+**IBiS2 Week 1-2 Summary** (Information State Extensions):
+1. ✅ **ibdm-98.1**: Grounding fields added to SharedIS
+2. ✅ **ibdm-98.2**: Grounding status tracking module created
+3. ✅ **ibdm-98.3**: Serialization verified and complete
 
-**After Demo**: Proceed with IBiS2 implementation for production-ready robustness
+**Progress**: IBiS2 10% → 20% (foundations complete!)
 
-Ready for next phase! 🚀
+---
+
+## 🎯 Recommended Next Task: ibdm-98.4
+
+**Option 1: Continue IBiS2 with ICM Move Types** (RECOMMENDED for momentum)
+- **Task**: ibdm-98.4 - Implement ICM Move Types
+- **Duration**: 3-4 days
+- **Why**: Natural continuation, maintains momentum on IBiS2 implementation
+- **Value**: Foundation for grounding operations (27 ICM rules in Weeks 4-5)
+
+**Option 2: Interactive Demo Application** (HIGH VALUE for validation)
+- Create CLI demo showcasing IBiS3 capabilities
+- Validate end-to-end system with real interaction
+- **Why**: Demonstrate research contribution tangibly
+- **Value**: User validation, publication material, edge case discovery
+
+**Option 3: Other IBiS2/IBiS4 Work** (see Alternative Options above)
+
+**Recommendation**: **Continue with ibdm-98.4 (ICM Move Types)** to maintain momentum on IBiS2 implementation. The foundations (information state + grounding status) are now complete, and ICM types are needed before implementing the 27 ICM update rules.
+
+Ready for Week 3-5 IBiS2 implementation! 🚀
