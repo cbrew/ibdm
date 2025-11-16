@@ -358,6 +358,116 @@ class DomainModel:
 
         return list(self._dependencies.get(predicate, set()))
 
+    def incompatible(self, prop1: str, prop2: str) -> bool:
+        """Check if two propositions/commitments are incompatible.
+
+        Based on Larsson (2002) Section 4.6.6 - QuestionReaccommodation.
+        Two propositions are incompatible if they provide conflicting answers
+        to the same question.
+
+        Args:
+            prop1: First proposition (commitment string, format "question: answer")
+            prop2: Second proposition (commitment string)
+
+        Returns:
+            True if propositions are incompatible
+
+        Example:
+            >>> domain.incompatible(
+            ...     "travel_date: april 5th",
+            ...     "travel_date: april 4th"
+            ... )  # True (different dates for same question)
+            >>> domain.incompatible(
+            ...     "travel_date: april 5th",
+            ...     "destination: London"
+            ... )  # False (different questions)
+
+        Note:
+            Simple heuristic: same question predicate + different answers = incompatible.
+            Domain-specific implementations can override for more sophisticated
+            compatibility checking (e.g., semantic similarity, value ranges).
+        """
+        # Extract question and answer from each proposition
+        q1, a1 = self._parse_commitment(prop1)
+        q2, a2 = self._parse_commitment(prop2)
+
+        # Not incompatible if can't parse either
+        if not q1 or not q2:
+            return False
+
+        # Not incompatible if different questions
+        if q1 != q2:
+            return False
+
+        # Incompatible if same question but different answers
+        # Normalize for comparison (strip whitespace, lowercase)
+        a1_norm = a1.strip().lower() if a1 else ""
+        a2_norm = a2.strip().lower() if a2 else ""
+
+        return a1_norm != a2_norm
+
+    def _parse_commitment(self, commitment: str) -> tuple[str | None, str | None]:
+        """Parse commitment string into question and answer.
+
+        Args:
+            commitment: Commitment string (format "question: answer")
+
+        Returns:
+            Tuple of (question_str, answer_str), or (None, None) if invalid
+
+        Example:
+            >>> domain._parse_commitment("travel_date: april 5th")
+            ("travel_date", "april 5th")
+        """
+        if ":" not in commitment:
+            return (None, None)
+
+        parts = commitment.split(":", 1)
+        if len(parts) != 2:
+            return (None, None)
+
+        question_str = parts[0].strip()
+        answer_str = parts[1].strip()
+
+        return (question_str, answer_str)
+
+    def get_question_from_commitment(self, commitment: str) -> Question | None:
+        """Extract question object from commitment string.
+
+        Based on Larsson (2002) Section 4.6.6 - used for reaccommodation.
+
+        Args:
+            commitment: Commitment string (format "question: answer")
+
+        Returns:
+            Question object, or None if can't extract
+
+        Example:
+            >>> q = domain.get_question_from_commitment("travel_date: april 5th")
+            >>> q.predicate  # "travel_date"
+
+        Note:
+            Reconstructs WhQuestion from predicate name in commitment.
+            Assumes commitments use predicate names as question identifiers.
+        """
+        question_str, _ = self._parse_commitment(commitment)
+        if not question_str:
+            return None
+
+        # Try to match against known predicates
+        # Check if it's a WhQuestion predicate (most common case)
+        if question_str in self.predicates:
+            from ibdm.core import WhQuestion
+
+            return WhQuestion(predicate=question_str, variable="X")
+
+        # Check if it matches string representation of a question
+        # (for questions with constraints or other attributes)
+        # For now, just create basic WhQuestion
+        from ibdm.core import WhQuestion
+
+        return WhQuestion(predicate=question_str, variable="X")
+
     def __repr__(self) -> str:
         """String representation of domain model."""
         return (
