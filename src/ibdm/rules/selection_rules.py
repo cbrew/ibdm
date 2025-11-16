@@ -36,6 +36,16 @@ def create_selection_rules() -> list[UpdateRule]:
             priority=25,  # Highest - must handle invalid input first
             rule_type="selection",
         ),
+        # IBiS3 Rule 4.2: LocalQuestionAccommodation - raise issues to QUD
+        # Pre: private.issues not empty AND QUD is empty
+        # Effect: raise first issue to QUD
+        UpdateRule(
+            name="raise_accommodated_question",
+            preconditions=_has_raisable_issue,
+            effects=_raise_issue_to_qud,
+            priority=20,  # High priority - before other selection
+            rule_type="selection",
+        ),
         # Rule: SelectFromPlan (Section 2.9.1)
         # Pre: head(private.plan) is a communicative action
         # Effect: add(shared.next_moves, head(private.plan))
@@ -88,6 +98,28 @@ def create_selection_rules() -> list[UpdateRule]:
 
 
 # Precondition functions (IBiS1)
+
+
+def _has_raisable_issue(state: InformationState) -> bool:
+    """Check if there are issues that can be raised to QUD.
+
+    An issue can be raised if:
+    - There are issues in private.issues
+    - QUD is empty or current QUD is not blocking
+    - Context is appropriate for asking a new question
+
+    Larsson (2002) Section 4.6.2 - LocalQuestionAccommodation rule.
+    """
+    # Need at least one issue to raise
+    if not state.private.issues:
+        return False
+
+    # For now, simple strategy: raise if QUD is empty
+    # Future: more sophisticated context checking
+    if not state.shared.qud:
+        return True
+
+    return False
 
 
 def _needs_clarification(state: InformationState) -> bool:
@@ -217,6 +249,34 @@ def _should_greet(state: InformationState) -> bool:
 
 
 # Effect functions (IBiS1)
+
+
+def _raise_issue_to_qud(state: InformationState) -> InformationState:
+    """Raise first issue from private.issues to shared.qud.
+
+    IBiS3 Rule 4.2 (LocalQuestionAccommodation):
+    When context is appropriate, raise accommodated questions
+    to QUD so they can be asked. This implements incremental
+    questioning - we don't dump all questions at once.
+
+    Args:
+        state: Current information state
+
+    Returns:
+        New state with first issue raised to QUD
+
+    Larsson (2002) Section 4.6.2 - LocalQuestionAccommodation rule.
+    """
+    new_state = state.clone()
+
+    # Pop first issue from private.issues
+    if new_state.private.issues:
+        question = new_state.private.issues.pop(0)
+
+        # Push to QUD
+        new_state.shared.push_qud(question)
+
+    return new_state
 
 
 def _select_clarification(state: InformationState) -> InformationState:

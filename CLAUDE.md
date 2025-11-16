@@ -22,7 +22,7 @@ git commit -m "feat(scope): description"
 
 - [Architecture](#architecture) - Policies 0, 10, 11, 12, 14
 - [Tooling](#tooling) - Policies 1, 2, 3, 9
-- [Process](#process) - Policies 4, 5, 6, 7, 8, 13
+- [Process](#process) - Policies 4, 5, 6, 7, 8, 13, 15
 - [Workflow](#workflow) - Daily tasks, commits, pushing
 
 ---
@@ -246,6 +246,34 @@ All reports tagged with timestamp and git hash in `reports/` directory.
 2. Write minimal code to pass
 3. Refactor code quality
 4. Commit each step
+
+### 15. Update NEXT-TASK.md After Completing Tasks
+
+**Policy**: When you complete tasks from NEXT-TASK.md, update the file and communicate the plan.
+
+**After completing tasks**:
+1. Update `NEXT-TASK.md` to reflect:
+   - Mark completed tasks as done (✅)
+   - Update progress percentages
+   - Document what was accomplished
+   - Clarify what's next in the sequence
+2. Tell the user what was completed and what the next steps are
+3. If tasks remain, summarize the plan forward
+4. If all tasks complete, suggest next logical work or ask for direction
+
+**Why**: Keeps task tracking synchronized, maintains project momentum, and ensures clear communication about progress and next steps.
+
+**Example**:
+```
+Completed Week 2 IBiS3 tasks:
+- ✅ Rule 4.1 (IssueAccommodation)
+- ✅ Rule 4.2 (LocalQuestionAccommodation)
+- ✅ Volunteer information handling
+
+Progress: IBiS3 35% → 50%
+
+Next: Week 3 tasks in NEXT-TASK.md (clarification questions + dependent issues)
+```
 
 ### 13. Documentation Organization
 

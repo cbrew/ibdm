@@ -1,8 +1,8 @@
 # Next Recommended Task
 
-**Date**: 2025-11-16 (Updated - Week 1 Complete!)
-**Basis**: IBIS_VARIANTS_PRIORITY.md, IBiS3 foundation implemented
-**Status**: 🎉 Foundation complete, ready for accommodation rules
+**Date**: 2025-11-16 (Updated - Week 2 Complete!)
+**Basis**: IBIS_VARIANTS_PRIORITY.md, IBiS3 accommodation rules implemented
+**Status**: 🎉 Week 2 complete, core accommodation working!
 
 ---
 
@@ -20,17 +20,88 @@
 
 ---
 
-## 🎯 IMMEDIATE PRIORITY: Implement IBiS3 Accommodation Rules
+## ✅ Week 2 Complete: IBiS3 Accommodation Rules Implemented!
 
-**Current Focus**: Week 2 - Implement Rule 4.1 and Rule 4.2
-**Duration**: 3-5 days
-**Blockers**: None - foundation is ready!
+**Completed** (2025-11-16):
+- ✅ Rule 4.1 (IssueAccommodation) - questions from plans → private.issues
+- ✅ Rule 4.2 (LocalQuestionAccommodation) - issues → QUD incrementally
+- ✅ Volunteer information handling - check private.issues before QUD
+- ✅ Modified _form_task_plan to NOT push to QUD directly
+- ✅ Modified _integrate_answer to handle volunteer answers
+- ✅ 11 new tests passing, 155 total core tests passing
+- ✅ Type checks clean (pyright 0 errors)
+- ✅ Committed and pushed: 3 commits implementing Rules 4.1, 4.2, and volunteer info
+
+**Commits**:
+- `feat(ibis3): implement Rule 4.1 (IssueAccommodation)`
+- `feat(ibis3): implement Rule 4.2 (LocalQuestionAccommodation)`
+- `feat(ibis3): handle volunteer information in integrate_answer`
+
+**Progress**: IBiS3 35% → 50% (core accommodation rules working)
+
+**Key Achievement**: Natural dialogue with volunteer information now works!
+```
+System: "What are the parties?"
+User: "Acme and Smith, effective January 1, 2025"
+System: [Accommodates date to private.issues, processes as volunteer answer]
+System: "What's the governing law?" ← SKIPS ALREADY-ANSWERED QUESTION!
+```
 
 ---
 
-## Week 2 Tasks: Core Accommodation Rules
+## 🎯 NEXT PRIORITY: Integration Testing & Refinement
 
-### Task 1: Implement Rule 4.1 (IssueAccommodation) ⚡ NEXT
+**Current Focus**: Week 3 - Test end-to-end and refine accommodation behavior
+**Duration**: 2-3 days
+**Blockers**: None - core rules implemented!
+
+---
+
+## Week 3 Tasks: Integration Testing & End-to-End Validation
+
+### Task 1: Create End-to-End Integration Test ⚡ NEXT
+
+**Goal**: Verify complete dialogue flow with accommodation and volunteer information
+
+**What to Do**:
+
+1. **Create integration test** in `tests/integration/test_ibis3_end_to_end.py`:
+   ```python
+   def test_nda_drafting_with_volunteer_information():
+       """Test complete NDA drafting dialogue with volunteer answers."""
+       # Test scenario:
+       # 1. User requests "I need to draft an NDA"
+       # 2. System accommodates questions to private.issues
+       # 3. System raises first question to QUD
+       # 4. User volunteers multiple facts in one answer
+       # 5. System processes volunteer info and skips those questions
+       # 6. System continues with remaining questions
+       # 7. Complete plan execution
+   ```
+
+2. **Test the full rule chain**:
+   - Task plan formation → Rule 4.1 (accommodation to issues)
+   - Rule 4.2 (raise to QUD) → SelectAsk → NLG
+   - User volunteer answer → integrate_answer (check issues first)
+   - Plan progression (skip answered questions)
+
+3. **Verify expected behavior**:
+   - Questions accommodated to private.issues (not QUD directly)
+   - Questions raised to QUD incrementally
+   - Volunteer answers recognized and processed
+   - System doesn't re-ask answered questions
+   - Plan completes successfully
+
+**Expected Outcome**:
+- Full dialogue flow works end-to-end
+- All IBiS3 rules work together correctly
+- Natural conversation with volunteer information
+
+---
+
+## ✅ Week 2 Tasks: Core Accommodation Rules (COMPLETED)
+
+### ✅ Task 1: Implement Rule 4.1 (IssueAccommodation)
 
 **Goal**: Accommodate findout questions from plans to private.issues (instead of pushing directly to QUD)
 

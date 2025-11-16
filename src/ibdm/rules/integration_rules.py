@@ -21,6 +21,15 @@ def create_integration_rules() -> list[UpdateRule]:
         List of integration rules
     """
     return [
+        # IBiS3 Rule 4.1: IssueAccommodation - accommodate findout subplans to private.issues
+        # This must run BEFORE form_task_plan to catch newly created plans
+        UpdateRule(
+            name="accommodate_issue_from_plan",
+            preconditions=_plan_has_findout_subplan,
+            effects=_accommodate_findout_to_issues,
+            priority=14,  # Higher than form_task_plan (13)
+            rule_type="integration",
+        ),
         # Task plan formation - create plans for command/request moves
         # This is THE RIGHT PLACE for task plan formation per Larsson (2002)
         # Renamed from "accommodate_command" to clarify this is task plan formation,
@@ -92,6 +101,32 @@ def create_integration_rules() -> list[UpdateRule]:
 
 
 # Precondition functions
+
+
+def _plan_has_findout_subplan(state: InformationState) -> bool:
+    """Check if there's an active plan with findout subplans to accommodate.
+
+    This checks if we've just created a task plan that contains findout
+    subplans. These should be accommodated to private.issues first,
+    not pushed directly to shared.qud.
+
+    Larsson (2002) Section 4.6.1 - IssueAccommodation rule.
+    """
+    # Check if we have active plans with findout subplans
+    for plan in state.private.plan:
+        if not plan.is_active():
+            continue
+
+        # Check if plan has unaccommodated findout subplans
+        for subplan in plan.subplans:
+            if subplan.plan_type == "findout" and subplan.is_active():
+                # Check if this question is already in issues or QUD
+                question = subplan.content
+                if isinstance(question, Question):
+                    if question not in state.private.issues and question not in state.shared.qud:
+                        return True
+
+    return False
 
 
 def _is_task_request_move(state: InformationState) -> bool:
@@ -179,6 +214,44 @@ def _is_quit_move(state: InformationState) -> bool:
 # Effect functions
 
 
+def _accommodate_findout_to_issues(state: InformationState) -> InformationState:
+    """Accommodate findout subplans to private.issues.
+
+    IBiS3 Rule 4.1 (IssueAccommodation):
+    Instead of pushing questions directly to QUD, accommodate them
+    to private.issues first. They'll be raised to QUD later by
+    Rule 4.2 (LocalQuestionAccommodation) when contextually appropriate.
+
+    Args:
+        state: Current information state
+
+    Returns:
+        New state with findout questions accommodated to private.issues
+
+    Larsson (2002) Section 4.6.1 - IssueAccommodation rule.
+    """
+    new_state = state.clone()
+
+    # Find active plans with findout subplans
+    for plan in new_state.private.plan:
+        if not plan.is_active():
+            continue
+
+        # Accommodate each findout subplan to private.issues
+        for subplan in plan.subplans:
+            if subplan.plan_type == "findout" and subplan.is_active():
+                question = subplan.content
+                if isinstance(question, Question):
+                    # Only accommodate if not already in issues or QUD
+                    if (
+                        question not in new_state.private.issues
+                        and question not in new_state.shared.qud
+                    ):
+                        new_state.private.issues.append(question)
+
+    return new_state
+
+
 def _form_task_plan(state: InformationState) -> InformationState:
     """Form execution plan for user's task.
 
@@ -226,11 +299,8 @@ def _form_task_plan(state: InformationState) -> InformationState:
         # Add plan to state
         new_state.private.plan.append(plan)
 
-        # Push first question to QUD
-        if plan.subplans and len(plan.subplans) > 0:
-            first_subplan = plan.subplans[0]
-            if first_subplan.content and isinstance(first_subplan.content, Question):
-                new_state.shared.push_qud(first_subplan.content)
+        # IBiS3: Do NOT push to QUD here - Rule 4.1 will accommodate to private.issues
+        # Rule 4.2 will then raise to QUD when appropriate
 
     # Check for travel booking requests (Larsson 2002 travel agency domain)
     elif (
@@ -253,11 +323,8 @@ def _form_task_plan(state: InformationState) -> InformationState:
         # Add plan to state
         new_state.private.plan.append(plan)
 
-        # Push first question to QUD
-        if plan.subplans and len(plan.subplans) > 0:
-            first_subplan = plan.subplans[0]
-            if first_subplan.content and isinstance(first_subplan.content, Question):
-                new_state.shared.push_qud(first_subplan.content)
+        # IBiS3: Do NOT push to QUD here - Rule 4.1 will accommodate to private.issues
+        # Rule 4.2 will then raise to QUD when appropriate
 
     # Add move to history
     new_state.shared.last_moves.append(move)
@@ -451,10 +518,15 @@ def _integrate_question(state: InformationState) -> InformationState:
 def _integrate_answer(state: InformationState) -> InformationState:
     """Integrate an 'answer' move by resolving QUD and updating commitments.
 
+    Modified for IBiS3:
+    1. Check if answer resolves question in private.issues (volunteer info)
+    2. If yes: remove from issues, add commitment, DON'T raise to QUD
+    3. If no: check QUD as normal (original behavior)
+
     When an answer is provided:
-    1. Check if it resolves the top QUD (using domain validation)
-    2. If valid: pop the question from QUD, add commitment, progress plan
-    3. If invalid: mark as needing clarification (Larsson Section 3.4 accommodation)
+    - Check if it resolves the top QUD (using domain validation)
+    - If valid: pop the question from QUD, add commitment, progress plan
+    - If invalid: mark as needing clarification (Larsson Section 3.4 accommodation)
 
     Note:
         Uses domain.resolves() for semantic validation (Larsson Section 2.4.3)
@@ -469,42 +541,59 @@ def _integrate_answer(state: InformationState) -> InformationState:
 
     if isinstance(move.content, Answer):
         answer = move.content
+        domain = _get_active_domain(new_state)
 
-        # Check if this answer resolves the top QUD using domain validation
-        top_question = new_state.shared.top_qud()
-        if top_question:
-            # Get active domain for semantic validation
-            # Automatically selects NDA or travel domain based on active plan
-            domain = _get_active_domain(new_state)
+        # IBiS3: Check private.issues FIRST (volunteer information)
+        volunteer_answer_handled = False
+        for issue in new_state.private.issues[:]:  # Iterate over copy
+            if domain.resolves(answer, issue):
+                # User volunteered answer to unasked question!
+                new_state.private.issues.remove(issue)
 
-            # Use domain.resolves() for type checking and validation
-            # This implements Larsson (2002) Section 2.4.3 semantic operation
-            if domain.resolves(answer, top_question):
-                # Valid answer - integrate normally
-                # Pop the resolved question
-                new_state.shared.pop_qud()
-
-                # Add answer as a commitment (convert to string for simplicity)
-                commitment = f"{top_question}: {answer.content}"
+                # Add commitment
+                commitment = f"{issue}: {answer.content}"
                 new_state.shared.commitments.add(commitment)
 
-                # Mark corresponding subplan as completed (Larsson Section 2.6)
-                # Find and complete the findout subplan for this question
-                _complete_subplan_for_question(new_state, top_question)
+                # Mark corresponding subplan as completed
+                _complete_subplan_for_question(new_state, issue)
 
-                # Push next question to QUD if there are more active subplans
-                # This implements plan progression per Larsson Section 2.6
-                next_question = _get_next_question_from_plan(new_state)
-                if next_question:
-                    new_state.shared.push_qud(next_question)
-                # If no next question, QUD remains empty (plan complete)
-            else:
-                # Invalid answer - needs clarification (Larsson Section 3.4)
-                # Keep question on QUD (don't pop)
-                # Mark that clarification is needed
-                new_state.private.beliefs["_needs_clarification"] = True
-                new_state.private.beliefs["_invalid_answer"] = answer.content
-                new_state.private.beliefs["_clarification_question"] = top_question
+                # DON'T raise this question to QUD - already answered!
+                volunteer_answer_handled = True
+                break  # Process one volunteer answer per turn
+
+        # If volunteer answer was handled, skip QUD processing
+        if not volunteer_answer_handled:
+            # No volunteer info - check QUD as normal (original behavior)
+            top_question = new_state.shared.top_qud()
+            if top_question:
+                # Use domain.resolves() for type checking and validation
+                # This implements Larsson (2002) Section 2.4.3 semantic operation
+                if domain.resolves(answer, top_question):
+                    # Valid answer - integrate normally
+                    # Pop the resolved question
+                    new_state.shared.pop_qud()
+
+                    # Add answer as a commitment (convert to string for simplicity)
+                    commitment = f"{top_question}: {answer.content}"
+                    new_state.shared.commitments.add(commitment)
+
+                    # Mark corresponding subplan as completed (Larsson Section 2.6)
+                    # Find and complete the findout subplan for this question
+                    _complete_subplan_for_question(new_state, top_question)
+
+                    # Push next question to QUD if there are more active subplans
+                    # This implements plan progression per Larsson Section 2.6
+                    next_question = _get_next_question_from_plan(new_state)
+                    if next_question:
+                        new_state.shared.push_qud(next_question)
+                    # If no next question, QUD remains empty (plan complete)
+                else:
+                    # Invalid answer - needs clarification (Larsson Section 3.4)
+                    # Keep question on QUD (don't pop)
+                    # Mark that clarification is needed
+                    new_state.private.beliefs["_needs_clarification"] = True
+                    new_state.private.beliefs["_invalid_answer"] = answer.content
+                    new_state.private.beliefs["_clarification_question"] = top_question
 
         # Add to last_moves
         new_state.shared.last_moves.append(move)
