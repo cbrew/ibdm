@@ -977,17 +977,27 @@ Confidence modes:
 
 ---
 
-## 🎯 NEXT PRIORITY: Finalize and Push
+## 🎯 NEXT PRIORITY: Begin IBIS-4 Implementation
 
-**Current Focus**: Final commit and push
-**Duration**: Minutes
+**Decision**: Defer remaining 6 IBIS-2 rules (edge case robustness) and **begin IBIS-4 implementation**
+
+**Rationale**:
+- Current IBIS-2 implementation (78%, 21/27 rules) covers **all essential grounding functionality**
+- Remaining 6 rules handle edge cases and advanced features (Rules 3.9, 3.12-3.15, 3.17, 3.22-3.24, 3.26-3.27)
+- IBIS-4 provides more value: transforms system from information-gathering to **task-execution**
+- IBIS-4 action execution requires the grounding we already have (confirmation, error handling)
+- Edge case robustness can be added later if needed
+
+**Current Focus**: Week 1 IBIS-4 tasks (Information State Extensions)
+**Duration**: 3-4 days for Week 1
 **Blockers**: None
 
-**Remaining Tasks**:
-- Update NEXT-TASK.md with final summary
-- Push all commits to remote
+**Starting Tasks**:
+1. ✅ ibdm-99.1: Add action fields to PrivateIS (1 day)
+2. ✅ ibdm-99.2: Create Action and Proposition classes (2 days)
+3. ✅ ibdm-99.3: Update serialization for action fields (1 day)
 
-**Progress**: Demo Application 100% complete! 🎉
+**Progress**: IBIS-4 implementation begins! 🚀
 
 ---
 
@@ -1581,12 +1591,17 @@ System: "Booking confirmed. Confirmation number: ABC123"
 - **Value**: Natural language action requests, not just commands
 - **Duration**: 2-3 weeks
 
-**Recommendation**:
-1. **First**: Complete remaining 6 IBiS-2 rules (1-2 weeks) for 100% grounding
-2. **Then**: Begin IBiS-4 implementation starting with information state extensions
-3. **Finally**: Enhance NLU as needed to support natural action requests
+**Recommendation (UPDATED 2025-11-16)**:
+1. ✅ **Defer**: Remaining 6 IBiS-2 rules handle edge cases only - defer for now
+2. 🚀 **Begin**: IBiS-4 implementation starting with information state extensions (Week 1-2)
+3. 📋 **Future**: Enhance NLU as needed to support natural action requests (Week 3+)
 
-**Rationale**: IBiS-2 grounding provides robustness needed for action execution (confirmation, error handling). Complete foundation before adding advanced capabilities.
+**Rationale**:
+- Current IBiS-2 (78%, 21/27 rules) provides sufficient grounding for action execution
+- Core grounding features complete: perception checks, understanding confirmations, acceptance feedback, user corrections
+- Remaining 6 rules are advanced edge cases that can be added later if needed
+- IBiS-4 provides more immediate value: action execution and negotiation
+- The grounding we have (confirmation requests, error handling) is what IBiS-4 needs most
 
 ---
 
