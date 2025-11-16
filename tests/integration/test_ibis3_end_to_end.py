@@ -39,9 +39,7 @@ class TestIBiS3RuleChain:
 
         # Turn 1: User requests NDA drafting
         user_move = DialogueMove(
-            move_type="command",
-            content="I need to draft an NDA",
-            speaker="user"
+            move_type="command", content="I need to draft an NDA", speaker="user"
         )
 
         # Store move in state for rules to process
@@ -58,9 +56,7 @@ class TestIBiS3RuleChain:
 
         # Verify: Rule 4.1 - Questions accommodated to private.issues (NOT QUD yet)
         # All 5 questions should be in private.issues
-        assert len(state.private.issues) == 5, (
-            f"Expected 5 issues, got {len(state.private.issues)}"
-        )
+        assert len(state.private.issues) == 5, f"Expected 5 issues, got {len(state.private.issues)}"
 
         # QUD should be EMPTY at this point (before SELECTION phase)
         assert len(state.shared.qud) == 0, (
@@ -76,9 +72,7 @@ class TestIBiS3RuleChain:
         state = selection_ruleset.apply_rules("selection", state)
 
         # Verify: Rule 4.2 - First issue raised to QUD
-        assert len(state.shared.qud) == 1, (
-            "QUD should have one question after selection"
-        )
+        assert len(state.shared.qud) == 1, "QUD should have one question after selection"
         assert len(state.private.issues) == 4, (
             "Issues should have 4 questions left (one moved to QUD)"
         )
@@ -118,9 +112,7 @@ class TestIBiS3RuleChain:
 
         # Turn 1: Create NDA plan
         user_move = DialogueMove(
-            move_type="command",
-            content="I need to draft an NDA",
-            speaker="user"
+            move_type="command", content="I need to draft an NDA", speaker="user"
         )
         state.private.beliefs["_temp_move"] = user_move
         state = integration_ruleset.apply_rules("integration", state)
@@ -141,15 +133,8 @@ class TestIBiS3RuleChain:
         print(f"  - Date question: {date_question}")
 
         # Turn 2: User volunteers answer for date (unasked question!)
-        volunteer_answer = Answer(
-            content="January 1, 2025",
-            question_ref=date_question
-        )
-        volunteer_move = DialogueMove(
-            move_type="answer",
-            content=volunteer_answer,
-            speaker="user"
-        )
+        volunteer_answer = Answer(content="January 1, 2025", question_ref=date_question)
+        volunteer_move = DialogueMove(move_type="answer", content=volunteer_answer, speaker="user")
         state.private.beliefs["_temp_move"] = volunteer_move
 
         # Apply integration rules
@@ -169,7 +154,7 @@ class TestIBiS3RuleChain:
             "Volunteer answer should be committed"
         )
 
-        print(f"\n✅ After volunteer answer:")
+        print("\n✅ After volunteer answer:")
         print(f"  - Issues: {len(state.private.issues)} questions (one removed)")
         print(f"  - Commitment added: {expected_commitment}")
         print(f"  - QUD: {len(state.shared.qud)} (unchanged - not asked yet)")
@@ -204,9 +189,7 @@ class TestIBiS3MultiTurnDialogue:
         # Turn 1: User requests NDA
         print("\n📥 Turn 1: User requests NDA")
         user_move = DialogueMove(
-            move_type="command",
-            content="I need to draft an NDA",
-            speaker="user"
+            move_type="command", content="I need to draft an NDA", speaker="user"
         )
         state.private.beliefs["_temp_move"] = user_move
 
@@ -254,7 +237,9 @@ class TestIBiS3MultiTurnDialogue:
 
         print(f"  ✅ QUD length: {len(state.shared.qud)} (still incremental!)")
         print(f"  ✅ Issues length: {len(state.private.issues)}")
-        print(f"  ✅ System asks: {state.shared.qud[-1].predicate}")
+        next_q = state.shared.qud[-1]
+        q_desc = getattr(next_q, "predicate", None) or str(next_q)
+        print(f"  ✅ System asks: {q_desc}")
         print(f"  ✅ Commitments: {len(state.shared.commitments)}")
 
         # Verify: IBiS3 incremental questioning working
