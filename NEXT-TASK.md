@@ -1,8 +1,8 @@
 # Next Recommended Task
 
-**Date**: 2025-11-16 (Updated - Week 3 Complete!)
-**Basis**: IBIS_VARIANTS_PRIORITY.md, IBiS3 end-to-end verified
-**Status**: 🎉 Week 3 complete, IBiS3 rule chain verified and working!
+**Date**: 2025-11-16 (Updated - Week 3 Complete + NLU Interface Defined!)
+**Basis**: IBIS_VARIANTS_PRIORITY.md, IBiS3 end-to-end verified, NLU requirements analyzed
+**Status**: 🎉 Week 3 complete, IBiS3 rule chain verified and working! NLU interface defined!
 
 ---
 
@@ -152,6 +152,62 @@ Turn 2:
 
 ---
 
+### Task 3: NLU Interface Adoption ⚡ RECOMMENDED
+
+**Goal**: Adopt BaseNLUService interface to separate NLU requirements from implementation
+
+**Context**:
+- ✅ Completed IBiS NLU requirements analysis (`reports/ibis-nlu-requirements-analysis.md`)
+- ✅ Defined abstract interface (`src/ibdm/nlu/base_nlu_service.py`)
+- ✅ Created specification document (`docs/nlu_interface_specification.md`)
+
+**What to Do**:
+
+1. **Create NLUServiceAdapter** (2-3 hours):
+   - Create `src/ibdm/nlu/nlu_service_adapter.py`
+   - Wrap current `NLUEngine` to implement `BaseNLUService`
+   - Implement all IBiS1 required methods
+   - Report `get_supported_ibis_level() → "IBiS1"`
+   - Add unit tests for adapter
+
+2. **Create Mock NLU for Testing** (1-2 hours):
+   - Create `tests/mocks/mock_nlu_service.py`
+   - Simple mock implementing `BaseNLUService`
+   - Configurable responses for test scenarios
+   - Enables dialogue manager testing without full NLU
+
+3. **Use Interface in Dialogue Manager Tests** (1 hour):
+   - Update existing tests to use `BaseNLUService` interface
+   - Add tests using mock NLU
+   - Verify dialogue managers work with interface
+
+4. **Document IBiS3 NLU Requirements** (1 hour):
+   - List specific enhancements needed for Rules 4.3-4.5
+   - Multi-fact extraction requirements
+   - Volunteer information detection
+   - Answer-question matching improvements
+   - Plan for implementation (future work)
+
+**Expected Outcome**:
+- Clear separation between NLU interface and implementation
+- Mock implementations enable dialogue manager testing
+- Path forward for IBiS3 NLU enhancements documented
+- Current NLU wrapped in standard interface
+
+**Benefits**:
+- Test dialogue managers independently of NLU complexity
+- Clear contract for what NLU must provide
+- Easy to compare different NLU approaches
+- Progressive enhancement path (IBiS1 → IBiS3 → IBiS2 → IBiS4)
+
+**Why Now**:
+- Interface defined and type-safe ✅
+- Enables testing of future IBiS features
+- Aligns with priority: build/test IBiS variants first, enhance NLU later
+- Low effort, high value for future work
+
+---
+
 ## Progress Tracking
 
 **IBiS3 Completion**:
@@ -188,10 +244,17 @@ Turn 2:
 1. ⚡ Update SYSTEM_ACHIEVEMENTS.md - 1 hour
 2. ⚡ Update LARSSON_PRIORITY_ROADMAP.md - 30 min
 3. 📋 Create IBiS3 implementation guide - 2 hours
-4. 🔮 Plan clarification questions (Rule 4.3) - 1 day
+4. ⚡ **NEW: NLU Interface Adoption** - 4-6 hours
+   - Create NLUServiceAdapter wrapping current NLUEngine
+   - Create Mock NLU for testing
+   - Use interface in dialogue manager tests
+   - Document IBiS3 NLU requirements
+5. 🔮 Plan clarification questions (Rule 4.3) - 1 day
 
-**Total Effort**: 1-2 days
-**Goal**: IBiS3 60% → 65%
-**Outcome**: Documented achievements, ready for next feature
+**Total Effort**: 2-3 days
+**Goal**: IBiS3 60% → 65% + NLU interface adoption
+**Outcome**: Documented achievements, NLU interface in use, ready for next feature
+
+**Key Insight**: NLU interface enables testing IBiS variants independently of NLU complexity!
 
 Ready to consolidate! 📚
