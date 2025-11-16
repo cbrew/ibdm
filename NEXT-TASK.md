@@ -399,11 +399,85 @@ User: "Actually, april 4th"
 
 ---
 
-## 🎯 NEXT RECOMMENDED TASK: Week 11+
+## 🚀 IBiS2 Implementation Started!
 
-**Status**: IBiS3 100% complete, Core dialogue loop verified, Ready for next phase
+**Started**: 2025-11-16
+**Status**: Week 1-2 tasks in progress (Information State Extensions)
 
-**Recommended Path**: **Option 1 - Demo Application** (2-3 weeks, HIGH VALUE)
+### ✅ Completed Tasks (2/3 Week 1-2 tasks)
+
+#### ibdm-98.1: Add grounding fields to SharedIS ✅
+
+**Completed**: 2025-11-16
+**Commit**: `876acd1`
+
+**What Was Done**:
+- ✅ Added `moves: list[DialogueMove]` to SharedIS for complete move history
+- ✅ Added `next_moves: list[DialogueMove]` for pending system moves
+- ✅ Updated SharedIS.to_dict() to serialize new fields
+- ✅ Improved SharedIS.from_dict() to properly reconstruct DialogueMoves
+- ✅ Added 6 comprehensive unit tests for grounding fields
+- ✅ All 37 information_state tests passing
+- ✅ Type checks clean (pyright 0 errors)
+
+**Larsson Reference**: Figure 3.1, Section 3.6.4
+
+---
+
+#### ibdm-98.2: Create grounding status tracking module ✅
+
+**Completed**: 2025-11-16
+**Commit**: `e02f1c8`
+
+**What Was Done**:
+- ✅ Created `src/ibdm/core/grounding.py` module
+- ✅ Added GroundingStatus enum (ungrounded, pending, grounded)
+- ✅ Added GroundingStrategy enum (optimistic, cautious, pessimistic)
+- ✅ Added ActionLevel enum for ICM feedback (con, per, sem, und, acc)
+- ✅ Implemented EvidenceRequirement dataclass with move-specific thresholds
+- ✅ Implemented select_grounding_strategy() for dynamic selection
+- ✅ Implemented requires_confirmation() logic
+- ✅ 33 comprehensive unit tests (all passing)
+- ✅ Type checks clean (pyright 0 errors)
+
+**Features**:
+- Dynamic strategy selection based on confidence and move type
+- Move-specific confidence thresholds (quit: 0.9, ask: 0.8, answer: 0.7, greet: 0.6)
+- Automatic confirmation for critical moves
+
+**Larsson Reference**: Section 3.5, Section 3.6.1, Section 3.6.6
+
+---
+
+### 📋 Next Task: ibdm-98.3
+
+**Task**: Update serialization for grounding fields
+**Duration**: ~1 hour
+**Description**: Update to_dict/from_dict methods in information_state.py to handle new grounding fields (moves, next_moves). Add type safety and validation.
+
+---
+
+## Progress Summary
+
+**IBiS2 Progress**: 10% → 15% (Week 1-2 foundations started)
+
+**Test Coverage**:
+- Core tests: 91 passing
+- Information state tests: 37 passing
+- Grounding tests: 33 passing
+- **Total**: 161+ tests passing
+
+**Commits This Session**:
+1. `feat(ibis2): add grounding fields to SharedIS (ibdm-98.1)` - 876acd1
+2. `feat(ibis2): create grounding status tracking module (ibdm-98.2)` - e02f1c8
+
+---
+
+## 🎯 NEXT RECOMMENDED TASK: Continue IBiS2
+
+**Status**: IBiS3 100% complete, Core dialogue loop verified, IBiS2 started
+
+**Current Path**: **IBiS2 Implementation** (6-8 weeks, HIGH VALUE for production robustness)
 
 ### Option 1: Interactive Demo Application (RECOMMENDED)
 

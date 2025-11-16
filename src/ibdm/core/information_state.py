@@ -116,6 +116,10 @@ class SharedIS:
 
     Contains information that is mutually believed to be shared between
     dialogue participants, including the QUD stack and shared commitments.
+
+    IBiS2 Extension: The 'moves' and 'next_moves' fields support grounding.
+    Moves tracks complete dialogue history with grounding status, next_moves
+    contains pending system moves. Based on Larsson Figure 3.1.
     """
 
     qud: list[Question] = field(default_factory=lambda: [])
@@ -126,6 +130,12 @@ class SharedIS:
 
     last_moves: list[DialogueMove] = field(default_factory=lambda: [])
     """Recent moves from dialogue partners"""
+
+    moves: list[DialogueMove] = field(default_factory=lambda: [])
+    """Complete move history with grounding status (IBiS2 - Larsson Figure 3.1)"""
+
+    next_moves: list[DialogueMove] = field(default_factory=lambda: [])
+    """Pending system moves to be performed (IBiS2 - Larsson Figure 3.1)"""
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to JSON-serializable dict.
@@ -138,19 +148,73 @@ class SharedIS:
             "last_moves": [
                 m.to_dict() if hasattr(m, "to_dict") else str(m) for m in self.last_moves
             ],
+            "moves": [m.to_dict() if hasattr(m, "to_dict") else str(m) for m in self.moves],
+            "next_moves": [
+                m.to_dict() if hasattr(m, "to_dict") else str(m) for m in self.next_moves
+            ],
         }
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "SharedIS":
         """Reconstruct from dict.
 
-        Note: QUD and moves are not fully reconstructed (stored as empty).
-        For now, we only restore commitments which are simple strings.
+        Properly deserializes all fields including questions and moves.
+
+        Args:
+            data: Dictionary representation from to_dict()
+
+        Returns:
+            Reconstructed SharedIS
         """
+        from ibdm.core.moves import DialogueMove
+        from ibdm.core.questions import Question
+
+        # Reconstruct QUD
+        qud_data = data.get("qud", [])
+        qud: list[Question] = []
+        for q in qud_data:
+            if isinstance(q, dict):
+                qud.append(Question.from_dict(cast(dict[str, Any], q)))
+            elif isinstance(q, Question):
+                qud.append(q)
+            # Skip string representations
+
+        # Reconstruct last_moves
+        last_moves_data = data.get("last_moves", [])
+        last_moves: list[DialogueMove] = []
+        for m in last_moves_data:
+            if isinstance(m, dict):
+                last_moves.append(DialogueMove.from_dict(cast(dict[str, Any], m)))
+            elif isinstance(m, DialogueMove):
+                last_moves.append(m)
+            # Skip string representations
+
+        # Reconstruct moves (IBiS2)
+        moves_data = data.get("moves", [])
+        moves: list[DialogueMove] = []
+        for m in moves_data:
+            if isinstance(m, dict):
+                moves.append(DialogueMove.from_dict(cast(dict[str, Any], m)))
+            elif isinstance(m, DialogueMove):
+                moves.append(m)
+            # Skip string representations
+
+        # Reconstruct next_moves (IBiS2)
+        next_moves_data = data.get("next_moves", [])
+        next_moves: list[DialogueMove] = []
+        for m in next_moves_data:
+            if isinstance(m, dict):
+                next_moves.append(DialogueMove.from_dict(cast(dict[str, Any], m)))
+            elif isinstance(m, DialogueMove):
+                next_moves.append(m)
+            # Skip string representations
+
         return cls(
-            qud=[],  # Questions would need Question.from_dict() - skip for now
+            qud=qud,
             commitments=set(data.get("commitments", [])),  # Convert list back to set
-            last_moves=[],  # Moves would need DialogueMove.from_dict() - skip for now
+            last_moves=last_moves,
+            moves=moves,
+            next_moves=next_moves,
         )
 
     def __str__(self) -> str:

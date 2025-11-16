@@ -98,6 +98,8 @@ class TestSharedIS:
         assert shared.qud == []
         assert shared.commitments == set()
         assert shared.last_moves == []
+        assert shared.moves == []  # IBiS2
+        assert shared.next_moves == []  # IBiS2
 
     def test_push_qud(self):
         """Test pushing a question onto QUD stack."""
@@ -172,6 +174,109 @@ class TestSharedIS:
         s = str(shared)
         assert "SharedIS" in s
         assert "qud=1" in s
+
+    def test_creation_with_moves(self):
+        """Test creating a SharedIS with moves (IBiS2)."""
+        move1 = DialogueMove(move_type="ask", content="What is the weather?", speaker="user")
+        move2 = DialogueMove(move_type="answer", content="Sunny", speaker="system")
+        shared = SharedIS(moves=[move1, move2])
+        assert len(shared.moves) == 2
+        assert shared.moves[0] == move1
+        assert shared.moves[1] == move2
+
+    def test_creation_with_next_moves(self):
+        """Test creating a SharedIS with next_moves (IBiS2)."""
+        move1 = DialogueMove(move_type="ask", content="What is your name?", speaker="system")
+        move2 = DialogueMove(move_type="icm", content="confirmation", speaker="system")
+        shared = SharedIS(next_moves=[move1, move2])
+        assert len(shared.next_moves) == 2
+        assert shared.next_moves[0] == move1
+        assert shared.next_moves[1] == move2
+
+    def test_serialization_with_grounding_fields(self):
+        """Test serialization of SharedIS with IBiS2 grounding fields."""
+        # Create moves
+        q = WhQuestion(variable="x", predicate="weather(x)")
+        move1 = DialogueMove(move_type="ask", content=q, speaker="system")
+        move2 = DialogueMove(move_type="answer", content="sunny", speaker="user")
+
+        # Create SharedIS with grounding fields
+        shared = SharedIS(moves=[move1, move2], next_moves=[move1], commitments={"weather(sunny)"})
+
+        # Serialize
+        data = shared.to_dict()
+        assert "moves" in data
+        assert "next_moves" in data
+        assert len(data["moves"]) == 2
+        assert len(data["next_moves"]) == 1
+
+    def test_deserialization_with_grounding_fields(self):
+        """Test deserialization of SharedIS with IBiS2 grounding fields."""
+        # Create moves with complex content
+        q = WhQuestion(variable="x", predicate="parties(x)")
+        a = Answer(content="Acme Corp", question_ref=q)
+        move1 = DialogueMove(move_type="ask", content=q, speaker="system")
+        move2 = DialogueMove(move_type="answer", content=a, speaker="user")
+
+        # Create SharedIS
+        shared = SharedIS(
+            moves=[move1, move2], next_moves=[move1], commitments={"parties(acme_corp)"}
+        )
+
+        # Serialize and deserialize
+        data = shared.to_dict()
+        reconstructed = SharedIS.from_dict(data)
+
+        # Verify reconstruction
+        assert len(reconstructed.moves) == 2
+        assert len(reconstructed.next_moves) == 1
+        assert reconstructed.commitments == {"parties(acme_corp)"}
+
+        # Verify moves are properly reconstructed
+        assert isinstance(reconstructed.moves[0], DialogueMove)
+        assert isinstance(reconstructed.moves[1], DialogueMove)
+        assert reconstructed.moves[0].move_type == "ask"
+        assert reconstructed.moves[1].move_type == "answer"
+
+    def test_grounding_move_history_tracking(self):
+        """Test tracking complete move history for grounding (IBiS2)."""
+        shared = SharedIS()
+
+        # Simulate dialogue with move tracking
+        q1 = WhQuestion(variable="x", predicate="destination(x)")
+        move1 = DialogueMove(move_type="ask", content=q1, speaker="system")
+        shared.moves.append(move1)
+
+        a1 = Answer(content="Paris", question_ref=q1)
+        move2 = DialogueMove(move_type="answer", content=a1, speaker="user")
+        shared.moves.append(move2)
+
+        # Verify history
+        assert len(shared.moves) == 2
+        assert shared.moves[0].speaker == "system"
+        assert shared.moves[1].speaker == "user"
+
+    def test_next_moves_queue(self):
+        """Test pending system moves queue (IBiS2)."""
+        shared = SharedIS()
+
+        # System prepares multiple moves
+        q1 = WhQuestion(variable="x", predicate="name(x)")
+        move1 = DialogueMove(move_type="ask", content=q1, speaker="system")
+
+        q2 = WhQuestion(variable="y", predicate="age(y)")
+        move2 = DialogueMove(move_type="ask", content=q2, speaker="system")
+
+        # Add to next_moves queue
+        shared.next_moves.append(move1)
+        shared.next_moves.append(move2)
+
+        assert len(shared.next_moves) == 2
+
+        # Pop first move
+        next_move = shared.next_moves.pop(0)
+        assert next_move == move1
+        assert len(shared.next_moves) == 1
 
 
 class TestControlIS:
