@@ -178,3 +178,80 @@ class TestRule42LocalQuestionAccommodation:
         # Should have no effect
         assert len(new_state.shared.qud) == 0
         assert len(new_state.private.issues) == 0
+
+
+class TestVolunteerInformationHandling:
+    """Test volunteer information handling in integrate_answer."""
+
+    def test_volunteer_information_handling(self):
+        """Test IBiS3: User volunteers answer before being asked."""
+        from ibdm.core import Answer, DialogueMove
+        from ibdm.rules.integration_rules import _integrate_answer
+
+        state = InformationState()
+
+        # Setup: Question in private.issues (not yet asked)
+        q = WhQuestion(variable="x", predicate="effective_date(x)")
+        state.private.issues.append(q)
+
+        # User volunteers answer
+        answer = Answer(content="January 1, 2025", question_ref=q)
+        move = DialogueMove(move_type="answer", content=answer, speaker="user")
+        state.private.beliefs["_temp_move"] = move
+
+        # Apply integration
+        new_state = _integrate_answer(state)
+
+        # Assertions
+        assert q not in new_state.private.issues  # Removed from issues
+        assert len(new_state.shared.qud) == 0  # NOT raised to QUD
+        assert len(new_state.shared.commitments) > 0  # Answer committed
+
+    def test_volunteer_answer_not_in_qud(self):
+        """Test that volunteer answers don't affect QUD."""
+        from ibdm.core import Answer, DialogueMove
+        from ibdm.rules.integration_rules import _integrate_answer
+
+        state = InformationState()
+
+        # Setup: Two questions - one in issues, one in QUD
+        q_issue = WhQuestion(variable="x", predicate="effective_date(x)")
+        q_qud = WhQuestion(variable="y", predicate="parties(y)")
+        state.private.issues.append(q_issue)
+        state.shared.push_qud(q_qud)
+
+        # User volunteers answer to the issue question (not the QUD question)
+        answer = Answer(content="January 1, 2025", question_ref=q_issue)
+        move = DialogueMove(move_type="answer", content=answer, speaker="user")
+        state.private.beliefs["_temp_move"] = move
+
+        # Apply integration
+        new_state = _integrate_answer(state)
+
+        # Assertions
+        assert q_issue not in new_state.private.issues  # Removed from issues
+        assert len(new_state.shared.qud) == 1  # QUD unchanged
+        assert new_state.shared.qud[0] == q_qud  # Same question in QUD
+
+    def test_normal_qud_answer_still_works(self):
+        """Test that normal QUD answering still works after modification."""
+        from ibdm.core import Answer, DialogueMove
+        from ibdm.rules.integration_rules import _integrate_answer
+
+        state = InformationState()
+
+        # Setup: Question in QUD (normal case)
+        q = WhQuestion(variable="x", predicate="parties(x)")
+        state.shared.push_qud(q)
+
+        # User answers the QUD question
+        answer = Answer(content="Acme Corp", question_ref=q)
+        move = DialogueMove(move_type="answer", content=answer, speaker="user")
+        state.private.beliefs["_temp_move"] = move
+
+        # Apply integration
+        new_state = _integrate_answer(state)
+
+        # Assertions
+        assert len(new_state.shared.qud) == 0  # QUD popped
+        assert len(new_state.shared.commitments) > 0  # Answer committed

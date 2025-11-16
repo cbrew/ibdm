@@ -518,10 +518,15 @@ def _integrate_question(state: InformationState) -> InformationState:
 def _integrate_answer(state: InformationState) -> InformationState:
     """Integrate an 'answer' move by resolving QUD and updating commitments.
 
+    Modified for IBiS3:
+    1. Check if answer resolves question in private.issues (volunteer info)
+    2. If yes: remove from issues, add commitment, DON'T raise to QUD
+    3. If no: check QUD as normal (original behavior)
+
     When an answer is provided:
-    1. Check if it resolves the top QUD (using domain validation)
-    2. If valid: pop the question from QUD, add commitment, progress plan
-    3. If invalid: mark as needing clarification (Larsson Section 3.4 accommodation)
+    - Check if it resolves the top QUD (using domain validation)
+    - If valid: pop the question from QUD, add commitment, progress plan
+    - If invalid: mark as needing clarification (Larsson Section 3.4 accommodation)
 
     Note:
         Uses domain.resolves() for semantic validation (Larsson Section 2.4.3)
@@ -536,42 +541,59 @@ def _integrate_answer(state: InformationState) -> InformationState:
 
     if isinstance(move.content, Answer):
         answer = move.content
+        domain = _get_active_domain(new_state)
 
-        # Check if this answer resolves the top QUD using domain validation
-        top_question = new_state.shared.top_qud()
-        if top_question:
-            # Get active domain for semantic validation
-            # Automatically selects NDA or travel domain based on active plan
-            domain = _get_active_domain(new_state)
+        # IBiS3: Check private.issues FIRST (volunteer information)
+        volunteer_answer_handled = False
+        for issue in new_state.private.issues[:]:  # Iterate over copy
+            if domain.resolves(answer, issue):
+                # User volunteered answer to unasked question!
+                new_state.private.issues.remove(issue)
 
-            # Use domain.resolves() for type checking and validation
-            # This implements Larsson (2002) Section 2.4.3 semantic operation
-            if domain.resolves(answer, top_question):
-                # Valid answer - integrate normally
-                # Pop the resolved question
-                new_state.shared.pop_qud()
-
-                # Add answer as a commitment (convert to string for simplicity)
-                commitment = f"{top_question}: {answer.content}"
+                # Add commitment
+                commitment = f"{issue}: {answer.content}"
                 new_state.shared.commitments.add(commitment)
 
-                # Mark corresponding subplan as completed (Larsson Section 2.6)
-                # Find and complete the findout subplan for this question
-                _complete_subplan_for_question(new_state, top_question)
+                # Mark corresponding subplan as completed
+                _complete_subplan_for_question(new_state, issue)
 
-                # Push next question to QUD if there are more active subplans
-                # This implements plan progression per Larsson Section 2.6
-                next_question = _get_next_question_from_plan(new_state)
-                if next_question:
-                    new_state.shared.push_qud(next_question)
-                # If no next question, QUD remains empty (plan complete)
-            else:
-                # Invalid answer - needs clarification (Larsson Section 3.4)
-                # Keep question on QUD (don't pop)
-                # Mark that clarification is needed
-                new_state.private.beliefs["_needs_clarification"] = True
-                new_state.private.beliefs["_invalid_answer"] = answer.content
-                new_state.private.beliefs["_clarification_question"] = top_question
+                # DON'T raise this question to QUD - already answered!
+                volunteer_answer_handled = True
+                break  # Process one volunteer answer per turn
+
+        # If volunteer answer was handled, skip QUD processing
+        if not volunteer_answer_handled:
+            # No volunteer info - check QUD as normal (original behavior)
+            top_question = new_state.shared.top_qud()
+            if top_question:
+                # Use domain.resolves() for type checking and validation
+                # This implements Larsson (2002) Section 2.4.3 semantic operation
+                if domain.resolves(answer, top_question):
+                    # Valid answer - integrate normally
+                    # Pop the resolved question
+                    new_state.shared.pop_qud()
+
+                    # Add answer as a commitment (convert to string for simplicity)
+                    commitment = f"{top_question}: {answer.content}"
+                    new_state.shared.commitments.add(commitment)
+
+                    # Mark corresponding subplan as completed (Larsson Section 2.6)
+                    # Find and complete the findout subplan for this question
+                    _complete_subplan_for_question(new_state, top_question)
+
+                    # Push next question to QUD if there are more active subplans
+                    # This implements plan progression per Larsson Section 2.6
+                    next_question = _get_next_question_from_plan(new_state)
+                    if next_question:
+                        new_state.shared.push_qud(next_question)
+                    # If no next question, QUD remains empty (plan complete)
+                else:
+                    # Invalid answer - needs clarification (Larsson Section 3.4)
+                    # Keep question on QUD (don't pop)
+                    # Mark that clarification is needed
+                    new_state.private.beliefs["_needs_clarification"] = True
+                    new_state.private.beliefs["_invalid_answer"] = answer.content
+                    new_state.private.beliefs["_clarification_question"] = top_question
 
         # Add to last_moves
         new_state.shared.last_moves.append(move)
