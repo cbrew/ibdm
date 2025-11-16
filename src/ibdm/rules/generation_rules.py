@@ -6,6 +6,8 @@ They implement template-based and context-aware generation strategies.
 Based on Larsson (2002) Issue-based Dialogue Management.
 """
 
+from typing import Any, cast
+
 from ibdm.core import (
     AltQuestion,
     Answer,
@@ -26,6 +28,14 @@ def create_generation_rules() -> list[UpdateRule]:
         List of generation rules
     """
     return [
+        # ICM generation (Interactive Communication Management)
+        UpdateRule(
+            name="generate_icm",
+            preconditions=_is_icm_move,
+            effects=_generate_icm_text,
+            priority=11,  # Higher than others - ICM is meta-communication
+            rule_type="generation",
+        ),
         # Greeting generation
         UpdateRule(
             name="generate_greeting",
@@ -78,6 +88,12 @@ def create_generation_rules() -> list[UpdateRule]:
 
 
 # Precondition functions
+
+
+def _is_icm_move(state: InformationState) -> bool:
+    """Check if the move to generate is an ICM (Interactive Communication Management) move."""
+    move = state.private.beliefs.get("_temp_generate_move")
+    return isinstance(move, DialogueMove) and move.move_type == "icm"
 
 
 def _is_greeting_move(state: InformationState) -> bool:
@@ -168,6 +184,47 @@ def _get_domain_for_plan(plan: Plan | None) -> DomainModel | None:
 
 
 # Effect functions
+
+
+def _generate_icm_text(state: InformationState) -> InformationState:
+    """Generate text for an ICM (Interactive Communication Management) move.
+
+    ICM moves include clarification requests, confirmations, perception checks, etc.
+    """
+    new_state = state.clone()
+    move = new_state.private.beliefs.get("_temp_generate_move")
+
+    if move is None:
+        new_state.private.beliefs["_temp_generated_text"] = "I'm not sure what you mean."
+        return new_state
+
+    # Extract ICM content
+    content = move.content
+    text: str
+    if isinstance(content, dict):
+        # Cast to dict for type checking
+        content_dict = cast(dict[str, Any], content)
+        icm_type: str = str(content_dict.get("icm_type", "unknown"))
+        message: str = str(content_dict.get("message", ""))
+
+        if icm_type == "clarify":
+            # Use the message from the content
+            text = message
+        elif icm_type == "confirm":
+            # Confirmation request
+            text = str(content_dict.get("message", "Can you confirm that?"))
+        elif icm_type == "perception":
+            # Perception check (did I hear you correctly?)
+            text = str(content_dict.get("message", "Did I understand you correctly?"))
+        else:
+            # Unknown ICM type - use generic message
+            text = message if message else "I'm not sure what you mean."
+    else:
+        # Fallback for non-dict content
+        text = str(content)
+
+    new_state.private.beliefs["_temp_generated_text"] = text
+    return new_state
 
 
 def _generate_greeting_text(state: InformationState) -> InformationState:

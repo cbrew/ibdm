@@ -15,16 +15,27 @@ def create_selection_rules() -> list[UpdateRule]:
     """Create IBiS1 selection rules.
 
     Implements the selection rules from Larsson (2002) Section 2.9:
-    1. SelectFromPlan (Section 2.9.1) - Select action from plan
-    2. SelectAnswer (Section 2.9.4) - Answer top QUD question
-    3. SelectAsk (Section 2.9.2) - Ask top QUD question
-    4. SelectGreet (Section 2.9) - Greet at dialogue start
-    5. Fallback - Generic response
+    1. SelectClarification (Section 3.4) - Request clarification for invalid answer
+    2. SelectFromPlan (Section 2.9.1) - Select action from plan
+    3. SelectAnswer (Section 2.9.4) - Answer top QUD question
+    4. SelectAsk (Section 2.9.2) - Ask top QUD question
+    5. SelectGreet (Section 2.9) - Greet at dialogue start
+    6. Fallback - Generic response
 
     Returns:
         List of IBiS1 selection rules
     """
     return [
+        # Rule: SelectClarification (Section 3.4 - Accommodation)
+        # Pre: Invalid answer received, clarification needed
+        # Effect: add(shared.next_moves, icm:clarify(Q))
+        UpdateRule(
+            name="select_clarification",
+            preconditions=_needs_clarification,
+            effects=_select_clarification,
+            priority=25,  # Highest - must handle invalid input first
+            rule_type="selection",
+        ),
         # Rule: SelectFromPlan (Section 2.9.1)
         # Pre: head(private.plan) is a communicative action
         # Effect: add(shared.next_moves, head(private.plan))
@@ -77,6 +88,20 @@ def create_selection_rules() -> list[UpdateRule]:
 
 
 # Precondition functions (IBiS1)
+
+
+def _needs_clarification(state: InformationState) -> bool:
+    """Check if clarification is needed for invalid answer.
+
+    IBiS3 Rule: SelectClarification (Section 3.4 - Accommodation)
+    Pre: Invalid answer received, needs clarification
+    """
+    # Don't trigger if there's already something on the agenda
+    if state.private.agenda:
+        return False
+
+    # Check if clarification marker is set
+    return state.private.beliefs.get("_needs_clarification", False)
 
 
 def _has_communicative_plan(state: InformationState) -> bool:
@@ -192,6 +217,47 @@ def _should_greet(state: InformationState) -> bool:
 
 
 # Effect functions (IBiS1)
+
+
+def _select_clarification(state: InformationState) -> InformationState:
+    """Select clarification request for invalid answer.
+
+    IBiS3 Rule: SelectClarification (Section 3.4 - Accommodation)
+    Effect: add(shared.next_moves, icm:clarify(Q))
+
+    Creates an ICM (Interactive Communication Management) move requesting
+    clarification about the invalid answer.
+    """
+    new_state = state.clone()
+
+    # Get the question that needs clarification
+    question = new_state.private.beliefs.get("_clarification_question")
+    invalid_answer = new_state.private.beliefs.get("_invalid_answer")
+
+    # Create ICM clarification move
+    # ICM moves have format "icm:<subtype>" for move_type
+    # Content is a dict with clarification details
+    clarification_content = {
+        "icm_type": "clarify",
+        "question": question,
+        "invalid_answer": invalid_answer,
+        "message": "I didn't understand that answer. Could you please provide a valid response?",
+    }
+
+    move = DialogueMove(
+        move_type="icm",
+        content=clarification_content,
+        speaker=new_state.agent_id,
+        metadata={"icm_subtype": "clarify"},
+    )
+    new_state.private.agenda.append(move)
+
+    # Clear the clarification markers
+    new_state.private.beliefs["_needs_clarification"] = False
+    new_state.private.beliefs.pop("_invalid_answer", None)
+    new_state.private.beliefs.pop("_clarification_question", None)
+
+    return new_state
 
 
 def _select_plan_action(state: InformationState) -> InformationState:
