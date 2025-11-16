@@ -52,14 +52,34 @@ class PrivateIS:
     def from_dict(cls, data: dict[str, Any]) -> "PrivateIS":
         """Reconstruct from dict.
 
-        Note: Plans, agenda, and last_utterance are not fully reconstructed.
-        For now, we only restore beliefs which are standard Python types.
+        Args:
+            data: Dictionary representation from to_dict()
+
+        Returns:
+            Reconstructed PrivateIS object
         """
+        from ibdm.core.moves import DialogueMove
+        from ibdm.core.plans import Plan
+
+        # Reconstruct plans
+        plan_data = data.get("plan", [])
+        plans = [Plan.from_dict(p) for p in plan_data]
+
+        # Reconstruct agenda
+        agenda_data = data.get("agenda", [])
+        agenda = [DialogueMove.from_dict(m) for m in agenda_data]
+
+        # Reconstruct last_utterance
+        last_utterance = None
+        last_utterance_data = data.get("last_utterance")
+        if last_utterance_data is not None:
+            last_utterance = DialogueMove.from_dict(last_utterance_data)
+
         return cls(
-            plan=[],  # Plans would need Plan.from_dict() - skip for now
-            agenda=[],  # Moves would need DialogueMove.from_dict() - skip for now
+            plan=plans,
+            agenda=agenda,
             beliefs=data.get("beliefs", {}).copy(),
-            last_utterance=None,  # Would need DialogueMove.from_dict() - skip for now
+            last_utterance=last_utterance,
         )
 
     def __str__(self) -> str:
