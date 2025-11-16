@@ -106,6 +106,7 @@ class InteractiveDemo:
         print("  /state      - Toggle state display")
         print("  /history    - Show dialogue history")
         print("  /export     - Export dialogue history")
+        print("  /load       - Load and replay a saved dialogue")
         print("  /confidence - Change confidence mode")
         print("  /reset      - Reset the dialogue")
         print("  /quit       - Exit the demo")
@@ -238,6 +239,8 @@ class InteractiveDemo:
             self.display_history()
         elif command == "/export":
             self._export_history()
+        elif command == "/load":
+            self._load_dialogue()
         elif command == "/confidence":
             self._change_confidence_mode()
         elif command == "/reset":
@@ -270,6 +273,43 @@ class InteractiveDemo:
             },
         )
         print("\nDialogue reset.")
+
+    def _load_dialogue(self) -> None:
+        """Load and replay a saved dialogue."""
+        filename = ""
+        try:
+            filename = input("\nEnter filename to load (e.g., dialogue-abc123.json): ").strip()
+
+            if not filename:
+                print("\nLoad cancelled.")
+                return
+
+            # Load dialogue history
+            loaded_history = DialogueHistory.load_from_file(filename)
+
+            # Display loaded dialogue
+            print(f"\n✓ Loaded dialogue session: {loaded_history.session_id}")
+            print(self.visualizer.format_history(loaded_history, show_metadata=True))
+
+            # Ask if user wants to continue from this session
+            choice = input("\nContinue from this session? (y/n): ").strip().lower()
+
+            if choice == "y":
+                # Replace current history with loaded one
+                self.dialogue_history = loaded_history
+                print("\n✓ Session loaded. You can continue the dialogue.")
+            else:
+                print("\n✓ Dialogue displayed (current session unchanged).")
+
+        except FileNotFoundError:
+            if filename:
+                print(f"\n✗ Error: File '{filename}' not found.")
+            else:
+                print("\n✗ Error: File not found.")
+        except (EOFError, KeyboardInterrupt):
+            print("\nLoad cancelled.")
+        except Exception as e:
+            print(f"\n✗ Error loading dialogue: {e}")
 
     def _export_history(self) -> None:
         """Export dialogue history."""

@@ -384,9 +384,7 @@ class DialogueVisualizer:
         # Rows
         if history.turns:
             for turn in history.turns:
-                confidence_str = (
-                    f"{turn.confidence:.2f}" if turn.confidence is not None else ""
-                )
+                confidence_str = f"{turn.confidence:.2f}" if turn.confidence is not None else ""
                 grounding_str = turn.grounding_strategy or ""
                 move_type_str = turn.move_type or ""
 
