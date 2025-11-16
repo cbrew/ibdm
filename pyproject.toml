@@ -53,7 +53,19 @@ visualization = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-addopts = "-v"
+addopts = "-v --tb=short"
+# Markers for optional dependencies
+markers = [
+    "requires_burr: tests that require burr integration",
+    "requires_nlu: tests that require NLU dependencies",
+    "requires_storage: tests that require storage dependencies",
+    "slow: slow running tests",
+]
+# Filter warnings
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
 
 [tool.ruff]
 line-length = 100
