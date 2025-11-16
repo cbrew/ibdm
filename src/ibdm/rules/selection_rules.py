@@ -87,9 +87,10 @@ def create_selection_rules() -> list[UpdateRule]:
             rule_type="selection",
         ),
         # Fallback: Generic response if nothing else applies
+        # Only fires when no other rule has selected an action
         UpdateRule(
             name="select_fallback",
-            preconditions=lambda state: True,  # Always applicable
+            preconditions=lambda state: len(state.private.agenda) == 0,
             effects=_select_fallback_response,
             priority=1,
             rule_type="selection",

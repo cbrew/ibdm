@@ -21,24 +21,25 @@ def create_integration_rules() -> list[UpdateRule]:
         List of integration rules
     """
     return [
-        # IBiS3 Rule 4.1: IssueAccommodation - accommodate findout subplans to private.issues
-        # This must run BEFORE form_task_plan to catch newly created plans
-        UpdateRule(
-            name="accommodate_issue_from_plan",
-            preconditions=_plan_has_findout_subplan,
-            effects=_accommodate_findout_to_issues,
-            priority=14,  # Higher than form_task_plan (13)
-            rule_type="integration",
-        ),
         # Task plan formation - create plans for command/request moves
         # This is THE RIGHT PLACE for task plan formation per Larsson (2002)
         # Renamed from "accommodate_command" to clarify this is task plan formation,
         # not Larsson's presupposition accommodation
+        # MUST RUN FIRST - creates the plan that Rule 4.1 will accommodate
         UpdateRule(
             name="form_task_plan",
             preconditions=_is_task_request_move,
             effects=_form_task_plan,
-            priority=13,  # Highest - before other integrations
+            priority=14,  # Highest - must create plan before accommodation
+            rule_type="integration",
+        ),
+        # IBiS3 Rule 4.1: IssueAccommodation - accommodate findout subplans to private.issues
+        # This must run AFTER form_task_plan to accommodate newly created plan's questions
+        UpdateRule(
+            name="accommodate_issue_from_plan",
+            preconditions=_plan_has_findout_subplan,
+            effects=_accommodate_findout_to_issues,
+            priority=13,  # After form_task_plan (14)
             rule_type="integration",
         ),
         # Command integration - treat commands like requests
@@ -581,12 +582,9 @@ def _integrate_answer(state: InformationState) -> InformationState:
                     # Find and complete the findout subplan for this question
                     _complete_subplan_for_question(new_state, top_question)
 
-                    # Push next question to QUD if there are more active subplans
-                    # This implements plan progression per Larsson Section 2.6
-                    next_question = _get_next_question_from_plan(new_state)
-                    if next_question:
-                        new_state.shared.push_qud(next_question)
-                    # If no next question, QUD remains empty (plan complete)
+                    # IBiS3: Do NOT push next question to QUD here
+                    # Rule 4.2 (LocalQuestionAccommodation) will raise it from private.issues
+                    # during the SELECTION phase, implementing incremental questioning
                 else:
                     # Invalid answer - needs clarification (Larsson Section 3.4)
                     # Keep question on QUD (don't pop)
