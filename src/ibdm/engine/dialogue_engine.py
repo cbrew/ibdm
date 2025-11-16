@@ -137,7 +137,7 @@ class DialogueMoveEngine:
                     move_type="ask",
                     content=content,
                     speaker=speaker,
-                    metadata={"nlu_confidence": nlu_result.confidence},
+                    metadata={"confidence": nlu_result.confidence},
                 )
             )
 
@@ -157,7 +157,7 @@ class DialogueMoveEngine:
                     move_type="answer",
                     content=content,
                     speaker=speaker,
-                    metadata={"nlu_confidence": nlu_result.confidence},
+                    metadata={"confidence": nlu_result.confidence},
                 )
             )
 
@@ -167,7 +167,7 @@ class DialogueMoveEngine:
                     move_type="command",
                     content=nlu_result.intent if nlu_result.intent else "command",
                     speaker=speaker,
-                    metadata={"nlu_confidence": nlu_result.confidence},
+                    metadata={"confidence": nlu_result.confidence},
                 )
             )
 
@@ -177,7 +177,7 @@ class DialogueMoveEngine:
                     move_type="assert",
                     content="assertion",
                     speaker=speaker,
-                    metadata={"nlu_confidence": nlu_result.confidence},
+                    metadata={"confidence": nlu_result.confidence},
                 )
             )
 
@@ -187,7 +187,7 @@ class DialogueMoveEngine:
                     move_type="acknowledge",
                     content="acknowledgment",
                     speaker=speaker,
-                    metadata={"nlu_confidence": nlu_result.confidence},
+                    metadata={"confidence": nlu_result.confidence},
                 )
             )
 
@@ -197,7 +197,7 @@ class DialogueMoveEngine:
                     move_type="clarify",
                     content="clarification",
                     speaker=speaker,
-                    metadata={"nlu_confidence": nlu_result.confidence},
+                    metadata={"confidence": nlu_result.confidence},
                 )
             )
 
@@ -207,7 +207,7 @@ class DialogueMoveEngine:
                     move_type="greet",
                     content="greeting",
                     speaker=speaker,
-                    metadata={"nlu_confidence": nlu_result.confidence},
+                    metadata={"confidence": nlu_result.confidence},
                 )
             )
 
@@ -217,7 +217,7 @@ class DialogueMoveEngine:
                     move_type="quit",
                     content="quit",
                     speaker=speaker,
-                    metadata={"nlu_confidence": nlu_result.confidence},
+                    metadata={"confidence": nlu_result.confidence},
                 )
             )
 
@@ -228,7 +228,7 @@ class DialogueMoveEngine:
                     move_type="inform",
                     content=dialogue_act,
                     speaker=speaker,
-                    metadata={"nlu_confidence": nlu_result.confidence},
+                    metadata={"confidence": nlu_result.confidence},
                 )
             )
 

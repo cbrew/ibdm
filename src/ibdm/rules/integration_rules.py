@@ -11,133 +11,148 @@ Based on Larsson (2002) Issue-based Dialogue Management.
 """
 
 from ibdm.core import Answer, DialogueMove, InformationState, Question
+from ibdm.rules.icm_integration_rules import create_icm_integration_rules
 from ibdm.rules.update_rules import UpdateRule
 
 
 def create_integration_rules() -> list[UpdateRule]:
-    """Create standard integration rules.
+    """Create standard integration rules including IBiS2 ICM rules.
+
+    Returns IBiS1, IBiS2, and IBiS3 integration rules:
+    - IBiS2 ICM integration rules (grounding feedback processing)
+    - IBiS1 basic integration rules (questions, answers, assertions)
+    - IBiS3 accommodation rules (issue accommodation, reaccommodation)
 
     Returns:
         List of integration rules
     """
-    return [
-        # Task plan formation - create plans for command/request moves
-        # This is THE RIGHT PLACE for task plan formation per Larsson (2002)
-        # Renamed from "accommodate_command" to clarify this is task plan formation,
-        # not Larsson's presupposition accommodation
-        # MUST RUN FIRST - creates the plan that Rule 4.1 will accommodate
-        UpdateRule(
-            name="form_task_plan",
-            preconditions=_is_task_request_move,
-            effects=_form_task_plan,
-            priority=14,  # Highest - must create plan before accommodation
-            rule_type="integration",
-        ),
-        # IBiS3 Rule 4.1: IssueAccommodation - accommodate findout subplans to private.issues
-        # This must run AFTER form_task_plan to accommodate newly created plan's questions
-        UpdateRule(
-            name="accommodate_issue_from_plan",
-            preconditions=_plan_has_findout_subplan,
-            effects=_accommodate_findout_to_issues,
-            priority=13,  # After form_task_plan (14)
-            rule_type="integration",
-        ),
-        # Command integration - treat commands like requests
-        UpdateRule(
-            name="integrate_command",
-            preconditions=_is_command_move,
-            effects=_integrate_command,
-            priority=12,
-            rule_type="integration",
-        ),
-        # Request integration - task accommodation (no QUD change needed, plan already created)
-        UpdateRule(
-            name="integrate_request",
-            preconditions=_is_request_move,
-            effects=_integrate_request,
-            priority=11,
-            rule_type="integration",
-        ),
-        # IBiS3 Rule 4.3: IssueClarification - accommodate clarification questions to QUD
-        # This must run BEFORE answer integration to handle unclear/invalid answers
-        UpdateRule(
-            name="accommodate_clarification_question",
-            preconditions=_needs_clarification_question,
-            effects=_accommodate_clarification,
-            priority=10,  # Before integrate_answer (8)
-            rule_type="integration",
-        ),
-        # IBiS3 Rule 4.8: DependentQuestionReaccommodation
-        # When a question is reaccommodated, also reaccommodate dependent questions
-        # Must run BEFORE reaccommodate_question (priority 10)
-        UpdateRule(
-            name="reaccommodate_dependent_questions",
-            preconditions=_has_dependent_questions_to_reaccommodate,
-            effects=_reaccommodate_dependent_questions,
-            priority=11,  # Before reaccommodate_question (10)
-            rule_type="integration",
-        ),
-        # IBiS3 Rule 4.6: QuestionReaccommodation (accommodate Com 2Issues)
-        # Re-raise question when user provides conflicting answer
-        # Must run BEFORE retract (priority 9) and integrate_answer (priority 8)
-        UpdateRule(
-            name="reaccommodate_question_from_commitment",
-            preconditions=_needs_question_reaccommodation,
-            effects=_reaccommodate_question,
-            priority=10,  # Before retract (9) and integrate_answer (8)
-            rule_type="integration",
-        ),
-        # IBiS3 Rule 4.7: Retract incompatible commitment
-        # Remove old incompatible commitment before integrating new answer
-        # Must run BEFORE integrate_answer (priority 8)
-        UpdateRule(
-            name="retract_incompatible_commitment",
-            preconditions=_has_incompatible_commitment,
-            effects=_retract_commitment,
-            priority=9,  # Before integrate_answer (8)
-            rule_type="integration",
-        ),
-        # Question integration - push to QUD
-        UpdateRule(
-            name="integrate_question",
-            preconditions=_is_ask_move,
-            effects=_integrate_question,
-            priority=7,  # After reaccommodation rules
-            rule_type="integration",
-        ),
-        # Answer integration - resolve QUD and add commitment
-        UpdateRule(
-            name="integrate_answer",
-            preconditions=_is_answer_move,
-            effects=_integrate_answer,
-            priority=8,  # After reaccommodation and retract
-            rule_type="integration",
-        ),
-        # Assertion integration - add to commitments
-        UpdateRule(
-            name="integrate_assertion",
-            preconditions=_is_assert_move,
-            effects=_integrate_assertion,
-            priority=7,
-            rule_type="integration",
-        ),
-        # Greet integration - update control
-        UpdateRule(
-            name="integrate_greet",
-            preconditions=_is_greet_move,
-            effects=_integrate_greet,
-            priority=6,
-            rule_type="integration",
-        ),
-        # Quit integration - end dialogue
-        UpdateRule(
-            name="integrate_quit",
-            preconditions=_is_quit_move,
-            effects=_integrate_quit,
-            priority=6,
-            rule_type="integration",
-        ),
-    ]
+    # Start with IBiS2 ICM integration rules
+    # These have priority 15 (high) and 5 (low) to bookend other rules
+    rules = create_icm_integration_rules()
+
+    # Add IBiS1 and IBiS3 integration rules
+    rules.extend(
+        [
+            # Task plan formation - create plans for command/request moves
+            # This is THE RIGHT PLACE for task plan formation per Larsson (2002)
+            # Renamed from "accommodate_command" to clarify this is task plan formation,
+            # not Larsson's presupposition accommodation
+            # MUST RUN FIRST - creates the plan that Rule 4.1 will accommodate
+            UpdateRule(
+                name="form_task_plan",
+                preconditions=_is_task_request_move,
+                effects=_form_task_plan,
+                priority=14,  # Highest - must create plan before accommodation
+                rule_type="integration",
+            ),
+            # IBiS3 Rule 4.1: IssueAccommodation - accommodate findout subplans to private.issues
+            # This must run AFTER form_task_plan to accommodate newly created plan's questions
+            UpdateRule(
+                name="accommodate_issue_from_plan",
+                preconditions=_plan_has_findout_subplan,
+                effects=_accommodate_findout_to_issues,
+                priority=13,  # After form_task_plan (14)
+                rule_type="integration",
+            ),
+            # Command integration - treat commands like requests
+            UpdateRule(
+                name="integrate_command",
+                preconditions=_is_command_move,
+                effects=_integrate_command,
+                priority=12,
+                rule_type="integration",
+            ),
+            # Request integration - task accommodation (no QUD change needed, plan already created)
+            UpdateRule(
+                name="integrate_request",
+                preconditions=_is_request_move,
+                effects=_integrate_request,
+                priority=11,
+                rule_type="integration",
+            ),
+            # IBiS3 Rule 4.3: IssueClarification - accommodate clarification questions to QUD
+            # This must run BEFORE answer integration to handle unclear/invalid answers
+            UpdateRule(
+                name="accommodate_clarification_question",
+                preconditions=_needs_clarification_question,
+                effects=_accommodate_clarification,
+                priority=10,  # Before integrate_answer (8)
+                rule_type="integration",
+            ),
+            # IBiS3 Rule 4.8: DependentQuestionReaccommodation
+            # When a question is reaccommodated, also reaccommodate dependent questions
+            # Must run BEFORE reaccommodate_question (priority 10)
+            UpdateRule(
+                name="reaccommodate_dependent_questions",
+                preconditions=_has_dependent_questions_to_reaccommodate,
+                effects=_reaccommodate_dependent_questions,
+                priority=11,  # Before reaccommodate_question (10)
+                rule_type="integration",
+            ),
+            # IBiS3 Rule 4.6: QuestionReaccommodation (accommodate Com 2Issues)
+            # Re-raise question when user provides conflicting answer
+            # Must run BEFORE retract (priority 9) and integrate_answer (priority 8)
+            UpdateRule(
+                name="reaccommodate_question_from_commitment",
+                preconditions=_needs_question_reaccommodation,
+                effects=_reaccommodate_question,
+                priority=10,  # Before retract (9) and integrate_answer (8)
+                rule_type="integration",
+            ),
+            # IBiS3 Rule 4.7: Retract incompatible commitment
+            # Remove old incompatible commitment before integrating new answer
+            # Must run BEFORE integrate_answer (priority 8)
+            UpdateRule(
+                name="retract_incompatible_commitment",
+                preconditions=_has_incompatible_commitment,
+                effects=_retract_commitment,
+                priority=9,  # Before integrate_answer (8)
+                rule_type="integration",
+            ),
+            # Question integration - push to QUD
+            UpdateRule(
+                name="integrate_question",
+                preconditions=_is_ask_move,
+                effects=_integrate_question,
+                priority=7,  # After reaccommodation rules
+                rule_type="integration",
+            ),
+            # Answer integration - resolve QUD and add commitment
+            UpdateRule(
+                name="integrate_answer",
+                preconditions=_is_answer_move,
+                effects=_integrate_answer,
+                priority=8,  # After reaccommodation and retract
+                rule_type="integration",
+            ),
+            # Assertion integration - add to commitments
+            UpdateRule(
+                name="integrate_assertion",
+                preconditions=_is_assert_move,
+                effects=_integrate_assertion,
+                priority=7,
+                rule_type="integration",
+            ),
+            # Greet integration - update control
+            UpdateRule(
+                name="integrate_greet",
+                preconditions=_is_greet_move,
+                effects=_integrate_greet,
+                priority=6,
+                rule_type="integration",
+            ),
+            # Quit integration - end dialogue
+            UpdateRule(
+                name="integrate_quit",
+                preconditions=_is_quit_move,
+                effects=_integrate_quit,
+                priority=6,
+                rule_type="integration",
+            ),
+        ]
+    )
+
+    return rules
 
 
 # Precondition functions
