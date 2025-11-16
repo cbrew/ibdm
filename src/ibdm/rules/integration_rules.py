@@ -64,7 +64,37 @@ def create_integration_rules() -> list[UpdateRule]:
             name="accommodate_clarification_question",
             preconditions=_needs_clarification_question,
             effects=_accommodate_clarification,
-            priority=10,  # Before integrate_answer (9)
+            priority=10,  # Before integrate_answer (8)
+            rule_type="integration",
+        ),
+        # IBiS3 Rule 4.8: DependentQuestionReaccommodation
+        # When a question is reaccommodated, also reaccommodate dependent questions
+        # Must run BEFORE reaccommodate_question (priority 10)
+        UpdateRule(
+            name="reaccommodate_dependent_questions",
+            preconditions=_has_dependent_questions_to_reaccommodate,
+            effects=_reaccommodate_dependent_questions,
+            priority=11,  # Before reaccommodate_question (10)
+            rule_type="integration",
+        ),
+        # IBiS3 Rule 4.6: QuestionReaccommodation (accommodate Com 2Issues)
+        # Re-raise question when user provides conflicting answer
+        # Must run BEFORE retract (priority 9) and integrate_answer (priority 8)
+        UpdateRule(
+            name="reaccommodate_question_from_commitment",
+            preconditions=_needs_question_reaccommodation,
+            effects=_reaccommodate_question,
+            priority=10,  # Before retract (9) and integrate_answer (8)
+            rule_type="integration",
+        ),
+        # IBiS3 Rule 4.7: Retract incompatible commitment
+        # Remove old incompatible commitment before integrating new answer
+        # Must run BEFORE integrate_answer (priority 8)
+        UpdateRule(
+            name="retract_incompatible_commitment",
+            preconditions=_has_incompatible_commitment,
+            effects=_retract_commitment,
+            priority=9,  # Before integrate_answer (8)
             rule_type="integration",
         ),
         # Question integration - push to QUD
@@ -72,7 +102,7 @@ def create_integration_rules() -> list[UpdateRule]:
             name="integrate_question",
             preconditions=_is_ask_move,
             effects=_integrate_question,
-            priority=9,
+            priority=7,  # After reaccommodation rules
             rule_type="integration",
         ),
         # Answer integration - resolve QUD and add commitment
@@ -80,7 +110,7 @@ def create_integration_rules() -> list[UpdateRule]:
             name="integrate_answer",
             preconditions=_is_answer_move,
             effects=_integrate_answer,
-            priority=8,
+            priority=8,  # After reaccommodation and retract
             rule_type="integration",
         ),
         # Assertion integration - add to commitments
@@ -255,6 +285,117 @@ def _needs_clarification_question(state: InformationState) -> bool:
             return False
 
     return True
+
+
+def _needs_question_reaccommodation(state: InformationState) -> bool:
+    """Check if question needs reaccommodation due to conflicting answer.
+
+    IBiS3 Rule 4.6 (QuestionReaccommodation / accommodate Com 2Issues):
+    When user provides an answer that conflicts with an existing commitment,
+    the question should be re-raised to private.issues for re-resolution.
+
+    Preconditions:
+    - User provided an answer move
+    - Answer is relevant to a question
+    - There's an existing commitment for that question
+    - New answer is incompatible with old commitment
+
+    Larsson (2002) Section 4.6.6 - QuestionReaccommodation.
+    """
+    move = state.private.beliefs.get("_temp_move")
+    if not isinstance(move, DialogueMove) or move.move_type != "answer":
+        return False
+
+    if not isinstance(move.content, Answer):
+        return False
+
+    answer = move.content
+    domain = _get_active_domain(state)
+
+    # Reaccommodation requires knowing what question the answer is for
+    # In real NLU scenarios, this would be set by the interpretation phase
+    if not hasattr(answer, "question_ref") or answer.question_ref is None:
+        return False
+
+    # Check each commitment to see if this answer is incompatible
+    for commitment in state.shared.commitments:
+        # Try to extract question from commitment
+        question = domain.get_question_from_commitment(commitment)
+        if not question:
+            continue
+
+        # Only check commitments for the same question as the answer
+        if question != answer.question_ref:
+            continue
+
+        # Check if answer resolves this question (using domain semantic matching)
+        if not domain.resolves(answer, question):
+            continue
+
+        # Construct new commitment string for this answer
+        # Use predicate name (not full question object string representation)
+        predicate = getattr(question, "predicate", str(question))
+        new_commitment = f"{predicate}: {answer.content}"
+
+        # Check if incompatible with existing commitment
+        if domain.incompatible(new_commitment, commitment):
+            # Store the question and old commitment for effect function
+            state.private.beliefs["_reaccommodate_question"] = question
+            state.private.beliefs["_reaccommodate_old_commitment"] = commitment
+            return True
+
+    return False
+
+
+def _has_incompatible_commitment(state: InformationState) -> bool:
+    """Check if there's an incompatible commitment to retract.
+
+    IBiS3 Rule 4.7 (Retract):
+    Before integrating a new answer, retract any incompatible old commitments.
+
+    Preconditions:
+    - Reaccommodation has been triggered (Rule 4.6 has marked the old commitment)
+
+    Larsson (2002) Section 4.6.6 - part of reaccommodation process.
+    """
+    # Check if Rule 4.6 has identified an incompatible commitment
+    return state.private.beliefs.get("_reaccommodate_old_commitment") is not None
+
+
+def _has_dependent_questions_to_reaccommodate(state: InformationState) -> bool:
+    """Check if dependent questions need reaccommodation.
+
+    IBiS3 Rule 4.8 (DependentQuestionReaccommodation / accommodate Com 2Issues Dependent):
+    When a question is reaccommodated, also reaccommodate questions that depend on it.
+
+    Preconditions:
+    - A question has been marked for reaccommodation (by Rule 4.6)
+    - That question has dependent questions in the domain
+    - The dependent questions have been answered (have commitments)
+
+    Larsson (2002) Section 4.6.6 - dependent question reaccommodation.
+    """
+    reaccommodate_question = state.private.beliefs.get("_reaccommodate_question")
+    if not reaccommodate_question:
+        return False
+
+    domain = _get_active_domain(state)
+
+    # Check if any questions depend on the reaccommodated question
+    # We need to check all questions in the domain and see if they depend on this one
+    for commitment in state.shared.commitments:
+        question = domain.get_question_from_commitment(commitment)
+        if not question:
+            continue
+
+        # Check if this question depends on the reaccommodated question
+        # domain.depends(Q1, Q2) returns True if Q1 depends on Q2
+        # We want to find questions that depend on the reaccommodated question
+        # So we check: does this question depend on the reaccommodated question?
+        if domain.depends(question, reaccommodate_question):
+            return True
+
+    return False
 
 
 # Effect functions
@@ -802,5 +943,132 @@ def _integrate_quit(state: InformationState) -> InformationState:
         new_state.private.agenda.append(quit_move)
     else:
         new_state.control.next_speaker = "user"
+
+    return new_state
+
+
+def _reaccommodate_question(state: InformationState) -> InformationState:
+    """Re-raise question to private.issues when user provides conflicting answer.
+
+    IBiS3 Rule 4.6 (QuestionReaccommodation / accommodate Com 2Issues):
+    When user changes their mind and provides a new answer that conflicts with
+    an existing commitment, re-raise the question to private.issues so it can
+    be asked again and the new answer can be integrated.
+
+    This implements simple belief revision - the question is reopened for
+    discussion when conflicting information is provided.
+
+    Args:
+        state: Current information state
+
+    Returns:
+        New state with question re-raised to private.issues
+
+    Larsson (2002) Section 4.6.6 - QuestionReaccommodation.
+    """
+    new_state = state.clone()
+
+    # Get the question that needs reaccommodation (set by precondition)
+    question = new_state.private.beliefs.get("_reaccommodate_question")
+    if not question:
+        return new_state
+
+    # Re-raise question to private.issues
+    # Check if not already there (avoid duplicates)
+    if question not in new_state.private.issues:
+        new_state.private.issues.append(question)
+
+    # Note: The old commitment will be retracted by Rule 4.7
+    # The new answer will be integrated by integrate_answer
+
+    return new_state
+
+
+def _retract_commitment(state: InformationState) -> InformationState:
+    """Retract incompatible commitment before integrating new answer.
+
+    IBiS3 Rule 4.7 (Retract):
+    When user provides a conflicting answer, remove the old incompatible
+    commitment from shared commitments. This implements simple belief revision.
+
+    Args:
+        state: Current information state
+
+    Returns:
+        New state with old commitment removed
+
+    Larsson (2002) Section 4.6.6 - part of reaccommodation process.
+    """
+    new_state = state.clone()
+
+    # Get the old commitment to retract (set by Rule 4.6 precondition)
+    old_commitment = new_state.private.beliefs.get("_reaccommodate_old_commitment")
+    if not old_commitment:
+        return new_state
+
+    # Remove the old commitment
+    if old_commitment in new_state.shared.commitments:
+        new_state.shared.commitments.remove(old_commitment)
+
+    # Clear the marker (commitment has been retracted)
+    new_state.private.beliefs["_reaccommodate_old_commitment"] = None
+
+    return new_state
+
+
+def _reaccommodate_dependent_questions(state: InformationState) -> InformationState:
+    """Re-raise dependent questions when base question is reaccommodated.
+
+    IBiS3 Rule 4.8 (DependentQuestionReaccommodation / accommodate Com 2Issues Dependent):
+    When a question is reaccommodated due to a changed answer, also reaccommodate
+    any questions that depend on it. This ensures dependent information is also
+    re-evaluated.
+
+    Example:
+        User changes travel class from "economy" to "business"
+        → Price question depends on class
+        → Both class and price questions are reaccommodated
+
+    Args:
+        state: Current information state
+
+    Returns:
+        New state with dependent questions re-raised to private.issues
+
+    Larsson (2002) Section 4.6.6 - dependent question reaccommodation.
+    """
+    new_state = state.clone()
+
+    # Get the question that's being reaccommodated
+    reaccommodate_question = new_state.private.beliefs.get("_reaccommodate_question")
+    if not reaccommodate_question:
+        return new_state
+
+    domain = _get_active_domain(new_state)
+
+    # Find all questions that depend on the reaccommodated question
+    # and retract their commitments, then re-raise them
+    commitments_to_retract: list[str] = []
+    questions_to_reaccommodate: list[Question] = []
+
+    for commitment in new_state.shared.commitments:
+        question = domain.get_question_from_commitment(commitment)
+        if not question:
+            continue
+
+        # Check if this question depends on the reaccommodated question
+        if domain.depends(question, reaccommodate_question):
+            commitments_to_retract.append(commitment)
+            questions_to_reaccommodate.append(question)
+
+    # Retract dependent commitments
+    for commitment_to_retract in commitments_to_retract:
+        if commitment_to_retract in new_state.shared.commitments:
+            new_state.shared.commitments.remove(commitment_to_retract)
+
+    # Re-raise dependent questions to issues
+    for question_to_reaccommodate in questions_to_reaccommodate:
+        if question_to_reaccommodate not in new_state.private.issues:
+            new_state.private.issues.append(question_to_reaccommodate)
 
     return new_state

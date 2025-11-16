@@ -87,6 +87,10 @@ def create_travel_domain() -> DomainModel:
     domain.add_sort("travel_class", TRAVEL_CLASSES)
     domain.add_sort("price_band", ["budget", "standard", "flex"])
 
+    # Add dependencies for IBiS3 Rule 4.8 (DependentQuestionReaccommodation)
+    # Price depends on travel class and transport mode
+    domain.add_dependency("price_quote", ["travel_class", "transport_mode"])
+
     domain.register_plan_builder("travel_booking", _build_travel_plan)
     return domain
 

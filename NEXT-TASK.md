@@ -261,19 +261,37 @@ System: "What's the price?" ← Now can ask dependent question
 
 ---
 
-### ibdm-95: Implement Rule 4.5 (QuestionReaccommodation)
+### ✅ ibdm-95: Implement Rule 4.5 (QuestionReaccommodation) (COMPLETED)
 
 **Priority**: P1
-**Duration**: 3-5 days
-**Goal**: Re-prioritize unresolved questions based on dialogue context
+**Duration**: 1 day (completed 2025-11-16)
+**Status**: ✅ COMPLETED
 
-**What to Do**:
-- Review Larsson Section 4.6.5 (reaccommodation)
-- Design reaccommodation triggers and logic
-- Implement question re-prioritization
-- Add tests for dynamic question ordering
+**What Was Done**:
+- ✅ Reviewed Larsson Section 4.6.6 (QuestionReaccommodation)
+- ✅ Designed reaccommodation triggers and logic (3 rules: 4.6, 4.7, 4.8)
+- ✅ Added domain.incompatible() and domain.get_question_from_commitment() helpers
+- ✅ Implemented Rule 4.6 (reaccommodate_question_from_commitment)
+- ✅ Implemented Rule 4.7 (retract_incompatible_commitment)
+- ✅ Implemented Rule 4.8 (reaccommodate_dependent_questions)
+- ✅ Added price_quote dependencies to travel domain
+- ✅ Wrote 12 unit tests for reaccommodation rules (all passing)
+- ✅ All tests passing (34/34 IBiS3 tests)
+- ✅ Type checks clean (0 errors)
+- ✅ Committed and pushed: `feat(ibis3): implement Rule 4.5 (QuestionReaccommodation)`
 
-**Beads Command**: `~/go/bin/bd show ibdm-95`
+**Commit**: `b0280ab` on branch `claude/ibdm-95-next-task-01FjByLJgMmLHsCy38yAQVpi`
+
+**Key Achievement**: Users can now change previous answers with simple belief revision!
+```
+User: "I want to leave on april 5th"
+[System stores: depart_day: april 5th]
+User: "Actually, april 4th"
+→ System detects conflict
+→ Retracts old answer from commitments
+→ Re-raises question to private.issues
+→ Integrates new answer: depart_day: april 4th
+```
 
 ---
 
@@ -286,11 +304,11 @@ System: "What's the price?" ← Now can ask dependent question
 - Week 4: ✅ Documentation + NLU interface (60% → 65%)
 - Week 5: ✅ Rule 4.3 - Clarification (65% → 75%)
 - Week 6: ✅ Rule 4.4 - Dependent issues (75% → 85%)
-- Week 7-8: 📋 Rule 4.5 - Reaccommodation (85% → 95%)
-- Week 9: 📋 Integration tests + polish (95% → 100%)
+- Week 7: ✅ Rule 4.5 - Reaccommodation (85% → 95%)
+- Week 8+: 📋 Integration tests + polish (95% → 100%)
 
-**Current**: 85% complete
-**Target**: 95% by end of Week 8
+**Current**: 95% complete 🎉
+**Target**: 100% by end of Week 9
 
 **Beads Status**:
 - **P0 Tasks**: 4 (Week 4 documentation + NLU interface)
@@ -307,35 +325,41 @@ System: "What's the price?" ← Now can ask dependent question
 - ✅ **Section 4.6.2**: LocalQuestionAccommodation rule (Rule 4.2)
 - ✅ **Section 4.6.3**: IssueClarification (Rule 4.3)
 - ✅ **Section 4.6.4**: DependentIssueAccommodation (Rule 4.4)
+- ✅ **Section 4.6.6**: QuestionReaccommodation (Rule 4.5 - Rules 4.6, 4.7, 4.8)
 
 **Next**:
-- 📋 **Section 4.6.5**: QuestionReaccommodation (Rule 4.5)
+- 📋 **Integration Tests**: End-to-end testing with all IBiS3 rules
+- 📋 **Polish**: Edge cases, error handling, performance
 
 ---
 
 ## Bottom Line
 
-**✅ Week 6 Complete!** (1/1 task - 100%):
-1. ✅ **ibdm-94**: Implement Rule 4.4 (DependentIssueAccommodation) - DONE (commit `09c62cb`)
+**✅ Week 7 Complete!** (1/1 task - 100%):
+1. ✅ **ibdm-95**: Implement Rule 4.5 (QuestionReaccommodation) - DONE (commit `b0280ab`)
 
-**Week 6 Achievements**:
-- Implemented Rule 4.4 (DependentIssueAccommodation) from Larsson Section 4.6.4
-- Added dependency tracking to domain model (add_dependency, depends, get_dependencies)
-- Prerequisite questions now automatically pushed to QUD before dependent questions
-- 5 new unit tests + 1 integration test (all passing)
-- IBiS3 progress: 75% → 85%
+**Week 7 Achievements**:
+- Implemented Rules 4.6, 4.7, 4.8 (QuestionReaccommodation) from Larsson Section 4.6.6
+- Added domain.incompatible() to detect conflicting commitments
+- Added domain.get_question_from_commitment() to extract questions from commitments
+- Simple belief revision: retract old commitment, re-raise question, integrate new answer
+- Dependent question cascade: when base answer changes, dependent questions also reaccommodated
+- 12 new unit tests (all passing)
+- IBiS3 progress: 85% → 95% 🎉
 
 **Next Recommended Task** (P1 Priority):
-2. ⚡ **ibdm-95**: Implement Rule 4.5 (QuestionReaccommodation) - 3-5 days ⬅️ **START WEEK 7**
-   - Re-prioritize unresolved questions based on context
-   - Larsson Section 4.6.5
-   - **Why Next**: Final IBiS3 accommodation rule, enables dynamic question ordering
-   - **Impact**: IBiS3 85% → 95%
+⚡ **ibdm-96**: End-to-End Integration Tests & Polish - 2-3 days ⬅️ **START WEEK 8**
+   - Write comprehensive integration tests exercising all IBiS3 rules together
+   - Test complex dialogue scenarios (volunteer info + clarification + reaccommodation)
+   - Edge case handling and error recovery
+   - Performance optimization if needed
+   - **Why Next**: Verify complete IBiS3 implementation works end-to-end
+   - **Impact**: IBiS3 95% → 100% ✅
 
-**Week 6 Progress**: ✅ 1/1 task complete (100%)
-**IBiS3 Progress**: 85% complete (up from 75%)
-**Next Milestone**: Complete Rule 4.5 → 95% complete
+**Week 7 Progress**: ✅ 1/1 task complete (100%)
+**IBiS3 Progress**: 95% complete (up from 85%)
+**Next Milestone**: Complete integration tests → 100% IBiS3 implementation
 
-**Key Achievement**: Prerequisite question ordering working! Travel booking scenario now feasible.
+**Key Achievement**: Simple belief revision working! Users can correct previous answers.
 
-Ready for the final IBiS3 rule! 🔮
+Ready for final integration testing! 🚀
