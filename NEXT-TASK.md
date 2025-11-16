@@ -1,276 +1,510 @@
 # Next Recommended Task
 
-**Date**: 2025-11-16 (Updated for IBiS Variants Priority)
-**Basis**: IBIS_VARIANTS_PRIORITY.md, code verification, Larsson thesis compliance
+**Date**: 2025-11-16 (Updated - Week 1 Complete!)
+**Basis**: IBIS_VARIANTS_PRIORITY.md, IBiS3 foundation implemented
+**Status**: 🎉 Foundation complete, ready for accommodation rules
 
 ---
 
-## Status Update: New Priority - Complete IBiS-2, 3, 4 Variants 🎯
+## ✅ Week 1 Complete: IBiS3 Foundation Implemented!
 
-### Current IBiS Status
+**Completed** (2025-11-16):
+- ✅ Phase separation verified (task plan formation in INTEGRATION phase)
+- ✅ `private.issues` field added to PrivateIS
+- ✅ Serialization updated (to_dict/from_dict with type safety)
+- ✅ Tests written and passing (97/97 core tests)
+- ✅ Type checks clean (pyright 0 errors)
+- ✅ Committed and pushed: `feat(ibis3): add private.issues field to InformationState`
 
-**Current State** (Verified from IBIS_PROGRESSION_GUIDE.md):
-- ✅ **IBiS1**: 100% complete (Core QUD, Plans, Four-phase control loop)
-- ⚠️ **IBiS2**: 60% complete (Basic grounding, missing advanced ICM)
-- 🔧 **IBiS3**: 30% complete (Architecture ready, accommodation incomplete)
-- 📋 **IBiS4**: 10% complete (Structure defined, not yet implemented)
-
-**New Goal**: Complete all IBiS variants to achieve full Larsson (2002) compliance
-
----
-
-## HIGHEST PRIORITY: Unblock IBiS3 Accommodation
-
-**Task**: Fix architectural violation blocking IBiS3 implementation
-**Duration**: 1 week
-**Blockers**: None (this IS the blocker removal)
-
-### Critical Blocker
-
-**Current Issue**: Task plan formation is in INTERPRET phase (architectural violation)
-- **What's Wrong**: Accommodation happens in wrong phase
-- **Larsson Violation**: Interpretation = syntactic, Integration = pragmatic
-- **Impact**: Blocks all IBiS3 accommodation work
-- **Fix**: `ibdm-accom` epic - move to integration phase
-
-### Week 1: Unblock IBiS3 (IMMEDIATE)
-
-**1. Fix Phase Separation Violation**
-- **Task**: `ibdm-accom` - Move accommodation to integration
-- **What**:
-  - Verify task plan formation is in `integration_rules.py`
-  - Ensure NO accommodation in interpretation phase
-  - Update all tests
-- **Why**: BLOCKS all IBiS3 work
-- **Effort**: 1 week
-- **Code**: `src/ibdm/rules/integration_rules.py`
-
-**2. Add private.issues Field**
-- **Task**: Update `src/ibdm/core/information_state.py`
-- **What**: Add `issues: list[Question]` to PrivateIS
-- **Why**: Foundation for two-phase accommodation (issues → qud)
-- **Larsson**: Figure 4.1 - Information State Extensions
-- **Effort**: 1 day
-- **Tests**: Update serialization, state management tests
-
-**3. Update Serialization**
-- **Task**: Update `to_dict()` and `from_dict()` methods
-- **What**: Handle new `issues` field in serialization
-- **Why**: State persistence must work
-- **Effort**: Half day
-
-### Week 2-3: Implement IBiS3 Core Rules
-
-**4. Implement Rule 4.1 (IssueAccommodation)**
-- **Task**: Create `accommodate_issue_from_plan` update rule
-- **What**: Plan findout actions → private.issues (not directly to QUD)
-- **Why**: Separates accommodation from raising
-- **Larsson**: Section 4.6.1 - IssueAccommodation rule
-- **Code**: `src/ibdm/rules/integration_rules.py`
-- **Priority**: 14 (before form_task_plan)
-- **Effort**: 2-3 days
-
-**5. Implement Rule 4.2 (LocalQuestionAccommodation)**
-- **Task**: Create `raise_accommodated_question` selection rule
-- **What**: private.issues → shared.qud (when contextually appropriate)
-- **Why**: Incremental questioning, not dumping all questions at once
-- **Larsson**: Section 4.6.2 - LocalQuestionAccommodation rule
-- **Code**: `src/ibdm/rules/selection_rules.py`
-- **Priority**: 20 (high)
-- **Effort**: 2-3 days
-
-**6. Handle Answers to Unasked Questions**
-- **Task**: Modify `integrate_answer` rule
-- **What**: Check if answer resolves question in private.issues
-- **Why**: Users can volunteer information before asked
-- **Larsson**: Core IBiS3 capability
-- **Effort**: 3-5 days
+**Progress**: IBiS3 30% → 35% (foundation infrastructure complete)
 
 ---
 
-## Complete Roadmap: IBIS_VARIANTS_PRIORITY.md
+## 🎯 IMMEDIATE PRIORITY: Implement IBiS3 Accommodation Rules
 
-**See**: [IBIS_VARIANTS_PRIORITY.md](IBIS_VARIANTS_PRIORITY.md) for full 22-28 week plan
-
-**Optimal Completion Order**: IBiS3 → IBiS2 → IBiS4
-
-**Rationale**:
-1. **IBiS3 first**: Biggest user experience improvement (natural dialogue, volunteer information)
-2. **IBiS2 second**: Robustness features (grounding, error handling)
-3. **IBiS4 last**: Advanced features (actions, negotiation)
+**Current Focus**: Week 2 - Implement Rule 4.1 and Rule 4.2
+**Duration**: 3-5 days
+**Blockers**: None - foundation is ready!
 
 ---
 
-## Timeline Overview
+## Week 2 Tasks: Core Accommodation Rules
 
-### Phase 1: IBiS3 Completion (Weeks 1-10)
-- **Target**: 30% → 100%
-- **Key Features**:
-  - private.issues field
-  - Rules 4.1-4.5 (accommodation, raising, clarification, dependencies, reaccommodation)
-  - Volunteer information handling
-  - Dependent issue accommodation
+### Task 1: Implement Rule 4.1 (IssueAccommodation) ⚡ NEXT
 
-### Phase 2: IBiS2 Completion (Weeks 11-18)
-- **Target**: 60% → 100%
-- **Key Features**:
-  - Complete ICM taxonomy (27 rules)
-  - Grounding strategies (optimistic/cautious/pessimistic)
-  - Perception checking (ASR confidence)
-  - Evidence requirements
+**Goal**: Accommodate findout questions from plans to private.issues (instead of pushing directly to QUD)
 
-### Phase 3: IBiS4 Implementation (Weeks 19-28)
-- **Target**: 10% → 100%
-- **Key Features**:
-  - Device actions and interface
-  - Action accommodation
-  - Negotiation and dominates() relation
-  - Multi-alternative handling
+**What to Do**:
 
----
+1. **Add precondition function** in `src/ibdm/rules/integration_rules.py`:
+   ```python
+   def _plan_has_findout_subplan(state: InformationState) -> bool:
+       """Check if there's an active plan with findout subplans to accommodate.
 
-## Success Criteria
+       This checks if we've just created a task plan that contains findout
+       subplans. These should be accommodated to private.issues first,
+       not pushed directly to shared.qud.
 
-### IBiS3 Complete (Week 10)
-- [x] `private.issues` field in InformationState
-- [x] Rule 4.1: Plan → private.issues (accommodation)
-- [x] Rule 4.2: private.issues → shared.qud (raising)
-- [x] Rule 4.3: Clarification questions
-- [x] Rule 4.4: Dependent issue accommodation
-- [x] Rule 4.5: Question reaccommodation
-- [x] Answers to unasked questions handled
-- [x] Integration tests passing
-- [x] IBiS3 fidelity: 100% (up from 30%)
+       Larsson (2002) Section 4.6.1 - IssueAccommodation rule.
+       """
+       # Check if we have active plans with findout subplans
+       for plan in state.private.plan:
+           if not plan.is_active():
+               continue
 
-### IBiS2 Complete (Week 18)
-- [x] All 27 ICM rules implemented
-- [x] Grounding status tracking
-- [x] Strategy selection working
-- [x] Perception checking integrated
-- [x] IBiS2 fidelity: 100% (up from 60%)
+           # Check if plan has unaccommodated findout subplans
+           for subplan in plan.subplans:
+               if subplan.plan_type == "findout" and subplan.is_active():
+                   # Check if this question is already in issues or QUD
+                   question = subplan.content
+                   if isinstance(question, Question):
+                       if question not in state.private.issues and question not in state.shared.qud:
+                           return True
 
-### IBiS4 Complete (Week 28)
-- [x] Device actions working
-- [x] Action accommodation implemented
-- [x] Negotiation dialogue working
-- [x] IBiS4 fidelity: 100% (up from 10%)
+       return False
+   ```
 
-### Overall Target
-- **Larsson Fidelity**: 95%+ (from current ~70%)
-- **Test Coverage**: 90%+
-- **All Tests**: Passing
+2. **Add effect function** in `src/ibdm/rules/integration_rules.py`:
+   ```python
+   def _accommodate_findout_to_issues(state: InformationState) -> InformationState:
+       """Accommodate findout subplans to private.issues.
 
----
+       IBiS3 Rule 4.1 (IssueAccommodation):
+       Instead of pushing questions directly to QUD, accommodate them
+       to private.issues first. They'll be raised to QUD later by
+       Rule 4.2 (LocalQuestionAccommodation) when contextually appropriate.
 
-## How to Start
+       Args:
+           state: Current information state
 
-### 1. Review IBiS Variants Documentation
+       Returns:
+           New state with findout questions accommodated to private.issues
 
-```bash
-# Read comprehensive IBiS progression guide
-cat IBIS_PROGRESSION_GUIDE.md
+       Larsson (2002) Section 4.6.1 - IssueAccommodation rule.
+       """
+       new_state = state.clone()
 
-# Read new priority roadmap
-cat IBIS_VARIANTS_PRIORITY.md
+       # Find active plans with findout subplans
+       for plan in new_state.private.plan:
+           if not plan.is_active():
+               continue
 
-# Review Larsson algorithms
-cat docs/LARSSON_ALGORITHMS.md
+           # Accommodate each findout subplan to private.issues
+           for subplan in plan.subplans:
+               if subplan.plan_type == "findout" and subplan.is_active():
+                   question = subplan.content
+                   if isinstance(question, Question):
+                       # Only accommodate if not already in issues or QUD
+                       if question not in new_state.private.issues and question not in new_state.shared.qud:
+                           new_state.private.issues.append(question)
+
+       return new_state
+   ```
+
+3. **Add rule to `create_integration_rules()`**:
+   ```python
+   # At the top of the rules list, BEFORE form_task_plan
+   UpdateRule(
+       name="accommodate_issue_from_plan",
+       preconditions=_plan_has_findout_subplan,
+       effects=_accommodate_findout_to_issues,
+       priority=14,  # Higher than form_task_plan (13)
+       rule_type="integration",
+   ),
+   ```
+
+4. **Modify `_form_task_plan()` to NOT push to QUD**:
+   - Remove lines 229-233 and 256-260 that push first question to QUD
+   - Let Rule 4.2 handle raising questions to QUD instead
+
+**Expected Outcome**:
+- Task plans created with findout subplans
+- Questions accommodated to `private.issues` (not pushed to QUD yet)
+- QUD remains empty until Rule 4.2 raises questions
+
+**Tests to Write**:
+```python
+def test_rule_4_1_issue_accommodation():
+    """Test Rule 4.1: Findout subplans accommodated to private.issues."""
+    state = InformationState()
+
+    # Create task plan with findout subplans
+    q1 = WhQuestion(variable="x", predicate="parties(x)")
+    q2 = WhQuestion(variable="y", predicate="effective_date(y)")
+    subplan1 = Plan(plan_type="findout", content=q1)
+    subplan2 = Plan(plan_type="findout", content=q2)
+    plan = Plan(plan_type="nda_drafting", content=None, subplans=[subplan1, subplan2])
+    state.private.plan.append(plan)
+
+    # Apply Rule 4.1
+    new_state = _accommodate_findout_to_issues(state)
+
+    # Assertions
+    assert len(new_state.private.issues) == 2
+    assert q1 in new_state.private.issues
+    assert q2 in new_state.private.issues
+    assert len(new_state.shared.qud) == 0  # Not raised to QUD yet!
 ```
 
-### 2. Verify Current Implementation
-
-```bash
-# Check if accommodation is in correct phase
-grep -r "accommodate" src/ibdm/rules/integration_rules.py
-grep -r "accommodate" src/ibdm/rules/interpretation_rules.py
-
-# Check InformationState structure
-cat src/ibdm/core/information_state.py
-```
-
-### 3. Start Week 1 Tasks
-
-```bash
-# 1. Fix phase separation (if needed)
-# Review ibdm-accom epic
-
-# 2. Add private.issues field
-# Edit src/ibdm/core/information_state.py
-
-# 3. Follow development workflow
-ruff format src/ tests/
-ruff check --fix src/ tests/
-pyright src/
-pytest
-```
-
-### 4. Development Workflow
-
-Per `CLAUDE.md`:
-1. Red-Green-Refactor: Test → Implement → Refactor
-2. Quality checks before each commit
-3. Commit: `feat(ibis3): add private.issues field`
-4. Push regularly
+**Larsson Reference**: Section 4.6.1 - IssueAccommodation rule
 
 ---
 
-## Why IBiS3 First?
+### Task 2: Implement Rule 4.2 (LocalQuestionAccommodation) 🎯
 
-**User Experience Impact**:
+**Goal**: Raise accommodated questions from private.issues to shared.qud when contextually appropriate
+
+**What to Do**:
+
+1. **Create `src/ibdm/rules/selection_rules.py` if it doesn't exist**, or add to existing file:
+   ```python
+   def _has_raisable_issue(state: InformationState) -> bool:
+       """Check if there are issues that can be raised to QUD.
+
+       An issue can be raised if:
+       - There are issues in private.issues
+       - QUD is empty or current QUD is not blocking
+       - Context is appropriate for asking a new question
+
+       Larsson (2002) Section 4.6.2 - LocalQuestionAccommodation rule.
+       """
+       # Need at least one issue to raise
+       if not state.private.issues:
+           return False
+
+       # For now, simple strategy: raise if QUD is empty
+       # Future: more sophisticated context checking
+       if not state.shared.qud:
+           return True
+
+       return False
+   ```
+
+2. **Add effect function**:
+   ```python
+   def _raise_issue_to_qud(state: InformationState) -> InformationState:
+       """Raise first issue from private.issues to shared.qud.
+
+       IBiS3 Rule 4.2 (LocalQuestionAccommodation):
+       When context is appropriate, raise accommodated questions
+       to QUD so they can be asked. This implements incremental
+       questioning - we don't dump all questions at once.
+
+       Args:
+           state: Current information state
+
+       Returns:
+           New state with first issue raised to QUD
+
+       Larsson (2002) Section 4.6.2 - LocalQuestionAccommodation rule.
+       """
+       new_state = state.clone()
+
+       # Pop first issue from private.issues
+       if new_state.private.issues:
+           question = new_state.private.issues.pop(0)
+
+           # Push to QUD
+           new_state.shared.push_qud(question)
+
+       return new_state
+   ```
+
+3. **Add selection rule**:
+   ```python
+   # In create_selection_rules() function
+   UpdateRule(
+       name="raise_accommodated_question",
+       preconditions=_has_raisable_issue,
+       effects=_raise_issue_to_qud,
+       priority=20,  # High priority
+       rule_type="selection",
+   ),
+   ```
+
+**Expected Outcome**:
+- Questions raised from private.issues to shared.qud incrementally
+- Only one question raised at a time (when QUD is empty)
+- Enables natural, incremental dialogue flow
+
+**Tests to Write**:
+```python
+def test_rule_4_2_local_question_accommodation():
+    """Test Rule 4.2: Issues raised to QUD when appropriate."""
+    state = InformationState()
+
+    # Setup: Questions in private.issues, QUD empty
+    q1 = WhQuestion(variable="x", predicate="parties(x)")
+    q2 = WhQuestion(variable="y", predicate="effective_date(y)")
+    state.private.issues = [q1, q2]
+
+    # Apply Rule 4.2
+    new_state = _raise_issue_to_qud(state)
+
+    # Assertions
+    assert len(new_state.shared.qud) == 1
+    assert new_state.shared.qud[0] == q1  # First issue raised
+    assert len(new_state.private.issues) == 1
+    assert new_state.private.issues[0] == q2  # Second issue remains
+```
+
+**Larsson Reference**: Section 4.6.2 - LocalQuestionAccommodation rule
+
+---
+
+### Task 3: Modify integrate_answer for Volunteer Information 🔄
+
+**Goal**: Check private.issues before checking QUD when processing answers
+
+**What to Do**:
+
+1. **Update `_integrate_answer()` in `src/ibdm/rules/integration_rules.py`**:
+   ```python
+   def _integrate_answer(state: InformationState) -> InformationState:
+       """Integrate answer, checking private.issues FIRST (IBiS3).
+
+       Modified for IBiS3:
+       1. Check if answer resolves question in private.issues (volunteer info)
+       2. If yes: remove from issues, add commitment, DON'T raise to QUD
+       3. If no: check QUD as normal (original behavior)
+       """
+       new_state = state.clone()
+       move = new_state.private.beliefs.get("_temp_move")
+
+       if not isinstance(move, DialogueMove):
+           return new_state
+
+       if isinstance(move.content, Answer):
+           answer = move.content
+           domain = _get_active_domain(new_state)
+
+           # IBiS3: Check private.issues FIRST (volunteer information)
+           for issue in new_state.private.issues[:]:  # Iterate over copy
+               if domain.resolves(answer, issue):
+                   # User volunteered answer to unasked question!
+                   new_state.private.issues.remove(issue)
+
+                   # Add commitment
+                   commitment = f"{issue}: {answer.content}"
+                   new_state.shared.commitments.add(commitment)
+
+                   # Mark corresponding subplan as completed
+                   _complete_subplan_for_question(new_state, issue)
+
+                   # DON'T raise this question to QUD - already answered!
+                   # Continue to check other issues
+                   break  # Process one volunteer answer per turn
+           else:
+               # No volunteer info - check QUD as normal (original behavior)
+               top_question = new_state.shared.top_qud()
+               if top_question:
+                   if domain.resolves(answer, top_question):
+                       # Normal QUD resolution...
+                       # (existing code)
+
+       return new_state
+   ```
+
+**Expected Outcome**:
+- User can volunteer information before being asked
+- System recognizes volunteer answers and doesn't re-ask
+- Natural dialogue flow
+
+**Tests to Write**:
+```python
+def test_volunteer_information_handling():
+    """Test IBiS3: User volunteers answer before being asked."""
+    state = InformationState()
+    domain = get_nda_domain()
+
+    # Setup: Question in private.issues (not yet asked)
+    q = WhQuestion(variable="x", predicate="effective_date(x)")
+    state.private.issues.append(q)
+
+    # User volunteers answer
+    answer = Answer(content="January 1, 2025", question_ref=q)
+    move = DialogueMove(move_type="answer", content=answer, speaker="user")
+    state.private.beliefs["_temp_move"] = move
+
+    # Apply integration
+    new_state = _integrate_answer(state)
+
+    # Assertions
+    assert q not in new_state.private.issues  # Removed from issues
+    assert len(new_state.shared.qud) == 0  # NOT raised to QUD
+    assert len(new_state.shared.commitments) > 0  # Answer committed
+```
+
+---
+
+## Development Workflow
+
+### For Each Task:
+
+1. **Write the test first** (TDD)
+   ```bash
+   # Create/update test file
+   vim tests/unit/test_ibis3_accommodation.py
+   ```
+
+2. **Run test (should fail)**
+   ```bash
+   pytest tests/unit/test_ibis3_accommodation.py -v
+   ```
+
+3. **Implement the function**
+   ```bash
+   vim src/ibdm/rules/integration_rules.py
+   # Or: vim src/ibdm/rules/selection_rules.py
+   ```
+
+4. **Run test (should pass)**
+   ```bash
+   pytest tests/unit/test_ibis3_accommodation.py -v
+   ```
+
+5. **Quality checks**
+   ```bash
+   ruff format src/ tests/
+   ruff check --fix src/ tests/
+   pyright src/
+   pytest  # Full suite
+   ```
+
+6. **Commit**
+   ```bash
+   git add .
+   git commit -m "feat(ibis3): implement Rule 4.1 (IssueAccommodation)"
+   # Or: "feat(ibis3): implement Rule 4.2 (LocalQuestionAccommodation)"
+   # Or: "feat(ibis3): handle volunteer information in integrate_answer"
+   ```
+
+---
+
+## Success Criteria - Week 2
+
+After completing these tasks, you should have:
+
+- [x] Rule 4.1 (IssueAccommodation) implemented
+  - Precondition: `_plan_has_findout_subplan`
+  - Effect: `_accommodate_findout_to_issues`
+  - Questions go to private.issues (not QUD)
+
+- [x] Rule 4.2 (LocalQuestionAccommodation) implemented
+  - Precondition: `_has_raisable_issue`
+  - Effect: `_raise_issue_to_qud`
+  - Questions raised from issues to QUD incrementally
+
+- [x] Volunteer information handling
+  - `_integrate_answer` checks private.issues first
+  - Answers to unasked questions processed correctly
+  - System doesn't re-ask already-answered questions
+
+- [x] Tests passing
+  - test_rule_4_1_issue_accommodation
+  - test_rule_4_2_local_question_accommodation
+  - test_volunteer_information_handling
+
+- [x] Integration tests
+  - Multi-turn dialogue with accommodation
+  - User volunteers multiple facts
+  - System adapts questioning based on volunteer info
+
+---
+
+## Expected Behavior After Week 2
 
 **Without IBiS3** (Current):
 ```
-System: "What are the parties to the agreement?"
+System: "What are the parties?"
 User: "Acme and Smith, effective January 1, 2025"
 System: [Only processes parties, ignores date]
 System: "What's the effective date?"
-User: "I just told you, January 1, 2025"  ← BAD UX
+User: "I just told you!"  ← BAD UX
 ```
 
-**With IBiS3** (Target):
+**With IBiS3** (After Week 2):
 ```
-System: "What are the parties to the agreement?"
+System: "What are the parties?"
 User: "Acme and Smith, effective January 1, 2025"
-System: [Accommodates date answer to unasked question]
-System: [Removes date question from private.issues]
-System: "What's the governing law?"  ← NATURAL DIALOGUE
+System: [Accommodates date to private.issues, then processes as volunteer answer]
+System: [Removes date question from issues, adds commitment]
+System: "What's the governing law?"  ← SKIPS ALREADY-ANSWERED!
 ```
 
-**Bottom Line**: IBiS3 makes dialogue feel intelligent and natural. This is more important than robustness (IBiS2) or advanced features (IBiS4).
+---
+
+## Progress Tracking
+
+**IBiS3 Completion**:
+- Week 1: ✅ Foundation (30% → 35%)
+- Week 2: 🔧 Rules 4.1-4.2 (35% → 50%)
+- Week 3-4: Volunteer information + clarification (50% → 65%)
+- Week 5-6: Dependent issues (65% → 80%)
+- Week 7-8: Question reaccommodation (80% → 90%)
+- Week 9-10: Integration tests + polish (90% → 100%)
+
+**Current**: 35% complete
+**Target**: 50% by end of Week 2
 
 ---
 
-## Alternative Path: Metrics First
+## File Locations
 
-If you prefer to establish baseline metrics before IBiS variants:
+**Core Files to Modify**:
+- `src/ibdm/core/information_state.py` - ✅ Already updated (private.issues)
+- `src/ibdm/rules/integration_rules.py` - 🔧 Add Rule 4.1, modify _form_task_plan, modify _integrate_answer
+- `src/ibdm/rules/selection_rules.py` - 🔧 Add Rule 4.2
 
-**Task**: Larsson Fidelity Metrics (ibdm-metrics)
-**Duration**: 2-3 days
-**Why**: Quantitative validation before adding complexity
-
-**Then**: Proceed to IBiS3 with baseline established
-
----
-
-## Alignment with Project Goals
-
-**IBiS Variants Completion**:
-- ✅ **Larsson Fidelity**: Full compliance with thesis (95%+)
-- ✅ **User Experience**: Natural, intelligent dialogue (IBiS3)
-- ✅ **Robustness**: Error handling, grounding (IBiS2)
-- ✅ **Advanced Features**: Actions, negotiation (IBiS4)
-- ✅ **Research Contribution**: Complete Larsson implementation
-
-**Bottom Line**: Completing all IBiS variants achieves the full vision of Larsson (2002) thesis, demonstrating a complete, production-ready issue-based dialogue management system.
+**Test Files**:
+- `tests/unit/test_information_state.py` - ✅ Already updated
+- `tests/unit/test_ibis3_accommodation.py` - 📋 To create
+- `tests/integration/test_volunteer_information.py` - 📋 To create
 
 ---
 
-## Summary
+## Larsson References
 
-**Status**: IBiS1 ✅ COMPLETE, Need to complete IBiS-2, 3, 4
-**Immediate Task**: Fix phase separation blocker, add private.issues field
-**Week 1 Goal**: Unblock IBiS3, implement Rules 4.1-4.2
-**Overall Goal**: Complete all IBiS variants (22-28 weeks)
-**Target Fidelity**: 95%+ Larsson compliance
+**Essential Reading**:
+- **Section 4.6.1**: IssueAccommodation rule (Rule 4.1)
+- **Section 4.6.2**: LocalQuestionAccommodation rule (Rule 4.2)
+- **Figure 4.1**: IBiS3 Information State structure
+- **Section 4.3**: Clarification questions
 
-**Key Action**: Start with Week 1 tasks in IBIS_VARIANTS_PRIORITY.md
+**Access**:
+```bash
+# Read Larsson algorithms
+cat docs/LARSSON_ALGORITHMS.md | grep -A 50 "IBiS3"
+
+# Read full thesis chapter
+cat docs/larsson_thesis/chapter_4.md
+```
+
+---
+
+## Questions or Issues?
+
+**If stuck**:
+1. Review `IBIS_PROGRESSION_GUIDE.md` - Section "Part 3: IBiS3"
+2. Check existing integration rules for patterns
+3. Look at test examples in `tests/integration/test_qud_and_plan_progression.py`
+
+**Key Principle**: Accommodation is INTEGRATION/SELECT, not INTERPRET
+- Questions accommodated to private.issues (INTEGRATION)
+- Questions raised to QUD (SELECTION)
+- User can answer before being asked (natural dialogue)
+
+---
+
+## Bottom Line
+
+**Next Steps** (in order):
+1. ⚡ Implement Rule 4.1 (IssueAccommodation) - 1-2 days
+2. 🎯 Implement Rule 4.2 (LocalQuestionAccommodation) - 1-2 days
+3. 🔄 Modify integrate_answer for volunteer info - 1 day
+
+**Total Effort**: 3-5 days
+**Goal**: IBiS3 35% → 50%
+**Outcome**: Natural dialogue with volunteer information handling
+
+Ready to code! 🚀
