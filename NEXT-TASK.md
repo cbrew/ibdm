@@ -1,324 +1,510 @@
 # Next Recommended Task
 
-**Date**: 2025-11-16 (Updated)
-**Basis**: Code verification, LARSSON_PRIORITY_ROADMAP.md, test suite analysis
+**Date**: 2025-11-16 (Updated - Week 1 Complete!)
+**Basis**: IBIS_VARIANTS_PRIORITY.md, IBiS3 foundation implemented
+**Status**: 🎉 Foundation complete, ready for accommodation rules
 
 ---
 
-## Status Update: TIER 1 Architecture Complete ✅
+## ✅ Week 1 Complete: IBiS3 Foundation Implemented!
 
-### Verification Results (2025-11-16)
+**Completed** (2025-11-16):
+- ✅ Phase separation verified (task plan formation in INTEGRATION phase)
+- ✅ `private.issues` field added to PrivateIS
+- ✅ Serialization updated (to_dict/from_dict with type safety)
+- ✅ Tests written and passing (97/97 core tests)
+- ✅ Type checks clean (pyright 0 errors)
+- ✅ Committed and pushed: `feat(ibis3): add private.issues field to InformationState`
 
-After comprehensive code and test review, **ALL TIER 1 Core Larsson Architecture tasks are COMPLETE**:
-
-#### ✅ ibdm-loop (Complete Interactive Dialogue Loop)
-- **ibdm-loop.2**: Domain validation in answer integration ✅
-  - Implemented in `integration_rules.py:476-482`
-  - Uses `domain.resolves(answer, question)` for semantic validation
-  - Tested in `test_nda_with_domain.py`, `test_domain_model.py`
-
-- **ibdm-loop.3**: Handle invalid answers with clarification ✅
-  - Implemented in `integration_rules.py:501-507`
-  - Sets `_needs_clarification` flag, keeps question on QUD
-  - Tested in `test_clarification_handling.py`
-
-- **ibdm-loop.4**: Mark subplan complete after valid answer ✅
-  - Implemented in `integration_rules.py:492-493`
-  - Calls `_complete_subplan_for_question()`
-  - Tested in `test_qud_and_plan_progression.py`
-
-- **ibdm-loop.5**: Push next question to QUD after answer ✅
-  - Implemented in `integration_rules.py:496-500`
-  - Gets next question from plan and pushes to QUD
-  - Tested in `test_qud_and_plan_progression.py`
-
-- **ibdm-loop.11**: Verify QUD management across turns ✅
-  - Comprehensive tests in `test_qud_and_plan_progression.py`
-  - Tests LIFO behavior, multi-turn dialogues, invalid answer handling
-
-- **ibdm-loop.12**: Verify plan progress tracking ✅
-  - Comprehensive tests in `test_qud_and_plan_progression.py`
-  - Tests subplan completion, plan progression, multi-turn scenarios
-
-**Test Results**: 90/90 core tests passing (100%)
-
-#### ✅ ibdm-accom (Accommodation in Integration Phase)
-- **Status**: COMPLETE
-- Task plan formation is in `integration_rules.py` (`form_task_plan` rule)
-- NO accommodation in interpretation phase (verified via grep)
-- Architecture properly separates INTERPRET (syntax) from INTEGRATE (pragmatics)
-
-#### ✅ ibdm-bsr (Burr-Centric State Refactoring)
-- **Status**: COMPLETE
-- Engine is stateless (verified: no `self.state` in engine code)
-- All methods accept `InformationState` as parameter
-- Methods are pure functions: `interpret()`, `integrate()`, `select_action()`, `generate()`
+**Progress**: IBiS3 30% → 35% (foundation infrastructure complete)
 
 ---
 
-## Updated Recommendation: Larsson Fidelity Metrics
+## 🎯 IMMEDIATE PRIORITY: Implement IBiS3 Accommodation Rules
 
-**Priority**: P0 (Foundation for Validation)
-**Estimated Duration**: 2-3 days
-**Epic**: ibdm-metrics
+**Current Focus**: Week 2 - Implement Rule 4.1 and Rule 4.2
+**Duration**: 3-5 days
+**Blockers**: None - foundation is ready!
 
-### Why This Task Now?
+---
 
-With TIER 1 complete, we need **objective validation** before moving to demos:
+## Week 2 Tasks: Core Accommodation Rules
 
-1. **Verify Larsson Compliance**: Quantitatively measure how well our implementation matches Larsson (2002)
-2. **Baseline for Future Work**: Establish metrics before adding complexity
-3. **Support Demo Claims**: Back up "Larsson-faithful" claims with measurements
-4. **Guide Next Steps**: Metrics will reveal any gaps in implementation
+### Task 1: Implement Rule 4.1 (IssueAccommodation) ⚡ NEXT
 
-### Current State
+**Goal**: Accommodate findout questions from plans to private.issues (instead of pushing directly to QUD)
 
-**What's Complete**:
-- ✅ Core Larsson algorithms (QUD, plans, domain validation, clarification)
-- ✅ Four-phase architecture (INTERPRET → INTEGRATE → SELECT → GENERATE)
-- ✅ Domain abstraction layer with semantic operations
-- ✅ Stateless engine with explicit state passing
+**What to Do**:
 
-**What's Missing**:
-- ❌ Quantitative Larsson fidelity measurement
-- ❌ Architectural compliance metrics
-- ❌ Baseline for tracking improvements/regressions
+1. **Add precondition function** in `src/ibdm/rules/integration_rules.py`:
+   ```python
+   def _plan_has_findout_subplan(state: InformationState) -> bool:
+       """Check if there's an active plan with findout subplans to accommodate.
 
-### Specific Tasks
+       This checks if we've just created a task plan that contains findout
+       subplans. These should be accommodated to private.issues first,
+       not pushed directly to shared.qud.
 
-#### Task 1: Define Architectural Compliance Metrics (ibdm-metrics.1.1)
+       Larsson (2002) Section 4.6.1 - IssueAccommodation rule.
+       """
+       # Check if we have active plans with findout subplans
+       for plan in state.private.plan:
+           if not plan.is_active():
+               continue
 
-**Actions**:
-1. Create metrics module: `src/ibdm/metrics/architectural_compliance.py`
-2. Define metrics for:
-   - Four-phase separation (interpretation, integration, selection, generation)
-   - Rule organization and priority handling
-   - Control loop structure
-3. Implement measurement functions
-4. Add tests for metric calculation
+           # Check if plan has unaccommodated findout subplans
+           for subplan in plan.subplans:
+               if subplan.plan_type == "findout" and subplan.is_active():
+                   # Check if this question is already in issues or QUD
+                   question = subplan.content
+                   if isinstance(question, Question):
+                       if question not in state.private.issues and question not in state.shared.qud:
+                           return True
 
-**Success Criteria**:
-- Metrics module with clear API
-- Can measure phase separation quantitatively
-- Tests verify metric calculations
+       return False
+   ```
 
-**Code Location**: Implementation lives in `integration_rules.py:451-522` (answer integration)
+2. **Add effect function** in `src/ibdm/rules/integration_rules.py`:
+   ```python
+   def _accommodate_findout_to_issues(state: InformationState) -> InformationState:
+       """Accommodate findout subplans to private.issues.
 
-#### Task 2: Define Information State Structure Metrics (ibdm-metrics.1.2)
+       IBiS3 Rule 4.1 (IssueAccommodation):
+       Instead of pushing questions directly to QUD, accommodate them
+       to private.issues first. They'll be raised to QUD later by
+       Rule 4.2 (LocalQuestionAccommodation) when contextually appropriate.
 
-**Actions**:
-1. Verify InformationState structure matches Larsson
-   - private/shared separation
-   - QUD as stack (LIFO)
-   - agenda structure
-   - plan structure
-2. Create structural validation metrics
-3. Add tests for structure compliance
+       Args:
+           state: Current information state
 
-**Success Criteria**:
-- Can verify QUD is LIFO (not set/list)
-- Can validate private/shared separation
-- Structural metrics pass for current implementation
+       Returns:
+           New state with findout questions accommodated to private.issues
 
-#### Task 3: Define Semantic Operations Coverage (ibdm-metrics.1.3)
+       Larsson (2002) Section 4.6.1 - IssueAccommodation rule.
+       """
+       new_state = state.clone()
 
-**Actions**:
-1. Verify all Larsson semantic operations implemented:
-   - `resolves(answer, question)` ✅ (already verified)
-   - `relevant(proposition, question)` (check implementation)
-   - `combines(answer1, answer2)` (verify if needed)
-   - `depends(question1, question2)` (verify if needed)
-2. Create coverage metrics
-3. Test operation correctness
+       # Find active plans with findout subplans
+       for plan in new_state.private.plan:
+           if not plan.is_active():
+               continue
 
-**Success Criteria**:
-- Metric shows which operations are implemented
-- Can verify operation correctness
-- Coverage report generated
+           # Accommodate each findout subplan to private.issues
+           for subplan in plan.subplans:
+               if subplan.plan_type == "findout" and subplan.is_active():
+                   question = subplan.content
+                   if isinstance(question, Question):
+                       # Only accommodate if not already in issues or QUD
+                       if question not in new_state.private.issues and question not in new_state.shared.qud:
+                           new_state.private.issues.append(question)
 
-**Code Location**: `src/ibdm/core/domain.py:151-204` (resolves, relevant methods)
+       return new_state
+   ```
 
-#### Task 4: Define Update Rules Coverage (ibdm-metrics.1.4)
+3. **Add rule to `create_integration_rules()`**:
+   ```python
+   # At the top of the rules list, BEFORE form_task_plan
+   UpdateRule(
+       name="accommodate_issue_from_plan",
+       preconditions=_plan_has_findout_subplan,
+       effects=_accommodate_findout_to_issues,
+       priority=14,  # Higher than form_task_plan (13)
+       rule_type="integration",
+   ),
+   ```
 
-**Actions**:
-1. Map implemented rules to Larsson algorithms:
-   - Integration rules (8 rules in `integration_rules.py`)
-   - Selection rules (check `selection_rules.py`)
-   - Generation rules (check `generation_rules.py`)
-2. Create rule coverage metrics
-3. Verify single-rule application per cycle
+4. **Modify `_form_task_plan()` to NOT push to QUD**:
+   - Remove lines 229-233 and 256-260 that push first question to QUD
+   - Let Rule 4.2 handle raising questions to QUD instead
 
-**Success Criteria**:
-- Coverage report of Larsson algorithms implemented
-- Verification that rules fire correctly
-- Documentation of any intentional deviations
+**Expected Outcome**:
+- Task plans created with findout subplans
+- Questions accommodated to `private.issues` (not pushed to QUD yet)
+- QUD remains empty until Rule 4.2 raises questions
 
-**Code Location**: `src/ibdm/rules/integration_rules.py:17-91` (8 integration rules)
+**Tests to Write**:
+```python
+def test_rule_4_1_issue_accommodation():
+    """Test Rule 4.1: Findout subplans accommodated to private.issues."""
+    state = InformationState()
 
-#### Task 5: Generate Baseline Report (ibdm-metrics.1.5)
+    # Create task plan with findout subplans
+    q1 = WhQuestion(variable="x", predicate="parties(x)")
+    q2 = WhQuestion(variable="y", predicate="effective_date(y)")
+    subplan1 = Plan(plan_type="findout", content=q1)
+    subplan2 = Plan(plan_type="findout", content=q2)
+    plan = Plan(plan_type="nda_drafting", content=None, subplans=[subplan1, subplan2])
+    state.private.plan.append(plan)
 
-**Actions**:
-1. Run all metrics on current codebase
-2. Generate baseline report: `reports/larsson-fidelity-baseline-2025-11-16.md`
-3. Document current compliance level (estimate 85-95%)
-4. Identify any gaps for future work
+    # Apply Rule 4.1
+    new_state = _accommodate_findout_to_issues(state)
 
-**Success Criteria**:
-- Comprehensive baseline report
-- Quantitative compliance score
-- Clear documentation for stakeholders
+    # Assertions
+    assert len(new_state.private.issues) == 2
+    assert q1 in new_state.private.issues
+    assert q2 in new_state.private.issues
+    assert len(new_state.shared.qud) == 0  # Not raised to QUD yet!
+```
 
-### Implementation Plan
+**Larsson Reference**: Section 4.6.1 - IssueAccommodation rule
 
+---
+
+### Task 2: Implement Rule 4.2 (LocalQuestionAccommodation) 🎯
+
+**Goal**: Raise accommodated questions from private.issues to shared.qud when contextually appropriate
+
+**What to Do**:
+
+1. **Create `src/ibdm/rules/selection_rules.py` if it doesn't exist**, or add to existing file:
+   ```python
+   def _has_raisable_issue(state: InformationState) -> bool:
+       """Check if there are issues that can be raised to QUD.
+
+       An issue can be raised if:
+       - There are issues in private.issues
+       - QUD is empty or current QUD is not blocking
+       - Context is appropriate for asking a new question
+
+       Larsson (2002) Section 4.6.2 - LocalQuestionAccommodation rule.
+       """
+       # Need at least one issue to raise
+       if not state.private.issues:
+           return False
+
+       # For now, simple strategy: raise if QUD is empty
+       # Future: more sophisticated context checking
+       if not state.shared.qud:
+           return True
+
+       return False
+   ```
+
+2. **Add effect function**:
+   ```python
+   def _raise_issue_to_qud(state: InformationState) -> InformationState:
+       """Raise first issue from private.issues to shared.qud.
+
+       IBiS3 Rule 4.2 (LocalQuestionAccommodation):
+       When context is appropriate, raise accommodated questions
+       to QUD so they can be asked. This implements incremental
+       questioning - we don't dump all questions at once.
+
+       Args:
+           state: Current information state
+
+       Returns:
+           New state with first issue raised to QUD
+
+       Larsson (2002) Section 4.6.2 - LocalQuestionAccommodation rule.
+       """
+       new_state = state.clone()
+
+       # Pop first issue from private.issues
+       if new_state.private.issues:
+           question = new_state.private.issues.pop(0)
+
+           # Push to QUD
+           new_state.shared.push_qud(question)
+
+       return new_state
+   ```
+
+3. **Add selection rule**:
+   ```python
+   # In create_selection_rules() function
+   UpdateRule(
+       name="raise_accommodated_question",
+       preconditions=_has_raisable_issue,
+       effects=_raise_issue_to_qud,
+       priority=20,  # High priority
+       rule_type="selection",
+   ),
+   ```
+
+**Expected Outcome**:
+- Questions raised from private.issues to shared.qud incrementally
+- Only one question raised at a time (when QUD is empty)
+- Enables natural, incremental dialogue flow
+
+**Tests to Write**:
+```python
+def test_rule_4_2_local_question_accommodation():
+    """Test Rule 4.2: Issues raised to QUD when appropriate."""
+    state = InformationState()
+
+    # Setup: Questions in private.issues, QUD empty
+    q1 = WhQuestion(variable="x", predicate="parties(x)")
+    q2 = WhQuestion(variable="y", predicate="effective_date(y)")
+    state.private.issues = [q1, q2]
+
+    # Apply Rule 4.2
+    new_state = _raise_issue_to_qud(state)
+
+    # Assertions
+    assert len(new_state.shared.qud) == 1
+    assert new_state.shared.qud[0] == q1  # First issue raised
+    assert len(new_state.private.issues) == 1
+    assert new_state.private.issues[0] == q2  # Second issue remains
+```
+
+**Larsson Reference**: Section 4.6.2 - LocalQuestionAccommodation rule
+
+---
+
+### Task 3: Modify integrate_answer for Volunteer Information 🔄
+
+**Goal**: Check private.issues before checking QUD when processing answers
+
+**What to Do**:
+
+1. **Update `_integrate_answer()` in `src/ibdm/rules/integration_rules.py`**:
+   ```python
+   def _integrate_answer(state: InformationState) -> InformationState:
+       """Integrate answer, checking private.issues FIRST (IBiS3).
+
+       Modified for IBiS3:
+       1. Check if answer resolves question in private.issues (volunteer info)
+       2. If yes: remove from issues, add commitment, DON'T raise to QUD
+       3. If no: check QUD as normal (original behavior)
+       """
+       new_state = state.clone()
+       move = new_state.private.beliefs.get("_temp_move")
+
+       if not isinstance(move, DialogueMove):
+           return new_state
+
+       if isinstance(move.content, Answer):
+           answer = move.content
+           domain = _get_active_domain(new_state)
+
+           # IBiS3: Check private.issues FIRST (volunteer information)
+           for issue in new_state.private.issues[:]:  # Iterate over copy
+               if domain.resolves(answer, issue):
+                   # User volunteered answer to unasked question!
+                   new_state.private.issues.remove(issue)
+
+                   # Add commitment
+                   commitment = f"{issue}: {answer.content}"
+                   new_state.shared.commitments.add(commitment)
+
+                   # Mark corresponding subplan as completed
+                   _complete_subplan_for_question(new_state, issue)
+
+                   # DON'T raise this question to QUD - already answered!
+                   # Continue to check other issues
+                   break  # Process one volunteer answer per turn
+           else:
+               # No volunteer info - check QUD as normal (original behavior)
+               top_question = new_state.shared.top_qud()
+               if top_question:
+                   if domain.resolves(answer, top_question):
+                       # Normal QUD resolution...
+                       # (existing code)
+
+       return new_state
+   ```
+
+**Expected Outcome**:
+- User can volunteer information before being asked
+- System recognizes volunteer answers and doesn't re-ask
+- Natural dialogue flow
+
+**Tests to Write**:
+```python
+def test_volunteer_information_handling():
+    """Test IBiS3: User volunteers answer before being asked."""
+    state = InformationState()
+    domain = get_nda_domain()
+
+    # Setup: Question in private.issues (not yet asked)
+    q = WhQuestion(variable="x", predicate="effective_date(x)")
+    state.private.issues.append(q)
+
+    # User volunteers answer
+    answer = Answer(content="January 1, 2025", question_ref=q)
+    move = DialogueMove(move_type="answer", content=answer, speaker="user")
+    state.private.beliefs["_temp_move"] = move
+
+    # Apply integration
+    new_state = _integrate_answer(state)
+
+    # Assertions
+    assert q not in new_state.private.issues  # Removed from issues
+    assert len(new_state.shared.qud) == 0  # NOT raised to QUD
+    assert len(new_state.shared.commitments) > 0  # Answer committed
+```
+
+---
+
+## Development Workflow
+
+### For Each Task:
+
+1. **Write the test first** (TDD)
+   ```bash
+   # Create/update test file
+   vim tests/unit/test_ibis3_accommodation.py
+   ```
+
+2. **Run test (should fail)**
+   ```bash
+   pytest tests/unit/test_ibis3_accommodation.py -v
+   ```
+
+3. **Implement the function**
+   ```bash
+   vim src/ibdm/rules/integration_rules.py
+   # Or: vim src/ibdm/rules/selection_rules.py
+   ```
+
+4. **Run test (should pass)**
+   ```bash
+   pytest tests/unit/test_ibis3_accommodation.py -v
+   ```
+
+5. **Quality checks**
+   ```bash
+   ruff format src/ tests/
+   ruff check --fix src/ tests/
+   pyright src/
+   pytest  # Full suite
+   ```
+
+6. **Commit**
+   ```bash
+   git add .
+   git commit -m "feat(ibis3): implement Rule 4.1 (IssueAccommodation)"
+   # Or: "feat(ibis3): implement Rule 4.2 (LocalQuestionAccommodation)"
+   # Or: "feat(ibis3): handle volunteer information in integrate_answer"
+   ```
+
+---
+
+## Success Criteria - Week 2
+
+After completing these tasks, you should have:
+
+- [x] Rule 4.1 (IssueAccommodation) implemented
+  - Precondition: `_plan_has_findout_subplan`
+  - Effect: `_accommodate_findout_to_issues`
+  - Questions go to private.issues (not QUD)
+
+- [x] Rule 4.2 (LocalQuestionAccommodation) implemented
+  - Precondition: `_has_raisable_issue`
+  - Effect: `_raise_issue_to_qud`
+  - Questions raised from issues to QUD incrementally
+
+- [x] Volunteer information handling
+  - `_integrate_answer` checks private.issues first
+  - Answers to unasked questions processed correctly
+  - System doesn't re-ask already-answered questions
+
+- [x] Tests passing
+  - test_rule_4_1_issue_accommodation
+  - test_rule_4_2_local_question_accommodation
+  - test_volunteer_information_handling
+
+- [x] Integration tests
+  - Multi-turn dialogue with accommodation
+  - User volunteers multiple facts
+  - System adapts questioning based on volunteer info
+
+---
+
+## Expected Behavior After Week 2
+
+**Without IBiS3** (Current):
+```
+System: "What are the parties?"
+User: "Acme and Smith, effective January 1, 2025"
+System: [Only processes parties, ignores date]
+System: "What's the effective date?"
+User: "I just told you!"  ← BAD UX
+```
+
+**With IBiS3** (After Week 2):
+```
+System: "What are the parties?"
+User: "Acme and Smith, effective January 1, 2025"
+System: [Accommodates date to private.issues, then processes as volunteer answer]
+System: [Removes date question from issues, adds commitment]
+System: "What's the governing law?"  ← SKIPS ALREADY-ANSWERED!
+```
+
+---
+
+## Progress Tracking
+
+**IBiS3 Completion**:
+- Week 1: ✅ Foundation (30% → 35%)
+- Week 2: 🔧 Rules 4.1-4.2 (35% → 50%)
+- Week 3-4: Volunteer information + clarification (50% → 65%)
+- Week 5-6: Dependent issues (65% → 80%)
+- Week 7-8: Question reaccommodation (80% → 90%)
+- Week 9-10: Integration tests + polish (90% → 100%)
+
+**Current**: 35% complete
+**Target**: 50% by end of Week 2
+
+---
+
+## File Locations
+
+**Core Files to Modify**:
+- `src/ibdm/core/information_state.py` - ✅ Already updated (private.issues)
+- `src/ibdm/rules/integration_rules.py` - 🔧 Add Rule 4.1, modify _form_task_plan, modify _integrate_answer
+- `src/ibdm/rules/selection_rules.py` - 🔧 Add Rule 4.2
+
+**Test Files**:
+- `tests/unit/test_information_state.py` - ✅ Already updated
+- `tests/unit/test_ibis3_accommodation.py` - 📋 To create
+- `tests/integration/test_volunteer_information.py` - 📋 To create
+
+---
+
+## Larsson References
+
+**Essential Reading**:
+- **Section 4.6.1**: IssueAccommodation rule (Rule 4.1)
+- **Section 4.6.2**: LocalQuestionAccommodation rule (Rule 4.2)
+- **Figure 4.1**: IBiS3 Information State structure
+- **Section 4.3**: Clarification questions
+
+**Access**:
 ```bash
-# 1. Create metrics module structure
-mkdir -p src/ibdm/metrics tests/unit/metrics
+# Read Larsson algorithms
+cat docs/LARSSON_ALGORITHMS.md | grep -A 50 "IBiS3"
 
-# 2. Implement metrics (red-green-refactor)
-# - Write failing test
-# - Implement metric
-# - Refactor and commit
-
-# 3. Generate baseline report
-python -m ibdm.metrics.generate_report > reports/larsson-fidelity-baseline.md
-
-# 4. Review and document
-# Update SYSTEM_ACHIEVEMENTS.md with quantitative metrics
-```
-
-### Why Not Domain Completeness?
-
-Domain completeness (previous recommendation) is **still important** but:
-
-1. **Metrics First**: Need to establish baseline BEFORE adding complexity
-2. **Validation Foundation**: Metrics will help verify domain switching works correctly
-3. **Risk Mitigation**: Quantify current state before changing architecture
-4. **Better Demos**: Can claim "95% Larsson-compliant" with evidence
-
-**Revised Timeline**:
-1. **This Week**: Larsson fidelity metrics (ibdm-metrics) - 2-3 days
-2. **Next Week**: Domain completeness & switching (ibdm-84, ibdm-85) - 3-5 days
-3. **Following**: End-to-end validation with metrics tracking
-
-### Expected Outcome
-
-After completing metrics:
-- **Quantitative Larsson Fidelity Score**: 85-95% (estimated)
-- **Baseline Documentation**: For tracking future changes
-- **Gap Analysis**: Clear list of remaining work
-- **Demo Credibility**: Evidence-based claims
-- **Clear Path**: To domain completeness and end-to-end validation
-
----
-
-## Alternative: Continue with Domain Completeness
-
-If metrics implementation is deferred, the **previous recommendation remains valid**:
-
-### Domain Completeness & Runtime Switching (ibdm-84, ibdm-85)
-
-**Why**: Demonstrates architectural soundness and domain portability
-**Priority**: P0 for demo readiness
-**Estimated**: 3-5 days
-
-**Tasks**:
-1. Verify NDA domain completeness (ibdm-84.1)
-2. Complete Travel domain (ibdm-85)
-3. Implement runtime domain switching
-4. Create side-by-side demo
-
-**Outcome**: Goal 3 (Domain Portability) 90% → 100%
-
----
-
-## Recommended Path: Metrics → Domains → Validation
-
-```
-Week 1 (Current): Larsson Fidelity Metrics
-  ├─ Define metrics (architectural, structural, semantic, rules)
-  ├─ Implement measurement
-  ├─ Generate baseline report
-  └─ Document compliance level
-
-Week 2: Domain Completeness
-  ├─ Verify NDA domain
-  ├─ Complete Travel domain
-  ├─ Runtime switching
-  └─ Side-by-side demo
-
-Week 3-4: End-to-End Validation
-  ├─ Full workflow validation (both domains)
-  ├─ Metrics tracking through dialogues
-  ├─ Performance benchmarks
-  └─ Demo polish
+# Read full thesis chapter
+cat docs/larsson_thesis/chapter_4.md
 ```
 
 ---
 
-## How to Start (Metrics Path)
+## Questions or Issues?
 
-### 1. Review Larsson Compliance Documentation
+**If stuck**:
+1. Review `IBIS_PROGRESSION_GUIDE.md` - Section "Part 3: IBiS3"
+2. Check existing integration rules for patterns
+3. Look at test examples in `tests/integration/test_qud_and_plan_progression.py`
 
-```bash
-# Read Larsson algorithms reference
-cat docs/LARSSON_ALGORITHMS.md
-
-# Review implementation
-cat LARSSON_PRIORITY_ROADMAP.md
-```
-
-### 2. Examine Current Implementation
-
-```bash
-# Check integration rules (answer validation logic)
-cat src/ibdm/rules/integration_rules.py
-
-# Check domain semantic operations
-cat src/ibdm/core/domain.py
-
-# Check test coverage
-pytest tests/integration/test_qud_and_plan_progression.py -v
-```
-
-### 3. Create Metrics Module
-
-```bash
-# Create module structure
-mkdir -p src/ibdm/metrics tests/unit/metrics
-
-# Start with architectural metrics
-touch src/ibdm/metrics/__init__.py
-touch src/ibdm/metrics/architectural_compliance.py
-touch tests/unit/metrics/test_architectural_compliance.py
-```
-
-### 4. Follow Development Workflow
-
-Per `CLAUDE.md`:
-1. Use beads for tracking: `.claude/beads-larsson.sh start ibdm-metrics.1.1`
-2. Red-Green-Refactor: Test → Implement → Refactor
-3. Quality checks: `ruff format && ruff check --fix && pyright && pytest`
-4. Commit: `feat(metrics): add architectural compliance metrics`
+**Key Principle**: Accommodation is INTEGRATION/SELECT, not INTERPRET
+- Questions accommodated to private.issues (INTEGRATION)
+- Questions raised to QUD (SELECTION)
+- User can answer before being asked (natural dialogue)
 
 ---
 
-## Alignment with Project Goals
+## Bottom Line
 
-**Metrics-First Path**:
-- ✅ **Larsson Fidelity**: Quantitatively verify compliance
-- ✅ **Validation Foundation**: Establish baseline before complexity
-- ✅ **Demo Credibility**: Evidence-based claims
-- ✅ **Risk Mitigation**: Measure before changing
+**Next Steps** (in order):
+1. ⚡ Implement Rule 4.1 (IssueAccommodation) - 1-2 days
+2. 🎯 Implement Rule 4.2 (LocalQuestionAccommodation) - 1-2 days
+3. 🔄 Modify integrate_answer for volunteer info - 1 day
 
-**Bottom Line**: Metrics provide the **foundation for confident progress**. With TIER 1 complete, we need quantitative validation before adding domain switching complexity or creating demos.
+**Total Effort**: 3-5 days
+**Goal**: IBiS3 35% → 50%
+**Outcome**: Natural dialogue with volunteer information handling
 
----
-
-## Summary
-
-**Status**: TIER 1 (Core Larsson Architecture) ✅ COMPLETE
-**Recommendation**: Implement Larsson Fidelity Metrics (ibdm-metrics)
-**Alternative**: Domain Completeness & Runtime Switching (ibdm-84, ibdm-85)
-**Rationale**: Establish quantitative baseline before adding complexity
-
-**Key Finding**: The core dialogue loop with domain validation, QUD management, plan progression, and clarification handling is **fully implemented and tested**. Next step is to measure how well it matches Larsson (2002) before proceeding.
+Ready to code! 🚀

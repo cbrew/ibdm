@@ -8,7 +8,7 @@ Based on Larsson (2002) Issue-based Dialogue Management.
 
 import copy
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 from ibdm.core.moves import DialogueMove
 from ibdm.core.plans import Plan
@@ -21,6 +21,9 @@ class PrivateIS:
 
     Contains information that is private to one agent, including their
     plans, agenda, beliefs, and recent utterances.
+
+    IBiS3 Extension: The 'issues' field supports question accommodation.
+    Questions are accommodated to issues before being raised to the QUD.
     """
 
     plan: list[Plan] = field(default_factory=lambda: [])
@@ -35,6 +38,9 @@ class PrivateIS:
     last_utterance: DialogueMove | None = None
     """Latest utterance produced by this agent"""
 
+    issues: list[Question] = field(default_factory=lambda: [])
+    """Accommodated questions not yet raised to QUD (IBiS3 - Larsson Section 4.6)"""
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to JSON-serializable dict."""
         return {
@@ -46,6 +52,7 @@ class PrivateIS:
                 if self.last_utterance
                 else None
             ),
+            "issues": [getattr(q, "to_dict", lambda: str(q))() for q in self.issues],
         }
 
     @classmethod
@@ -60,6 +67,7 @@ class PrivateIS:
         """
         from ibdm.core.moves import DialogueMove
         from ibdm.core.plans import Plan
+        from ibdm.core.questions import Question
 
         # Reconstruct plans
         plan_data = data.get("plan", [])
@@ -75,11 +83,21 @@ class PrivateIS:
         if last_utterance_data is not None:
             last_utterance = DialogueMove.from_dict(last_utterance_data)
 
+        # Reconstruct issues (IBiS3)
+        issues_data: list[Any] = data.get("issues", [])
+        issues: list[Question] = []
+        for q in issues_data:
+            if isinstance(q, dict):
+                issues.append(Question.from_dict(cast(dict[str, Any], q)))
+            else:
+                issues.append(q)
+
         return cls(
             plan=plans,
             agenda=agenda,
             beliefs=data.get("beliefs", {}).copy(),
             last_utterance=last_utterance,
+            issues=issues,
         )
 
     def __str__(self) -> str:
@@ -87,7 +105,8 @@ class PrivateIS:
         return (
             f"PrivateIS(plans={len(self.plan)}, "
             f"agenda={len(self.agenda)}, "
-            f"beliefs={len(self.beliefs)})"
+            f"beliefs={len(self.beliefs)}, "
+            f"issues={len(self.issues)})"
         )
 
 
