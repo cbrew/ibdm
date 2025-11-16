@@ -169,6 +169,16 @@ def create_selection_rules() -> list[UpdateRule]:
             priority=19,  # Very high - confirm before processing
             rule_type="selection",
         ),
+        # IBiS2 Rule 3.25: ReraiseIssue
+        # Pre: Communication failure, need to re-ask question
+        # Effect: Re-raise question to QUD after failure
+        UpdateRule(
+            name="reraise_issue",
+            preconditions=_needs_issue_reraised,
+            effects=_reraise_failed_issue,
+            priority=13,  # Medium-high - handle failures
+            rule_type="selection",
+        ),
         # Fallback: Generic response if nothing else applies
         # Only fires when no other rule has selected an action
         UpdateRule(
@@ -1074,5 +1084,66 @@ def _select_understanding_confirmation_answer(state: InformationState) -> Inform
     )
 
     new_state.private.agenda.append(move)
+
+    return new_state
+
+
+# IBiS2 Rule 3.25 functions
+
+
+def _needs_issue_reraised(state: InformationState) -> bool:
+    """Check if an issue needs to be re-raised after failure.
+
+    IBiS2 Rule 3.25: ReraiseIssue
+    Pre: Communication failure for a question, need to re-ask
+
+    Args:
+        state: Current information state
+
+    Returns:
+        True if issue needs to be re-raised
+    """
+    # Check if beliefs indicate a failed question that needs re-raising
+    if "needs_reutterance" in state.private.beliefs and state.private.beliefs["needs_reutterance"]:
+        # Check if there's a rejected interpretation
+        if "rejected_interpretation" in state.private.beliefs:
+            return True
+
+    return False
+
+
+def _reraise_failed_issue(state: InformationState) -> InformationState:
+    """Re-raise question after communication failure.
+
+    IBiS2 Rule 3.25: ReraiseIssue
+    Effect: Re-ask the question that failed
+
+    Args:
+        state: Current information state
+
+    Returns:
+        Updated state with question re-raised
+    """
+    new_state = state.clone()
+
+    # Get the rejected interpretation
+    rejected_content = new_state.private.beliefs.get("rejected_interpretation", "")
+
+    # Clear the failure flags
+    new_state.private.beliefs["needs_reutterance"] = False
+    new_state.private.beliefs.pop("rejected_interpretation", None)
+
+    # Try to create a clarification question
+    from ibdm.core import WhQuestion
+    from ibdm.core.moves import DialogueMove
+
+    # Create a clarification request
+    clarification = DialogueMove(
+        move_type="ask",
+        content=WhQuestion(variable="x", predicate=f"clarify_{rejected_content}"),
+        speaker=new_state.agent_id,
+    )
+
+    new_state.private.agenda.append(clarification)
 
     return new_state

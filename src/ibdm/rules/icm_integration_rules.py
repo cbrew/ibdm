@@ -140,6 +140,36 @@ def create_icm_integration_rules() -> list[UpdateRule]:
             priority=17,  # High - handle rejection immediately
             rule_type="integration",
         ),
+        # Rule 3.16: GetLatestMoves (infrastructure)
+        # Pre: New utterance received
+        # Effect: Record in last_moves for processing
+        UpdateRule(
+            name="get_latest_moves",
+            preconditions=_has_unprocessed_input,
+            effects=_record_latest_moves,
+            priority=20,  # Very high - must run first
+            rule_type="integration",
+        ),
+        # Rule 3.18: IntegrateSysAsk
+        # Pre: System's own ask-move on last_moves
+        # Effect: Add to move history, track for grounding
+        UpdateRule(
+            name="integrate_sys_ask",
+            preconditions=_is_system_ask_move,
+            effects=_integrate_system_ask,
+            priority=14,  # High - track system moves
+            rule_type="integration",
+        ),
+        # Rule 3.19: IntegrateSysAnswer
+        # Pre: System's own answer-move on last_moves
+        # Effect: Add to move history, track for grounding
+        UpdateRule(
+            name="integrate_sys_answer",
+            preconditions=_is_system_answer_move,
+            effects=_integrate_system_answer,
+            priority=14,  # High - track system moves
+            rule_type="integration",
+        ),
         # Generic ICM move tracking
         # Ensures all ICM moves are added to move history
         UpdateRule(
@@ -449,6 +479,53 @@ def _is_user_acceptance_negative(state: InformationState) -> bool:
         return any(phrase in content for phrase in rejection_phrases)
 
     return False
+
+
+def _has_unprocessed_input(state: InformationState) -> bool:
+    """Check if there's unprocessed input that needs recording.
+
+    Args:
+        state: Current information state
+
+    Returns:
+        True if last_moves has content not yet in moves
+    """
+    # This is typically handled by the dialogue engine before rules run
+    # For most cases, this will be False as moves are already recorded
+    # This is a placeholder for Rule 3.16 infrastructure
+    return False
+
+
+def _is_system_ask_move(state: InformationState) -> bool:
+    """Check if last move is system's own ask-move.
+
+    Args:
+        state: Current information state
+
+    Returns:
+        True if last move is from system and is ask
+    """
+    if not state.shared.last_moves:
+        return False
+
+    last_move = state.shared.last_moves[-1]
+    return last_move.speaker == state.agent_id and last_move.move_type == "ask"
+
+
+def _is_system_answer_move(state: InformationState) -> bool:
+    """Check if last move is system's own answer-move.
+
+    Args:
+        state: Current information state
+
+    Returns:
+        True if last move is from system and is answer
+    """
+    if not state.shared.last_moves:
+        return False
+
+    last_move = state.shared.last_moves[-1]
+    return last_move.speaker == state.agent_id and last_move.move_type == "answer"
 
 
 # Effect functions
@@ -848,5 +925,75 @@ def _integrate_user_acceptance_negative(state: InformationState) -> InformationS
                 new_state.private.beliefs["rejected_content"] = move.content
                 new_state.private.beliefs["needs_correction"] = True
                 break
+
+    return new_state
+
+
+def _record_latest_moves(state: InformationState) -> InformationState:
+    """Record latest moves in dialogue history.
+
+    Based on Larsson (2002) Section 3.6, Rule 3.16.
+
+    Args:
+        state: Current information state
+
+    Returns:
+        Updated information state with moves recorded
+    """
+    # This is typically handled by the dialogue engine
+    # Placeholder implementation
+    return state.clone()
+
+
+def _integrate_system_ask(state: InformationState) -> InformationState:
+    """Integrate system's own ask-move.
+
+    Track system questions for grounding and dialogue flow.
+
+    Based on Larsson (2002) Section 3.6, Rule 3.18.
+
+    Args:
+        state: Current information state
+
+    Returns:
+        Updated information state with system ask tracked
+    """
+    new_state = state.clone()
+    last_move = new_state.shared.last_moves[-1]
+
+    # Add to move history if not already there
+    if not new_state.shared.moves or new_state.shared.moves[-1] != last_move:
+        new_state.shared.moves.append(last_move)
+
+    # Mark as needing grounding feedback
+    last_move.metadata["needs_grounding"] = True
+    last_move.metadata["grounding_status"] = "pending"
+
+    return new_state
+
+
+def _integrate_system_answer(state: InformationState) -> InformationState:
+    """Integrate system's own answer-move.
+
+    Track system answers for grounding and dialogue flow.
+
+    Based on Larsson (2002) Section 3.6, Rule 3.19.
+
+    Args:
+        state: Current information state
+
+    Returns:
+        Updated information state with system answer tracked
+    """
+    new_state = state.clone()
+    last_move = new_state.shared.last_moves[-1]
+
+    # Add to move history if not already there
+    if not new_state.shared.moves or new_state.shared.moves[-1] != last_move:
+        new_state.shared.moves.append(last_move)
+
+    # Mark as needing grounding feedback
+    last_move.metadata["needs_grounding"] = True
+    last_move.metadata["grounding_status"] = "pending"
 
     return new_state
