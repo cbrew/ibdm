@@ -20,9 +20,11 @@ Quick navigation to all IBDM documentation, organized by purpose and currency.
 
 | Document | Purpose |
 |----------|---------|
-| [SYSTEM_ACHIEVEMENTS.md](../SYSTEM_ACHIEVEMENTS.md) | What's been built - 10,893 LOC, 527 tests, Phase 3.5 complete |
+| [PROJECT_STATUS.md](../PROJECT_STATUS.md) | **Current implementation status** - What's working, what's missing, demo readiness |
+| [IBIS_PROGRESSION_GUIDE.md](../IBIS_PROGRESSION_GUIDE.md) | **IBiS1→2→3→4 roadmap** - How to progress through Larsson's stages (ESSENTIAL READ) |
+| [LARSSON_TASK_MAPPING.md](../LARSSON_TASK_MAPPING.md) | Task-to-thesis mapping - All beads tasks mapped to thesis chapters |
 | [LARSSON_PRIORITY_ROADMAP.md](../LARSSON_PRIORITY_ROADMAP.md) | Current priorities, tier-based task breakdown |
-| [LARSSON_TASK_MAPPING.md](../LARSSON_TASK_MAPPING.md) | **Task-to-thesis mapping** - Complete guide to how tasks relate to Larsson chapters |
+| [SYSTEM_ACHIEVEMENTS.md](../SYSTEM_ACHIEVEMENTS.md) | What's been built - 10,893 LOC, 527 tests, Phase 3.5 complete |
 | [ARCHITECTURE_ISSUE_SUMMARY.md](../ARCHITECTURE_ISSUE_SUMMARY.md) | Known architectural issues (accommodation phase separation) |
 
 ---
@@ -113,6 +115,8 @@ Documents use these status markers in headers:
 |------|------|
 | Start development | [CLAUDE.md](../CLAUDE.md) → [GETTING_STARTED.md](../GETTING_STARTED.md) |
 | Understand architecture | [architecture_principles.md](architecture_principles.md) → [LARSSON_ALGORITHMS.md](LARSSON_ALGORITHMS.md) |
+| **Plan next steps** | **[IBIS_PROGRESSION_GUIDE.md](../IBIS_PROGRESSION_GUIDE.md)** ← **Start here for roadmap** |
+| Check current status | [PROJECT_STATUS.md](../PROJECT_STATUS.md) |
 | Set up environment | [environment_setup.md](environment_setup.md) → [llm_configuration.md](llm_configuration.md) |
 | See what's built | [SYSTEM_ACHIEVEMENTS.md](../SYSTEM_ACHIEVEMENTS.md) |
 | Find current priorities | [LARSSON_PRIORITY_ROADMAP.md](../LARSSON_PRIORITY_ROADMAP.md) |
