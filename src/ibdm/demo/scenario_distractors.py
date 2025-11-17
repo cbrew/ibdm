@@ -564,86 +564,331 @@ def get_scenario1_turn5_distractors() -> list[ChoiceOption]:
 
 
 def get_action_confirmation_turn0_distractors() -> list[ChoiceOption]:
-    """Distractors for Action Confirmation Turn 0 (Initial request)."""
+    """Distractors for Action Confirmation Turn 0 (Initial request).
+
+    Expected: "Book a hotel in Paris from January 5 to January 10, 2025"
+    Context: User is initiating an action-oriented dialogue
+    """
     return [
+        # Expected move (always option 1)
         ChoiceOption(
             id=1,
             category=MoveCategory.EXPECTED,
             utterance="Book a hotel in Paris from January 5 to January 10, 2025",
             description="[Expected] Complete action request with all parameters",
-            expected_trajectory="System forms booking plan and requests confirmation",
+            expected_trajectory=(
+                "System forms booking plan with action: book_hotel(Paris, 2025-01-05, 2025-01-10), "
+                "adds action to private.actions queue, "
+                "generates confirmation question, "
+                "raises confirmation to QUD"
+            ),
         ),
+        # Distractor 1: Missing critical parameters
         ChoiceOption(
             id=2,
             category=MoveCategory.INVALID_ANSWER,
             utterance="Book a hotel in Paris",
-            description="[Distractor] Missing parameters → System must ask follow-up questions",
-            expected_trajectory="System asks for missing dates → clarification dialogue",
+            description=(
+                "[Distractor] Missing dates → "
+                "System must ask follow-up questions for required parameters"
+            ),
+            expected_trajectory=(
+                "System detects incomplete action (missing check_in, check_out), "
+                "forms clarification plan with questions: "
+                "'When is check-in?', 'When is check-out?', "
+                "accommodates questions to private.issues, "
+                "raises first question to QUD"
+            ),
         ),
+        # Distractor 2: Ambiguous parameters
         ChoiceOption(
             id=3,
-            category=MoveCategory.VOLUNTEER_INFO,
-            utterance=(
-                "Book a hotel in Paris from January 5 to January 10, "
-                "cancel my previous booking"
+            category=MoveCategory.CLARIFICATION_REQUEST,
+            utterance="Book a hotel for next week",
+            description=("[Distractor] Ambiguous time reference → System asks for specific dates"),
+            expected_trajectory=(
+                "System detects ambiguous temporal reference 'next week', "
+                "generates clarification: 'What are the specific check-in and check-out dates?', "
+                "pushes clarification to QUD"
             ),
-            description="[Distractor] Volunteer action → Multiple actions in queue",
-            expected_trajectory="System queues two actions: cancel + book",
         ),
+        # Distractor 3: Volunteer multiple actions
         ChoiceOption(
             id=4,
-            category=MoveCategory.NESTED_QUESTION,
-            utterance="What hotels are available in Paris?",
-            description="[Distractor] Nested question → QUD stack operations before action",
-            expected_trajectory="System pushes search question to QUD before booking action",
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance=(
+                "Book a hotel in Paris from January 5 to January 10, 2025, "
+                "and cancel my existing Paris booking"
+            ),
+            description=("[Distractor] Multiple actions → System queues both actions in sequence"),
+            expected_trajectory=(
+                "System forms two actions: cancel_booking(), book_hotel(Paris, ...), "
+                "adds both to private.actions queue (FIFO), "
+                "processes first action (cancel) with confirmation request"
+            ),
         ),
+        # Distractor 4: Nested question before action
         ChoiceOption(
             id=5,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="What hotels are available in Paris for January 5-10?",
+            description=(
+                "[Distractor] Information request before action → QUD stack, search dialogue"
+            ),
+            expected_trajectory=(
+                "System pushes search question to QUD, "
+                "performs hotel search, "
+                "presents alternatives (may trigger negotiation via IUN), "
+                "after selection, may lead to booking action"
+            ),
+        ),
+        # Distractor 5: Request specific hotel
+        ChoiceOption(
+            id=6,
+            category=MoveCategory.EXPECTED,
+            utterance="Book Hotel de Paris from January 5 to January 10, 2025",
+            description=(
+                "[Distractor] Specific hotel named → System forms booking with exact hotel"
+            ),
+            expected_trajectory=(
+                "System forms action: book_hotel(Hotel de Paris, Paris, 2025-01-05, 2025-01-10), "
+                "queues action, "
+                "raises confirmation to QUD with specific hotel name"
+            ),
+        ),
+        # Distractor 6: Request without confirmation
+        ChoiceOption(
+            id=7,
             category=MoveCategory.CLARIFICATION_REQUEST,
-            utterance="Book Hotel de Paris immediately without asking",
-            description="[Distractor] User requests no confirmation → different flow",
-            expected_trajectory="System bypasses confirmation (optimistic mode)",
+            utterance="Book a hotel in Paris from January 5-10 without asking me to confirm",
+            description=(
+                "[Distractor] User requests optimistic execution → System bypasses confirmation"
+            ),
+            expected_trajectory=(
+                "System detects user preference for optimistic mode, "
+                "forms booking action, "
+                "executes action IMMEDIATELY without confirmation, "
+                "makes optimistic commitment, "
+                "reports result (may need rollback if fails)"
+            ),
+        ),
+        # Distractor 7: Volunteer preferences/constraints
+        ChoiceOption(
+            id=8,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance=(
+                "Book a hotel in Paris from January 5 to January 10, 2025, "
+                "with free breakfast and under $150 per night"
+            ),
+            description=("[Distractor] Volunteer constraints → System adds constraints to action"),
+            expected_trajectory=(
+                "System forms action with constraints: "
+                "book_hotel(Paris, 2025-01-05, 2025-01-10, amenities=[breakfast], max_price=150), "
+                "may need to search for hotels matching constraints, "
+                "then raise confirmation with specific hotel meeting criteria"
+            ),
+        ),
+        # Distractor 8: Meta-question about process
+        ChoiceOption(
+            id=9,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="How do I book a hotel?",
+            description=(
+                "[Distractor] Meta-question about booking process → System explains procedure"
+            ),
+            expected_trajectory=(
+                "System pushes meta-question to QUD, "
+                "provides explanation: "
+                "'Provide city, check-in/out dates, I'll find options and confirm', "
+                "pops meta-question, "
+                "asks if user wants to proceed with booking"
+            ),
         ),
     ]
 
 
 def get_action_confirmation_turn2_distractors() -> list[ChoiceOption]:
-    """Distractors for Action Confirmation Turn 2 (Confirmation response)."""
+    """Distractors for Action Confirmation Turn 2 (Confirmation response).
+
+    Expected: "Yes"
+    Context: System asked "Should I book Hotel de Paris for January 5-10, 2025?"
+            Action is queued: book_hotel(Hotel de Paris, Paris, 2025-01-05, 2025-01-10)
+    """
     return [
+        # Expected move (always option 1)
         ChoiceOption(
             id=1,
             category=MoveCategory.EXPECTED,
             utterance="Yes",
             description="[Expected] User confirms → action executes",
-            expected_trajectory="System executes action, reports success",
+            expected_trajectory=(
+                "System pops confirmation question from QUD, "
+                "executes action from queue: book_hotel(...), "
+                "makes commitment: hotel_booked(Hotel de Paris, 2025-01-05, 2025-01-10), "
+                "removes action from queue, "
+                "reports success: 'Booking confirmed. Hotel de Paris reserved.'"
+            ),
         ),
+        # Distractor 1: Explicit rejection
         ChoiceOption(
             id=2,
             category=MoveCategory.REJECTION,
             utterance="No",
-            description="[Distractor] Rejection → Action cancelled, plan aborted",
-            expected_trajectory="System cancels action, clears action queue",
+            description=("[Distractor] Rejection → Action cancelled, queue cleared, plan aborted"),
+            expected_trajectory=(
+                "System pops confirmation question from QUD, "
+                "removes action from queue WITHOUT executing, "
+                "no commitment made, "
+                "reports cancellation: 'Okay, I won't book the hotel', "
+                "clears private.actions, "
+                "returns to idle or asks if user wants different hotel"
+            ),
         ),
+        # Distractor 2: Rejection with reason
         ChoiceOption(
             id=3,
-            category=MoveCategory.CORRECTION,
-            utterance="Wait, change the dates to January 6-11",
-            description="[Distractor] Correction → Parameter revision, new confirmation cycle",
-            expected_trajectory="System updates action parameters, asks for re-confirmation",
+            category=MoveCategory.REJECTION,
+            utterance="No, that hotel is too expensive",
+            description=(
+                "[Distractor] Rejection with constraint → System searches for alternatives"
+            ),
+            expected_trajectory=(
+                "System pops confirmation, removes action from queue, "
+                "extracts constraint: price_constraint(lower), "
+                "initiates new search with constraint, "
+                "may trigger negotiation dialogue with cheaper alternatives"
+            ),
         ),
+        # Distractor 3: Correction of dates
         ChoiceOption(
             id=4,
-            category=MoveCategory.NESTED_QUESTION,
-            utterance="What are the cancellation terms?",
-            description="[Distractor] Nested question → QUD push, then return to confirmation",
-            expected_trajectory="System answers policy question, returns to confirmation",
+            category=MoveCategory.CORRECTION,
+            utterance="Wait, change the dates to January 6-11 instead",
+            description=(
+                "[Distractor] Date correction → Parameter revision, new confirmation cycle"
+            ),
+            expected_trajectory=(
+                "System detects correction, "
+                "updates action parameters: "
+                "book_hotel(Hotel de Paris, Paris, 2025-01-06, 2025-01-11), "
+                "keeps action in queue, "
+                "generates NEW confirmation question with updated dates, "
+                "raises to QUD: 'Should I book Hotel de Paris for January 6-11, 2025?'"
+            ),
         ),
+        # Distractor 4: Correction of hotel
         ChoiceOption(
             id=5,
+            category=MoveCategory.CORRECTION,
+            utterance="Actually, I want a different hotel",
+            description=("[Distractor] Hotel correction → Restarts search/selection process"),
+            expected_trajectory=(
+                "System removes current action from queue, "
+                "asks clarification: 'Which hotel would you prefer?', "
+                "may trigger search dialogue or negotiation with alternatives"
+            ),
+        ),
+        # Distractor 5: Nested question - cancellation policy
+        ChoiceOption(
+            id=6,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="What are the cancellation terms for this hotel?",
+            description=("[Distractor] Policy question → QUD push, answer, return to confirmation"),
+            expected_trajectory=(
+                "System pushes user's question to QUD: [Q_confirm, Q_cancellation], "
+                "provides answer: 'Free cancellation up to 24 hours before check-in', "
+                "pops Q_cancellation, "
+                "returns to Q_confirm: 'Should I book Hotel de Paris for January 5-10?'"
+            ),
+        ),
+        # Distractor 6: Nested question - hotel details
+        ChoiceOption(
+            id=7,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="What amenities does Hotel de Paris have?",
+            description=(
+                "[Distractor] Information request → "
+                "QUD push, provide details, return to confirmation"
+            ),
+            expected_trajectory=(
+                "System pushes amenities question to QUD, "
+                "provides hotel details: 'Free WiFi, breakfast, gym, pool', "
+                "pops amenities question, "
+                "returns to confirmation: 'Should I book this hotel?'"
+            ),
+        ),
+        # Distractor 7: Conditional acceptance
+        ChoiceOption(
+            id=8,
+            category=MoveCategory.CLARIFICATION_REQUEST,
+            utterance="Yes, but only if the price is under $200 per night",
+            description=(
+                "[Distractor] Conditional acceptance → System checks constraint before executing"
+            ),
+            expected_trajectory=(
+                "System extracts constraint: max_price(200), "
+                "checks if hotel meets constraint, "
+                "if YES: executes action and confirms, "
+                "if NO: rejects and searches for alternatives meeting constraint"
+            ),
+        ),
+        # Distractor 8: Volunteer additional action
+        ChoiceOption(
+            id=9,
             category=MoveCategory.VOLUNTEER_INFO,
-            utterance="Yes, and also book a flight to Paris",
-            description="[Distractor] Volunteer action → Sequential action execution",
-            expected_trajectory="System confirms hotel, then queues flight booking",
+            utterance="Yes, and also book a flight to Paris for January 5",
+            description=("[Distractor] Volunteer new action → Sequential action execution"),
+            expected_trajectory=(
+                "System confirms hotel booking (executes first action), "
+                "forms second action: book_flight(Paris, 2025-01-05), "
+                "adds to queue, "
+                "after hotel confirmation, raises flight confirmation: "
+                "'Should I book a flight to Paris for January 5?'"
+            ),
+        ),
+        # Distractor 9: Request modification and confirmation
+        ChoiceOption(
+            id=10,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="Yes, and send me a confirmation email",
+            description=(
+                "[Distractor] Volunteer follow-up action → Action with chained sub-action"
+            ),
+            expected_trajectory=(
+                "System confirms hotel booking (executes), "
+                "forms follow-up action: send_confirmation_email(), "
+                "adds to queue, "
+                "executes email action (may or may not confirm), "
+                "reports: 'Booking confirmed. Confirmation email sent.'"
+            ),
+        ),
+        # Distractor 10: Ask for summary before confirming
+        ChoiceOption(
+            id=11,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="Can you summarize all the booking details first?",
+            description=(
+                "[Distractor] Request summary → QUD push, provide details, return to confirmation"
+            ),
+            expected_trajectory=(
+                "System pushes summary request to QUD, "
+                "provides full booking details: hotel, dates, price, location, "
+                "pops summary question, "
+                "returns to confirmation: 'Should I proceed with this booking?'"
+            ),
+        ),
+        # Distractor 11: Defer decision
+        ChoiceOption(
+            id=12,
+            category=MoveCategory.REJECTION,
+            utterance="Let me think about it",
+            description=("[Distractor] Soft rejection → Action remains queued, dialogue paused"),
+            expected_trajectory=(
+                "System keeps action in queue (doesn't remove), "
+                "keeps confirmation in QUD or moves to pending state, "
+                "acknowledges: 'Okay, let me know when you're ready', "
+                "dialogue enters waiting state"
+            ),
         ),
     ]
 
@@ -778,8 +1023,7 @@ def get_rollback_turn0_distractors() -> list[ChoiceOption]:
             id=3,
             category=MoveCategory.VOLUNTEER_INFO,
             utterance=(
-                "Book Hotel de Paris for January 5-10, 2025, "
-                "and send confirmation to my email"
+                "Book Hotel de Paris for January 5-10, 2025, and send confirmation to my email"
             ),
             description="[Distractor] Volunteer action → Multiple action sequence",
             expected_trajectory="System queues two actions: book + send_email",
