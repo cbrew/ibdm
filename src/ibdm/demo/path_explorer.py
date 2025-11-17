@@ -1,19 +1,19 @@
-"""Exhaustive path exploration for dialogue scenarios.
+"""Best-first beam search path exploration for dialogue scenarios.
 
-Explores all possible dialogue paths up to a specified depth using breadth-first search.
-Depth is configurable - default is 3, but can be set to any positive integer.
-Note: Path count grows exponentially (depth 5+ may generate thousands of paths).
+Uses best-first beam search with configurable beam size (default: 200) to explore
+the most promising dialogue paths. Prioritizes complete paths (those with commitments
+and progress toward scenario goals).
 
 Useful for:
-- Testing all distractor behaviors
-- Understanding state transitions
-- Validating scenario logic
-- Coverage analysis
+- Finding high-quality dialogue paths efficiently
+- Testing scenario coverage with resource constraints
+- Understanding most likely state transitions
+- Evaluating path quality and completeness
 """
 
 from __future__ import annotations
 
-from collections import deque
+import heapq
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -67,6 +67,7 @@ class PathNode:
         parent: Parent node in the tree (None for root)
         path_id: String representation of path (e.g., "1→3→2")
         children: Child nodes (filled during exploration)
+        score: Quality score for beam search (higher is better)
     """
 
     depth: int
@@ -76,6 +77,7 @@ class PathNode:
     parent: PathNode | None
     path_id: str
     children: list[PathNode] = field(default_factory=lambda: [])
+    score: float = 0.0
 
     def get_path_choices(self) -> list[str]:
         """Get the sequence of choices that led to this node.
@@ -110,6 +112,64 @@ class PathNode:
         )
 
 
+def _empty_beam_metrics() -> dict[str, Any]:
+    """Create empty beam metrics dict with correct type.
+
+    Returns:
+        Empty dictionary for beam metrics
+    """
+    return {}
+
+
+def _calculate_path_score(node: PathNode, scenario: DemoScenario) -> float:
+    """Calculate quality score for a path (higher is better).
+
+    Scoring components:
+    - Completeness: Paths with commitments are prioritized
+    - Progress: Deeper paths with more commitments score higher
+    - Expected choices: Paths following expected choices score higher
+    - Scenario completion: Paths near end of scenario score higher
+
+    Args:
+        node: Path node to score
+        scenario: Scenario being explored
+
+    Returns:
+        Quality score (higher is better)
+    """
+    score = 0.0
+
+    # Completeness: Strong bonus for having commitments (indicates progress)
+    commitments = len(node.state_snapshot.get("commitments", set()))
+    if commitments > 0:
+        score += 100.0  # Base bonus for any result
+        score += commitments * 50.0  # Additional bonus per commitment
+
+    # Progress: Reward depth (exploration)
+    score += node.depth * 10.0
+
+    # Expected path bonus: Prioritize following expected choices
+    # Count how many choices in path are "expected"
+    expected_count = 0
+    current = node
+    while current is not None and current.choice_made is not None:
+        if current.choice_made.category.value == "expected":
+            expected_count += 1
+        current = current.parent
+    score += expected_count * 20.0
+
+    # Scenario completion: Reward being closer to end of scenario
+    if scenario.steps:
+        completion_ratio = node.step_index / len(scenario.steps)
+        score += completion_ratio * 30.0
+
+    # Small penalty for QUD size (prefer resolved questions)
+    qud_size = node.state_snapshot.get("qud_size", 0)
+    score -= qud_size * 2.0
+
+    return score
+
+
 @dataclass
 class ExplorationResult:
     """Results of path exploration.
@@ -122,6 +182,7 @@ class ExplorationResult:
         unique_states: Set of unique state signatures encountered
         state_convergence: Paths that led to same state
         coverage_metrics: Distractor coverage statistics
+        beam_metrics: Beam search statistics (paths pruned, avg score, etc.)
     """
 
     scenario_name: str
@@ -131,32 +192,37 @@ class ExplorationResult:
     unique_states: set[frozenset[tuple[str, Any]]]
     state_convergence: dict[frozenset[tuple[str, Any]], list[PathNode]]
     coverage_metrics: dict[str, Any]
+    beam_metrics: dict[str, Any] = field(default_factory=_empty_beam_metrics)
 
 
 class PathExplorer:
-    """Exhaustive path exploration engine using breadth-first search."""
+    """Best-first beam search path exploration engine."""
 
-    def __init__(self, scenario: DemoScenario, domain: Any) -> None:
+    def __init__(self, scenario: DemoScenario, domain: Any, beam_size: int = 200) -> None:
         """Initialize path explorer.
 
         Args:
             scenario: Scenario to explore
             domain: Domain model for the scenario
+            beam_size: Maximum number of paths to maintain (default: 200)
         """
         self.scenario = scenario
         self.domain = domain
+        self.beam_size = beam_size
         self.explorer: ScenarioExplorer | None = None
 
     def explore_paths(self, max_depth: int = 3) -> ExplorationResult:
-        """Explore all dialogue paths up to specified depth.
+        """Explore dialogue paths using best-first beam search.
+
+        Uses beam search to explore the most promising paths up to specified depth.
+        Maintains at most beam_size paths at any time, prioritizing paths with
+        commitments and progress toward scenario completion.
 
         Args:
-            max_depth: Maximum depth to explore (default: 3).
-                Can be any positive integer. Note that path count grows
-                exponentially - depth 5+ may generate thousands of paths.
+            max_depth: Maximum depth to explore (default: 3)
 
         Returns:
-            ExplorationResult with all explored paths and metrics
+            ExplorationResult with explored paths and metrics
         """
         # Initialize state and explorer
         initial_state = InformationState(agent_id="system")
@@ -171,17 +237,29 @@ class PathExplorer:
             state_snapshot=self._capture_state(initial_state),
             parent=None,
             path_id="root",
+            score=0.0,
         )
 
-        # BFS exploration
+        # Best-first beam search
         paths_by_depth: dict[int, list[PathNode]] = {0: [root]}
-        queue: deque[PathNode] = deque([root])
+        # Priority queue: (negative_score, counter, node)
+        # Use negative score because heapq is a min-heap
+        counter = 0  # Tie-breaker for nodes with same score
+        heap: list[tuple[float, int, PathNode]] = [(-root.score, counter, root)]
+        counter += 1
+
         all_paths: list[PathNode] = [root]
         unique_states: set[frozenset[tuple[str, Any]]] = {root.get_state_signature()}
         state_convergence: dict[frozenset[tuple[str, Any]], list[PathNode]] = {}
 
-        while queue:
-            node = queue.popleft()
+        # Beam search metrics
+        total_generated = 0
+        total_pruned = 0
+        scores_tracked: list[float] = []
+
+        while heap:
+            # Get highest-scoring node (lowest negative score)
+            _, _, node = heapq.heappop(heap)
 
             # Stop if we've reached max depth
             if node.depth >= max_depth:
@@ -192,7 +270,8 @@ class PathExplorer:
             if not choices:
                 continue
 
-            # Explore each choice
+            # Generate all children
+            children: list[PathNode] = []
             for choice in choices:
                 # Create child node
                 child_state = self._simulate_choice(node, choice, initial_state)
@@ -209,6 +288,10 @@ class PathExplorer:
                     path_id=child_path_id,
                 )
 
+                # Calculate score for child
+                child.score = _calculate_path_score(child, self.scenario)
+                scores_tracked.append(child.score)
+
                 # Track state
                 state_sig = child.get_state_signature()
                 unique_states.add(state_sig)
@@ -221,17 +304,41 @@ class PathExplorer:
                 # Add to tree
                 node.children.append(child)
                 all_paths.append(child)
+                children.append(child)
 
                 # Add to depth tracking
                 if child.depth not in paths_by_depth:
                     paths_by_depth[child.depth] = []
                 paths_by_depth[child.depth].append(child)
 
-                # Add to queue for further exploration
-                queue.append(child)
+                total_generated += 1
+
+            # Add children to heap
+            for child in children:
+                heapq.heappush(heap, (-child.score, counter, child))
+                counter += 1
+
+            # Beam pruning: keep only top beam_size paths
+            if len(heap) > self.beam_size:
+                # Keep top beam_size
+                top_paths = heapq.nsmallest(self.beam_size, heap)
+                pruned_count = len(heap) - self.beam_size
+                total_pruned += pruned_count
+                heap = top_paths
+                heapq.heapify(heap)  # Restore heap property
 
         # Calculate coverage metrics
         coverage_metrics = self._calculate_coverage(all_paths)
+
+        # Calculate beam metrics
+        beam_metrics = {
+            "beam_size": self.beam_size,
+            "total_generated": total_generated,
+            "total_pruned": total_pruned,
+            "avg_score": sum(scores_tracked) / len(scores_tracked) if scores_tracked else 0.0,
+            "max_score": max(scores_tracked) if scores_tracked else 0.0,
+            "min_score": min(scores_tracked) if scores_tracked else 0.0,
+        }
 
         return ExplorationResult(
             scenario_name=self.scenario.name,
@@ -241,6 +348,7 @@ class PathExplorer:
             unique_states=unique_states,
             state_convergence=state_convergence,
             coverage_metrics=coverage_metrics,
+            beam_metrics=beam_metrics,
         )
 
     def _get_choices_at_node(
@@ -399,6 +507,24 @@ def generate_exploration_report(result: ExplorationResult) -> str:
     lines.append(f"Paths with results: {paths_with_results}/{result.total_paths}")
     lines.append("")
 
+    # Beam search metrics
+    if result.beam_metrics:
+        lines.append("Beam Search Metrics")
+        lines.append("-" * 70)
+        lines.append(f"Beam size: {result.beam_metrics.get('beam_size', 'N/A')}")
+        lines.append(f"Total paths generated: {result.beam_metrics.get('total_generated', 0)}")
+        lines.append(f"Paths pruned: {result.beam_metrics.get('total_pruned', 0)}")
+        pruned = result.beam_metrics.get("total_pruned", 0)
+        generated = result.beam_metrics.get("total_generated", 1)
+        prune_rate = (pruned / generated * 100) if generated > 0 else 0
+        lines.append(f"Pruning rate: {prune_rate:.1f}%")
+        lines.append(f"Avg path score: {result.beam_metrics.get('avg_score', 0):.2f}")
+        lines.append(
+            f"Score range: [{result.beam_metrics.get('min_score', 0):.2f}, "
+            f"{result.beam_metrics.get('max_score', 0):.2f}]"
+        )
+        lines.append("")
+
     # Coverage
     metrics = result.coverage_metrics
     lines.append("Coverage")
@@ -416,14 +542,16 @@ def generate_exploration_report(result: ExplorationResult) -> str:
         paths = result.paths_by_depth[depth]
         lines.append(f"\nDepth {depth}: {len(paths)} path(s)")
 
-        # Show first 10 paths at each depth
-        for i, path in enumerate(paths[:10], 1):
+        # Show first 10 paths at each depth, sorted by score
+        sorted_paths = sorted(paths[:10], key=lambda p: p.score, reverse=True)
+        for i, path in enumerate(sorted_paths, 1):
             path_desc = path.path_id if path.path_id != "root" else "root"
             commitments = len(path.state_snapshot.get("commitments", set()))
             qud = path.state_snapshot.get("qud_size", 0)
             result_indicator = "✓" if _path_has_result(path) else "✗"
             lines.append(
-                f"  {result_indicator} [{path_desc}] commitments: {commitments}, qud: {qud}"
+                f"  {result_indicator} [{path_desc}] score: {path.score:.1f}, "
+                f"commitments: {commitments}, qud: {qud}"
             )
 
         if len(paths) > 10:
@@ -493,7 +621,7 @@ def generate_tree_visualization(result: ExplorationResult, max_depth: int = 2) -
             result_indicator = "✓" if _path_has_result(node) else "✗"
             node_info = (
                 f"{prefix}{connector}{result_indicator} [{node.path_id}] "
-                f'{category}: "{choice_desc}" (C:{commitments})'
+                f'{category}: "{choice_desc}" (S:{node.score:.1f}, C:{commitments})'
             )
             lines.append(node_info)
 
