@@ -321,6 +321,104 @@ def scenario_clarification() -> DemoScenario:
                 description="System returns to normal question sequence",
                 expected_state={"qud": "1 question"},
             ),
+            ScenarioStep(
+                speaker="user",
+                utterance="January 1, 2025",
+                description="User provides date",
+                expected_state={"commitments": "+1", "qud": "0"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="""
+╔══════════════════════════════════════════════════════════════╗
+║        CLARIFICATION HANDLING ANALYSIS REPORT                ║
+╚══════════════════════════════════════════════════════════════╝
+
+NDA Drafting Progress - WITH CLARIFICATION RECOVERY
+
+Information Collected:
+  Task:            Draft NDA
+  Parties:         Acme Corp and Smith Inc (after clarification)
+  Effective Date:  January 1, 2025
+  Status:          ✓ Proceeding after successful clarification
+
+Clarification Analysis (Rule 4.3 - IssueClarification):
+
+Dialogue Flow with Clarification:
+  1. System asks: "What are the parties to the NDA?"
+     User answers: "blue"
+     Validation:   domain.resolves("blue", Q_parties) → FALSE
+     Result:       ✗ Invalid answer detected
+
+  2. System generates clarification question (Rule 4.3)
+     Clarification: "What is a valid parties?"
+     QUD state:     [Q_parties, CQ_valid_parties] (nested)
+     Strategy:      Push clarification above original question
+     Result:        User prompted for valid response
+
+  3. User answers clarification: "Acme Corp and Smith Inc"
+     Validation:    domain.resolves("Acme Corp and Smith Inc", Q_parties) → TRUE
+     Resolution:    Pops CQ_valid_parties, resolves Q_parties
+     QUD state:     [] (both questions resolved)
+     Result:        ✓ Valid parties established
+
+  4. System continues: "What is the effective date?"
+     Behavior:      Normal flow resumed after clarification
+     Result:        ✓ Dialogue progressing smoothly
+
+Clarification Handling Metrics:
+  Invalid Answers:         1 ("blue")
+  Clarifications Needed:   1 (Rule 4.3 applied once)
+  Recovery Success:        ✓ 100% (user provided valid response)
+  Dialogue Continuity:     ✓ Maintained (no disruption)
+  Extra Turns:             2 (1 invalid + 1 clarification response)
+
+Rule 4.3 Demonstration:
+  ✓ Detected invalid answer through domain validation
+  ✓ Generated appropriate clarification question
+  ✓ Maintained question stack (QUD) correctly
+  ✓ Nested clarification above original question
+  ✓ Resolved both questions when valid answer provided
+  ✓ Continued dialogue flow seamlessly
+
+System Behavior - Error Recovery:
+  ⚠ User provided nonsensical answer: "blue"
+  ✓ System did NOT accept invalid input
+  ✓ System did NOT proceed with bad data
+  ✓ System requested clarification politely
+  ✓ System handled corrected input properly
+  ✓ Dialogue recovered gracefully
+
+Comparison: With vs. Without Clarification:
+  Without Rule 4.3:
+    → Accept "blue" as parties
+    → Generate invalid NDA
+    → User discovers error later
+    → Must restart dialogue
+
+  With Rule 4.3 (this dialogue):
+    → Detect "blue" is invalid
+    → Request clarification immediately
+    → Get valid input "Acme Corp and Smith Inc"
+    → Continue successfully ✓
+
+User Experience Benefits:
+  ✓ Prevented proceeding with bad data
+  ✓ Provided clear recovery path
+  ✓ Maintained conversational flow
+  ✓ No need to restart dialogue
+  ✓ Minimal overhead (2 extra turns)
+
+Recommendation:
+  Rule 4.3 (IssueClarification) successfully prevented invalid
+  data from corrupting the dialogue state. The system detected
+  the validation failure, generated an appropriate clarification
+  question, and recovered when the user provided valid input.
+  Essential for robust dialogue management.""",
+                description="System generates clarification analysis report",
+                expected_state={"clarification_report": "generated"},
+                is_payoff=True,  # PAYOFF: Clarification handling analysis
+            ),
         ],
     )
 
@@ -372,6 +470,117 @@ def scenario_dependent_questions() -> DemoScenario:
                 utterance="What's the price?",
                 description="System can NOW ask dependent question (after prerequisites answered)",
                 expected_state={"qud": "1 question"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="Under $500",
+                description="User provides price constraint",
+                expected_state={"commitments": "+1", "qud": "0"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="""
+╔══════════════════════════════════════════════════════════════╗
+║      DEPENDENT QUESTION HANDLING ANALYSIS REPORT             ║
+╚══════════════════════════════════════════════════════════════╝
+
+Flight Search Summary - WITH DEPENDENCY MANAGEMENT
+
+Search Parameters:
+  Departure:       London
+  Destination:     New York
+  Price Constraint: Under $500
+  Status:          ✓ All prerequisites satisfied
+
+Dependency Analysis (Rule 4.4 - DependentIssueAccommodation):
+
+Question Dependency Structure:
+  Prerequisites (must be asked first):
+    ✓ Q_departure_city  → Answered: London
+    ✓ Q_destination     → Answered: New York
+
+  Dependent Questions (blocked until prerequisites satisfied):
+    ⏸ Q_price          → BLOCKED initially (needs route info)
+    ✓ Q_price          → UNBLOCKED after both cities known
+    ✓ Q_price          → Answered: Under $500
+
+Dialogue Flow with Dependency Management:
+  1. System asks: "What's your departure city?" (Prerequisite #1)
+     User answers: "London"
+     Dependencies: price still BLOCKED (needs destination too)
+     Result:       ✓ First prerequisite satisfied
+
+  2. System asks: "What's your destination city?" (Prerequisite #2)
+     User answers: "New York"
+     Dependencies: price now UNBLOCKED (route complete!)
+     Result:       ✓ All prerequisites satisfied
+
+  3. System asks: "What's the price?" (Dependent Question)
+     Dependency Check: Can ask because [London, New York] known
+     User answers: "Under $500"
+     Result:       ✓ Dependent question answered successfully
+
+Rule 4.4 Demonstration:
+  ✓ Identified prerequisite dependencies correctly
+  ✓ Asked prerequisite questions BEFORE dependent questions
+  ✓ Did NOT ask price before knowing route
+  ✓ Unlocked price question after prerequisites satisfied
+  ✓ Maintained correct question ordering throughout
+
+Why Dependencies Matter:
+  Price depends on Route:
+    ❌ Cannot ask "What's the price?" without knowing route
+    ❌ Price varies by route: LON→NYC ≠ LON→PAR
+    ✓ Must know both cities before price makes sense
+
+  System Behavior:
+    ✓ Detected dependency: price depends on [departure, destination]
+    ✓ Ensured prerequisites asked first
+    ✓ Only raised price question after route established
+
+Prerequisite Satisfaction Timeline:
+  Turn 0: price BLOCKED     (no prerequisites satisfied)
+  Turn 1: price BLOCKED     (1/2 prerequisites: departure only)
+  Turn 2: price UNBLOCKED   (2/2 prerequisites: departure + destination)
+  Turn 3: price ANSWERED    (constraint provided)
+
+Comparison: With vs. Without Rule 4.4:
+  Without dependency management:
+    System: "What's the price?"
+    User:   "For which route?"
+    System: "What's your departure city?"
+    → Confusing, illogical question order
+
+  With Rule 4.4 (this dialogue):
+    System: "What's your departure city?"
+    User:   "London"
+    System: "What's your destination city?"
+    User:   "New York"
+    System: "What's the price?"
+    → Logical, natural question order ✓
+
+Flight Search Results:
+  Route:           London (LHR) → New York (JFK)
+  Price Filter:    Maximum $500
+  Available Flights: 12 options found
+
+  Best Match:
+    Flight:        BA117 (British Airways)
+    Departure:     10:30 AM from Heathrow
+    Arrival:       1:15 PM at JFK
+    Price:         $485
+    Duration:      7h 45m
+    Status:        ✓ Meets all criteria
+
+Recommendation:
+  Rule 4.4 (DependentIssueAccommodation) successfully managed
+  question dependencies. The system ensured prerequisite questions
+  were answered before asking dependent questions, resulting in
+  a logical, natural dialogue flow. Essential for complex domains
+  with interdependent information requirements.""",
+                description="System generates dependency analysis + search results",
+                expected_state={"dependency_report": "generated", "search_complete": "true"},
+                is_payoff=True,  # PAYOFF: Dependency analysis + flight results
             ),
         ],
     )
@@ -432,6 +641,72 @@ def scenario_reaccommodation() -> DemoScenario:
                 description="System continues (handles correction gracefully)",
                 expected_state={"qud": "1 question"},
             ),
+            ScenarioStep(
+                speaker="user",
+                utterance="London",
+                description="User answers departure city",
+                expected_state={"commitments": "+1", "qud": "0"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="What's your destination?",
+                description="System asks next question",
+                expected_state={"qud": "1 question"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="Paris",
+                description="User answers destination",
+                expected_state={"commitments": "+1", "qud": "0"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="""
+╔══════════════════════════════════════════════════════════════╗
+║         BELIEF REVISION TRACKING REPORT                      ║
+╚══════════════════════════════════════════════════════════════╝
+
+Flight Booking Summary - WITH REVISION HISTORY
+
+Final Commitments:
+  Departure Date:  April 4, 2025
+  Departure City:  London
+  Destination:     Paris
+  Status:          ✓ Ready to proceed
+
+Revision History:
+  1. Initial: departure_date = April 5th
+     → Retracted by user during dialogue
+
+  2. Revised: departure_date = April 4th
+     → Current commitment (Rule 4.6)
+
+  3. Question re-accommodation:
+     → Original Q_departure_date answered
+     → Then retracted and re-raised to private.issues
+     → Then answered again with new value
+     → Demonstrates Rules 4.6, 4.7, 4.8
+
+System Behavior:
+  ✓ Gracefully handled mid-dialogue correction
+  ✓ Retracted incompatible commitment (Rule 4.7)
+  ✓ Re-accommodated corrected question (Rule 4.6)
+  ✓ No dependent questions needed re-accommodation (Rule 4.8)
+  ✓ Continued dialogue flow seamlessly
+
+Belief Revision Demonstration:
+  This dialogue showcases the system's ability to handle
+  users changing their mind about previous answers without
+  disrupting the conversation flow. The system maintains
+  consistency by retracting outdated commitments and
+  re-validating dependent information.
+
+Ready to proceed with flight search:
+  London → Paris, departing April 4, 2025""",
+                description="System generates revision tracking report",
+                expected_state={"revision_report": "generated"},
+                is_payoff=True,  # PAYOFF: Belief revision analysis
+            ),
         ],
     )
 
@@ -468,6 +743,87 @@ def scenario_grounding_optimistic() -> DemoScenario:
                 utterance="What are the parties to the NDA?",
                 description="System proceeds with task",
                 expected_state={"qud": "1 question"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="Acme Corp and Smith Inc",
+                description="User provides parties (high confidence)",
+                expected_state={"commitments": "+1", "grounding": "optimistic"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="What is the effective date?",
+                description="Accepted immediately, continues",
+                expected_state={"qud": "1 question"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="January 1, 2025",
+                description="User provides date (high confidence)",
+                expected_state={"commitments": "+1"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="""
+╔══════════════════════════════════════════════════════════════╗
+║         OPTIMISTIC GROUNDING ANALYSIS REPORT                 ║
+╚══════════════════════════════════════════════════════════════╝
+
+Dialogue Completion Summary:
+  Task:            NDA Drafting
+  Grounding Mode:  OPTIMISTIC
+  Status:          ✓ Successfully Grounded
+
+Information Collected:
+  Parties:         Acme Corp and Smith Inc
+  Effective Date:  January 1, 2025
+
+Grounding Analysis:
+
+Turn-by-Turn Grounding:
+  1. "I need to draft an NDA"
+     Confidence: HIGH (0.9)
+     Strategy:   Optimistic (immediate acceptance)
+     ICM:        [icm:acc*pos] "Okay"
+     Result:     ✓ Grounded without confirmation
+
+  2. "Acme Corp and Smith Inc"
+     Confidence: HIGH (0.85)
+     Strategy:   Optimistic (immediate acceptance)
+     ICM:        Implicit acceptance
+     Result:     ✓ Grounded, proceed to next question
+
+  3. "January 1, 2025"
+     Confidence: HIGH (0.9)
+     Strategy:   Optimistic (immediate acceptance)
+     ICM:        Implicit acceptance
+     Result:     ✓ Grounded, ready for next step
+
+Efficiency Metrics:
+  Total Turns:          3 user utterances
+  Confirmation Turns:   0 (optimistic strategy)
+  Clarification Turns:  0 (high confidence throughout)
+  Efficiency Gain:      100% (no overhead for grounding)
+
+Strategy Benefits:
+  ✓ Fastest dialogue completion
+  ✓ Natural conversational flow
+  ✓ No unnecessary confirmations
+  ✓ User not interrupted by system doubts
+
+Risk Assessment:
+  ⚠ Assumes high confidence = correct interpretation
+  ⚠ No safety net for misunderstandings
+  ✓ Appropriate when confidence is consistently high
+  ✓ Best for clear, unambiguous utterances
+
+Recommendation:
+  Optimistic grounding successfully applied. High confidence
+  scores justified immediate acceptance. No errors detected.
+  Dialogue progressed efficiently without grounding overhead.""",
+                description="System generates optimistic grounding analysis",
+                expected_state={"grounding_report": "generated"},
+                is_payoff=True,  # PAYOFF: Grounding analysis report
             ),
         ],
     )
@@ -509,6 +865,82 @@ def scenario_grounding_cautious() -> DemoScenario:
                 description="System proceeds after confirmation",
                 expected_state={"qud": "1 question"},
             ),
+            ScenarioStep(
+                speaker="user",
+                utterance="Acme Corp and Smith Inc",
+                description="User provides parties (high confidence)",
+                expected_state={"commitments": "+1"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="""
+╔══════════════════════════════════════════════════════════════╗
+║         CAUTIOUS GROUNDING ANALYSIS REPORT                   ║
+╚══════════════════════════════════════════════════════════════╝
+
+Dialogue Completion Summary:
+  Task:            NDA Drafting
+  Grounding Mode:  CAUTIOUS
+  Status:          ✓ Successfully Grounded via Confirmation
+
+Information Collected:
+  Task Intent:     Draft NDA (confirmed)
+  Parties:         Acme Corp and Smith Inc
+
+Grounding Analysis:
+
+Turn-by-Turn Grounding:
+  1. "Need NDA draft"
+     Confidence: MEDIUM (0.65)
+     Strategy:   Cautious (understanding check required)
+     ICM:        [icm:und*int] "Do you want to draft an NDA?"
+     Result:     ⚠ Required confirmation before grounding
+
+  2. "Yes" (confirmation)
+     Confidence: HIGH (0.95)
+     Strategy:   Optimistic (confirmation accepted)
+     ICM:        Implicit acceptance
+     Result:     ✓ Intent now grounded, proceed with task
+
+  3. "Acme Corp and Smith Inc"
+     Confidence: HIGH (0.85)
+     Strategy:   Optimistic (clear answer)
+     ICM:        Implicit acceptance
+     Result:     ✓ Grounded, ready for next step
+
+Efficiency Metrics:
+  Total Turns:          3 user utterances
+  Confirmation Turns:   1 (understanding check)
+  Clarification Turns:  0 (no misunderstandings)
+  Efficiency:           Good (1 extra turn for safety)
+
+Strategy Benefits:
+  ✓ Balanced approach (speed vs. accuracy)
+  ✓ Caught ambiguous initial utterance
+  ✓ Prevented potential misunderstanding
+  ✓ Low overhead (single confirmation)
+
+Risk Mitigation:
+  ⚠ Initial utterance ambiguous: "Need NDA draft"
+  ✓ System requested understanding confirmation
+  ✓ User clarified intent with "Yes"
+  ✓ Misunderstanding avoided through cautious strategy
+
+Grounding Ladder:
+  Perception:    ✓ System perceived utterance
+  Understanding: ✓ System confirmed understanding (ICM check)
+  Acceptance:    ✓ User confirmed system's interpretation
+  → Full grounding achieved
+
+Recommendation:
+  Cautious grounding appropriately applied. Medium confidence
+  utterance required understanding check. One confirmation turn
+  prevented potential misunderstanding. Good balance between
+  efficiency and accuracy.""",
+                description="System generates cautious grounding analysis",
+                expected_state={"grounding_report": "generated"},
+                is_payoff=True,  # PAYOFF: Grounding analysis report
+            ),
         ],
     )
 
@@ -548,6 +980,90 @@ def scenario_grounding_pessimistic() -> DemoScenario:
                 utterance="What are the parties to the NDA?",
                 description="System proceeds after successful perception",
                 expected_state={"qud": "1 question"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="Acme Corp and Smith Inc",
+                description="User provides parties (clear utterance)",
+                expected_state={"commitments": "+1"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="""
+╔══════════════════════════════════════════════════════════════╗
+║        PESSIMISTIC GROUNDING ANALYSIS REPORT                 ║
+╚══════════════════════════════════════════════════════════════╝
+
+Dialogue Completion Summary:
+  Task:            NDA Drafting
+  Grounding Mode:  PESSIMISTIC
+  Status:          ✓ Successfully Grounded via Repetition
+
+Information Collected:
+  Task Intent:     Draft NDA (clarified after repetition)
+  Parties:         Acme Corp and Smith Inc
+
+Grounding Analysis:
+
+Turn-by-Turn Grounding:
+  1. "NDA"
+     Confidence: LOW (0.4)
+     Strategy:   Pessimistic (perception failure)
+     ICM:        [icm:per*neg] "Sorry, I didn't catch that. Could you repeat?"
+     Result:     ✗ Failed perception, repetition required
+
+  2. "I need to draft a Non-Disclosure Agreement" (repetition)
+     Confidence: HIGH (0.9)
+     Strategy:   Optimistic (clear after repetition)
+     ICM:        Implicit acceptance
+     Result:     ✓ Perception successful, understanding achieved
+
+  3. "Acme Corp and Smith Inc"
+     Confidence: HIGH (0.85)
+     Strategy:   Optimistic (clear answer)
+     ICM:        Implicit acceptance
+     Result:     ✓ Grounded, ready for next step
+
+Efficiency Metrics:
+  Total Turns:          3 user utterances
+  Repetition Requests:  1 (perception failure recovery)
+  Clarification Turns:  0 (after perception, understanding was clear)
+  Efficiency:           Moderate (1 extra turn for perception)
+
+Strategy Benefits:
+  ✓ Prevented acting on misunderstood input
+  ✓ Safely handled very low confidence utterance
+  ✓ Requested clarification before proceeding
+  ✓ Avoided potential catastrophic misunderstanding
+
+Risk Mitigation:
+  ⚠ Initial utterance too brief: "NDA" (LOW confidence 0.4)
+  ✗ Perception deemed unreliable
+  ✓ System requested repetition for safety
+  ✓ User provided expanded utterance
+  ✓ Grounding achieved after repetition
+
+Grounding Ladder Recovery:
+  Perception (Attempt 1):  ✗ Failed (confidence too low)
+  → Repetition Request:     [icm:per*neg]
+  Perception (Attempt 2):  ✓ Successful (clear utterance)
+  Understanding:           ✓ Achieved (full sentence context)
+  Acceptance:              ✓ System proceeded with task
+  → Full grounding achieved after recovery
+
+Comparison with Other Strategies:
+  Optimistic: Would have guessed "NDA" meaning → High risk
+  Cautious:   Would have confirmed "Did you mean NDA?" → Moderate risk
+  Pessimistic: Requested repetition → Safest approach ✓
+
+Recommendation:
+  Pessimistic grounding correctly applied. Very low confidence
+  utterance warranted perception check. Repetition provided
+  clearer input, enabling confident task understanding.
+  Extra turn cost justified by safety improvement.""",
+                description="System generates pessimistic grounding analysis",
+                expected_state={"grounding_report": "generated"},
+                is_payoff=True,  # PAYOFF: Grounding analysis report
             ),
         ],
     )
@@ -598,6 +1114,112 @@ def scenario_grounding_mixed() -> DemoScenario:
                 utterance="Yes, exactly",
                 description="User confirms",
                 expected_state={"commitments": "+1", "grounding_status": "grounded"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="What is the effective date?",
+                description="System continues with next question",
+                expected_state={"qud": "1 question"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="January 1, 2025",
+                description="User provides date (high confidence)",
+                expected_state={"commitments": "+1"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="""
+╔══════════════════════════════════════════════════════════════╗
+║          MIXED GROUNDING STRATEGIES REPORT                   ║
+╚══════════════════════════════════════════════════════════════╝
+
+Dialogue Completion Summary:
+  Task:            NDA Drafting
+  Grounding Mode:  ADAPTIVE (Mixed Strategies)
+  Status:          ✓ Successfully Grounded with Strategy Adaptation
+
+Information Collected:
+  Task Intent:     Draft NDA
+  Parties:         Acme Corp and Smith Inc (confirmed)
+  Effective Date:  January 1, 2025
+
+Grounding Analysis - Adaptive Strategy Selection:
+
+Turn-by-Turn Grounding with Strategy Adaptation:
+  1. "I need to draft an NDA"
+     Confidence: HIGH (0.9)
+     Strategy:   OPTIMISTIC → Immediate acceptance
+     ICM:        Implicit acceptance
+     Result:     ✓ Grounded without confirmation
+     Reason:     High confidence justified optimistic approach
+
+  2. "Acme and Smith"
+     Confidence: MEDIUM (0.6) - Abbreviated, informal
+     Strategy:   CAUTIOUS → Understanding check required
+     ICM:        [icm:und*int] "Did you mean 'Acme Corp and Smith Inc'?"
+     Result:     ⚠ Required confirmation before grounding
+     Reason:     Medium confidence + informal names → safety check
+
+  3. "Yes, exactly" (confirmation)
+     Confidence: HIGH (0.95)
+     Strategy:   OPTIMISTIC → Accept confirmation
+     ICM:        Implicit acceptance
+     Result:     ✓ Parties grounded after confirmation
+     Reason:     Clear affirmation, confidence restored
+
+  4. "January 1, 2025"
+     Confidence: HIGH (0.9)
+     Strategy:   OPTIMISTIC → Immediate acceptance
+     ICM:        Implicit acceptance
+     Result:     ✓ Grounded, task progressing
+     Reason:     Clear, unambiguous date format
+
+Strategy Adaptation Summary:
+  Optimistic used:  3/4 turns (75% - high confidence utterances)
+  Cautious used:    1/4 turns (25% - medium confidence utterance)
+  Pessimistic used: 0/4 turns (0% - no low confidence utterances)
+
+Efficiency Metrics:
+  Total Turns:          4 user utterances
+  Confirmation Turns:   1 (understanding check for informal names)
+  Repetition Requests:  0 (no perception failures)
+  Adaptation Events:    2 (optimistic→cautious, cautious→optimistic)
+  Overall Efficiency:   Good (minimal overhead, targeted safety)
+
+Adaptive Grounding Benefits:
+  ✓ Matched strategy to confidence level dynamically
+  ✓ Fast when possible (optimistic for clear utterances)
+  ✓ Safe when needed (cautious for ambiguous input)
+  ✓ No unnecessary confirmations on high-confidence turns
+  ✓ Prevented misunderstanding on medium-confidence turn
+
+Confidence-Based Decision Making:
+  HIGH (>0.8):    → Optimistic (3 instances)
+  MEDIUM (0.5-0.8): → Cautious (1 instance)
+  LOW (<0.5):     → Pessimistic (0 instances)
+
+Risk vs. Efficiency Trade-off:
+  ✓ Optimized for both speed and accuracy
+  ✓ Safety overhead only where needed (1 extra turn)
+  ✓ 75% of dialogue proceeded without grounding overhead
+  ✓ 25% had targeted safety confirmation
+
+Grounding Strategy Evolution:
+  Turn 1: OPTIMISTIC (conf=0.9) → Direct
+  Turn 2: CAUTIOUS (conf=0.6)   → Adaptation triggered
+  Turn 3: OPTIMISTIC (conf=0.95) → Back to fast mode
+  Turn 4: OPTIMISTIC (conf=0.9)  → Maintained fast mode
+
+Recommendation:
+  Mixed/adaptive grounding successfully balanced efficiency
+  and accuracy. System dynamically adjusted strategy based
+  on real-time confidence assessment. This approach provides
+  optimal user experience: fast when possible, safe when needed.
+  Ideal for real-world deployment with variable input quality.""",
+                description="System generates adaptive grounding analysis",
+                expected_state={"grounding_report": "generated"},
+                is_payoff=True,  # PAYOFF: Adaptive grounding strategy report
             ),
         ],
     )
