@@ -145,10 +145,12 @@ def _calculate_path_score(
 
     # Payoff state: MASSIVE bonus for reaching a payoff state (final product)
     # This is the primary goal - generating high-value outputs
-    if node.step_index < len(scenario.steps):
-        current_step = scenario.steps[node.step_index]
-        if current_step.is_payoff:
+    # Check current step AND upcoming system turns (payoff is usually a system turn)
+    for step_idx in range(node.step_index, min(node.step_index + 5, len(scenario.steps))):
+        step = scenario.steps[step_idx]
+        if step.is_payoff:
             score += 500.0  # Dominant bonus - payoff states are the goal!
+            break
 
     # Completeness: Strong bonus for having commitments (indicates progress)
     commitments = len(node.state_snapshot.get("commitments", set()))
@@ -676,14 +678,20 @@ def generate_top_paths_report(
     lines.append("")
 
     # Collect all paths that reach a payoff state
+    # Note: Path nodes are created for user turns, but payoffs are often system turns
+    # Check if any upcoming steps (within reasonable lookahead) are payoff states
     payoff_paths: list[PathNode] = []
     for depth_paths in result.paths_by_depth.values():
         for node in depth_paths:
-            # Check if this node is at a payoff step
-            if node.step_index < len(scenario.steps):
-                current_step = scenario.steps[node.step_index]
-                if current_step.is_payoff:
-                    payoff_paths.append(node)
+            # Check current step and upcoming system turns (payoffs are usually system turns)
+            reaches_payoff = False
+            for step_idx in range(node.step_index, min(node.step_index + 5, len(scenario.steps))):
+                step = scenario.steps[step_idx]
+                if step.is_payoff:
+                    reaches_payoff = True
+                    break
+            if reaches_payoff:
+                payoff_paths.append(node)
 
     if not payoff_paths:
         lines.append("⚠ No paths reached payoff states")
