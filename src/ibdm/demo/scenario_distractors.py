@@ -231,16 +231,15 @@ def get_scenario1_turn2a_distractors() -> list[ChoiceOption]:
                 "raises next question 'effective_date' to QUD"
             ),
         ),
-        # Distractor 1: Alternative choice
+        # Distractor 1: Alternative choice (incomplete)
         ChoiceOption(
             id=2,
-            category=MoveCategory.EXPECTED,
+            category=MoveCategory.INVALID_ANSWER,
             utterance="One-way",
-            description="[Distractor] Choose one-way NDA → Different trajectory",
+            description="[Distractor] Choose one-way (incomplete) → Triggers clarification",
             expected_trajectory=(
-                "System validates answer, "
-                "adds commitment 'nda_type(one-way)', "
-                "continues with effective_date question"
+                "System detects incomplete answer (a one-way NDA requires specifying the disclosing party), "
+                "generates clarification question: 'Who is the disclosing party?'"
             ),
         ),
         # Distractor 2: Invalid answer
