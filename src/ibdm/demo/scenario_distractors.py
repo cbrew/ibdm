@@ -894,146 +894,683 @@ def get_action_confirmation_turn2_distractors() -> list[ChoiceOption]:
 
 
 def get_negotiation_turn0_distractors() -> list[ChoiceOption]:
-    """Distractors for Negotiation Turn 0 (Hotel search request)."""
+    """Distractors for Negotiation Turn 0 (Hotel search request).
+
+    Expected: "Find me a hotel in Paris"
+    Context: User initiates search that will trigger negotiation with alternatives
+    """
     return [
+        # Expected move (always option 1)
         ChoiceOption(
             id=1,
             category=MoveCategory.EXPECTED,
             utterance="Find me a hotel in Paris",
             description="[Expected] Initiates search → alternatives to IUN",
-            expected_trajectory="System searches, presents alternatives in IUN",
+            expected_trajectory=(
+                "System performs hotel search for Paris, "
+                "finds multiple options, "
+                "adds alternatives to private.iun: [Hotel Expensive, Hotel Budget], "
+                "presents both options to user for negotiation"
+            ),
         ),
+        # Distractor 1: Search with price constraint
         ChoiceOption(
             id=2,
             category=MoveCategory.CLARIFICATION_REQUEST,
             utterance="Find me the cheapest hotel in Paris",
-            description="[Distractor] Constraint → May skip negotiation",
-            expected_trajectory="System applies price filter, shows single best option",
+            description=(
+                "[Distractor] Price constraint → May skip negotiation if single best match"
+            ),
+            expected_trajectory=(
+                "System applies price filter (minimum price), "
+                "searches for cheapest hotel, "
+                "if single match: skips IUN, presents single option, "
+                "if multiple matches: adds to IUN for negotiation"
+            ),
         ),
+        # Distractor 2: Search with multiple constraints
         ChoiceOption(
             id=3,
             category=MoveCategory.VOLUNTEER_INFO,
             utterance="Find me a hotel in Paris under $150 with free breakfast",
-            description="[Distractor] Volunteer constraints → Narrowed search space",
-            expected_trajectory="System filters by price and amenities",
+            description=("[Distractor] Multiple constraints → Narrowed search space, targeted IUN"),
+            expected_trajectory=(
+                "System extracts constraints: max_price(150), amenities(breakfast), "
+                "filters search results, "
+                "adds matching options to IUN, "
+                "presents filtered alternatives for negotiation"
+            ),
         ),
+        # Distractor 3: Missing location parameter
         ChoiceOption(
             id=4,
             category=MoveCategory.INVALID_ANSWER,
             utterance="What hotels are there?",
-            description="[Distractor] Missing parameter → Clarification needed",
-            expected_trajectory="System asks for clarification: which city?",
+            description=("[Distractor] Missing location → Clarification required before search"),
+            expected_trajectory=(
+                "System detects missing required parameter (location), "
+                "forms clarification question: 'Which city are you looking for hotels in?', "
+                "pushes to QUD, "
+                "after answer, performs search"
+            ),
+        ),
+        # Distractor 4: Search with date range
+        ChoiceOption(
+            id=5,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="Find me a hotel in Paris for January 5-10, 2025",
+            description=("[Distractor] Volunteer dates → Search with availability constraint"),
+            expected_trajectory=(
+                "System extracts location + dates, "
+                "searches for hotels available for specified dates, "
+                "filters by availability, "
+                "adds available options to IUN"
+            ),
+        ),
+        # Distractor 5: Specific hotel request (no search needed)
+        ChoiceOption(
+            id=6,
+            category=MoveCategory.EXPECTED,
+            utterance="Is Hotel de Paris available?",
+            description=("[Distractor] Specific hotel query → Direct lookup, no IUN negotiation"),
+            expected_trajectory=(
+                "System recognizes specific hotel request, "
+                "performs direct availability check (not search), "
+                "skips IUN negotiation, "
+                "provides yes/no answer with details"
+            ),
+        ),
+        # Distractor 6: Comparative search
+        ChoiceOption(
+            id=7,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="Compare hotels in Paris by price",
+            description=("[Distractor] Comparison request → Structured presentation, may use IUN"),
+            expected_trajectory=(
+                "System performs search, "
+                "sorts results by price, "
+                "presents ranked comparison (may use IUN for selection), "
+                "user can select from ranked list"
+            ),
+        ),
+        # Distractor 7: Search with preference expression
+        ChoiceOption(
+            id=8,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="I prefer boutique hotels in Paris near the Eiffel Tower",
+            description=("[Distractor] Volunteer preferences → Soft constraints in search"),
+            expected_trajectory=(
+                "System extracts preferences: style(boutique), location(near Eiffel Tower), "
+                "uses as soft constraints in search ranking, "
+                "presents best matches via IUN, "
+                "negotiates based on preference satisfaction"
+            ),
+        ),
+        # Distractor 8: Request with explicit alternative limit
+        ChoiceOption(
+            id=9,
+            category=MoveCategory.CLARIFICATION_REQUEST,
+            utterance="Show me 3 hotel options in Paris",
+            description=("[Distractor] Explicit alternative limit → Constrained IUN size"),
+            expected_trajectory=(
+                "System notes user preference for 3 options, "
+                "performs search, "
+                "selects top 3 matches (by ranking), "
+                "adds exactly 3 to IUN, "
+                "presents for negotiation"
+            ),
+        ),
+        # Distractor 9: Meta-question about hotels
+        ChoiceOption(
+            id=10,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="What's the average hotel price in Paris?",
+            description=("[Distractor] Information request → QUD push, provide info, then search"),
+            expected_trajectory=(
+                "System pushes information question to QUD, "
+                "provides answer: 'Average price is $180/night', "
+                "pops question, "
+                "asks if user wants to search for hotels"
+            ),
         ),
     ]
 
 
 def get_negotiation_turn2_distractors() -> list[ChoiceOption]:
-    """Distractors for Negotiation Turn 2 (Rejection of expensive option)."""
+    """Distractors for Negotiation Turn 2 (Rejection of expensive option).
+
+    Expected: "No, Hotel Expensive is too expensive"
+    Context: System presented two hotels (Expensive $200, Budget $120)
+            Both in IUN, user must respond to first option
+    """
     return [
+        # Expected move (always option 1)
         ChoiceOption(
             id=1,
             category=MoveCategory.EXPECTED,
             utterance="No, Hotel Expensive is too expensive",
-            description="[Expected] Rejection → IUN update, next option",
-            expected_trajectory="System removes from IUN, proposes next alternative",
+            description="[Expected] Rejection with reason → IUN update, next option",
+            expected_trajectory=(
+                "System removes Hotel Expensive from IUN, "
+                "IUN now contains: [Hotel Budget], "
+                "proposes next alternative: 'How about Hotel Budget at $120/night?', "
+                "continues negotiation"
+            ),
         ),
+        # Distractor 1: Simple rejection without reason
         ChoiceOption(
             id=2,
-            category=MoveCategory.CORRECTION,
-            utterance="Yes, I'll take Hotel Expensive",
-            description="[Distractor] Accept first → Negotiation ends immediately",
-            expected_trajectory="System commits to expensive option, ends negotiation",
+            category=MoveCategory.EXPECTED,
+            utterance="No",
+            description=("[Distractor] Simple rejection → IUN update, may ask for reason"),
+            expected_trajectory=(
+                "System removes Hotel Expensive from IUN, "
+                "no explicit reason given, "
+                "may ask clarification: 'Why not?', "
+                "or proceeds to next option: Hotel Budget"
+            ),
         ),
+        # Distractor 2: Accept first option
         ChoiceOption(
             id=3,
-            category=MoveCategory.NESTED_QUESTION,
-            utterance="Show me more hotels",
-            description="[Distractor] Search expansion, more alternatives",
-            expected_trajectory="System expands search, adds more options to IUN",
+            category=MoveCategory.EXPECTED,
+            utterance="Yes, I'll take Hotel Expensive",
+            description=("[Distractor] Accept first → Negotiation ends, commitment made"),
+            expected_trajectory=(
+                "System clears IUN (negotiation resolved), "
+                "makes commitment: hotel_selected(Hotel Expensive), "
+                "ends negotiation, "
+                "confirms: 'Great! I'll proceed with Hotel Expensive'"
+            ),
         ),
+        # Distractor 3: Request more options
         ChoiceOption(
             id=4,
             category=MoveCategory.NESTED_QUESTION,
-            utterance="What amenities does Hotel Expensive have?",
-            description="[Distractor] Information request → QUD push, return to IUN",
-            expected_trajectory="System provides details, returns to negotiation",
+            utterance="Show me more hotels",
+            description=("[Distractor] Search expansion → More alternatives added to IUN"),
+            expected_trajectory=(
+                "System keeps current IUN: [Hotel Expensive, Hotel Budget], "
+                "performs additional search, "
+                "finds more options, "
+                "adds to IUN: [Hotel Expensive, Hotel Budget, Hotel Moderate, ...], "
+                "presents expanded alternatives"
+            ),
         ),
+        # Distractor 4: Ask about specific hotel details
         ChoiceOption(
             id=5,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="What amenities does Hotel Expensive have?",
+            description=(
+                "[Distractor] Information request → QUD push, provide details, "
+                "return to negotiation"
+            ),
+            expected_trajectory=(
+                "System pushes amenity question to QUD, "
+                "provides hotel details: 'Pool, spa, gym, breakfast, WiFi', "
+                "pops question, "
+                "returns to IUN negotiation: 'Would you like Hotel Expensive?'"
+            ),
+        ),
+        # Distractor 5: Counter-proposal with price negotiation
+        ChoiceOption(
+            id=6,
             category=MoveCategory.CLARIFICATION_REQUEST,
             utterance="I'll take Hotel Expensive if you can get it for $150",
-            description="[Distractor] Counter-proposal → Price negotiation sub-dialogue",
-            expected_trajectory="System attempts counter-offer negotiation",
+            description=("[Distractor] Counter-proposal → Price negotiation sub-dialogue"),
+            expected_trajectory=(
+                "System extracts counter-offer: max_price(150) for Hotel Expensive, "
+                "attempts price negotiation with hotel, "
+                "if successful: commits to hotel at negotiated price, "
+                "if failed: returns to IUN with original options"
+            ),
+        ),
+        # Distractor 6: Reject with different constraint
+        ChoiceOption(
+            id=7,
+            category=MoveCategory.REJECTION,
+            utterance="No, I need something with a pool",
+            description=("[Distractor] Rejection with new constraint → Filtered search"),
+            expected_trajectory=(
+                "System extracts constraint: amenities(pool), "
+                "filters current IUN by constraint, "
+                "if Hotel Budget has pool: keeps in IUN, "
+                "if not: expands search with pool constraint, "
+                "presents filtered alternatives"
+            ),
+        ),
+        # Distractor 7: Request comparison
+        ChoiceOption(
+            id=8,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="What's the difference between these two hotels?",
+            description=(
+                "[Distractor] Comparison request → QUD push, provide comparison, return to IUN"
+            ),
+            expected_trajectory=(
+                "System pushes comparison question to QUD, "
+                "generates comparison: price, amenities, location, ratings, "
+                "presents side-by-side comparison, "
+                "pops question, "
+                "returns to negotiation"
+            ),
+        ),
+        # Distractor 8: Partial acceptance with condition
+        ChoiceOption(
+            id=9,
+            category=MoveCategory.CLARIFICATION_REQUEST,
+            utterance="Hotel Expensive is okay if it includes breakfast",
+            description=("[Distractor] Conditional acceptance → Constraint verification"),
+            expected_trajectory=(
+                "System extracts condition: must_include(breakfast), "
+                "checks if Hotel Expensive includes breakfast, "
+                "if YES: commits to hotel, "
+                "if NO: keeps in IUN but marks as conditional, "
+                "proceeds to next alternative"
+            ),
+        ),
+        # Distractor 9: Reject both, request new search
+        ChoiceOption(
+            id=10,
+            category=MoveCategory.REJECTION,
+            utterance="Neither of these work. Can you find hotels near the Louvre instead?",
+            description=("[Distractor] Reject all + new constraint → Clear IUN, new search"),
+            expected_trajectory=(
+                "System clears IUN: [], "
+                "extracts new constraint: location(near Louvre), "
+                "performs new search with location constraint, "
+                "populates IUN with new results, "
+                "presents new alternatives"
+            ),
+        ),
+        # Distractor 10: Ask about policy/terms
+        ChoiceOption(
+            id=11,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="What's the cancellation policy for Hotel Expensive?",
+            description=("[Distractor] Policy question → QUD push, provide policy, return to IUN"),
+            expected_trajectory=(
+                "System pushes policy question to QUD, "
+                "provides cancellation terms: 'Free cancellation 24hrs before', "
+                "pops question, "
+                "returns to negotiation: 'Would you like Hotel Expensive?'"
+            ),
+        ),
+        # Distractor 11: Defer decision
+        ChoiceOption(
+            id=12,
+            category=MoveCategory.REJECTION,
+            utterance="Let me think about these options",
+            description=("[Distractor] Defer decision → IUN preserved, dialogue paused"),
+            expected_trajectory=(
+                "System keeps IUN unchanged: [Hotel Expensive, Hotel Budget], "
+                "pauses negotiation, "
+                "acknowledges: 'Take your time. Let me know when you're ready', "
+                "dialogue enters waiting state"
+            ),
         ),
     ]
 
 
 def get_negotiation_turn4_distractors() -> list[ChoiceOption]:
-    """Distractors for Negotiation Turn 4 (Acceptance of budget option)."""
+    """Distractors for Negotiation Turn 4 (Acceptance of budget option).
+
+    Expected: "Yes, that works!"
+    Context: System asked "How about Hotel Budget at $120/night?"
+            Hotel Expensive was rejected, IUN contains: [Hotel Budget]
+    """
     return [
+        # Expected move (always option 1)
         ChoiceOption(
             id=1,
             category=MoveCategory.EXPECTED,
             utterance="Yes, that works!",
-            description="[Expected] Accept → IUN cleared, commitment added",
-            expected_trajectory="System clears IUN, commits to hotel, proceeds",
+            description="[Expected] Accept → IUN cleared, commitment added, negotiation ends",
+            expected_trajectory=(
+                "System clears IUN: [], "
+                "makes commitment: hotel_selected(Hotel Budget), "
+                "ends negotiation, "
+                "confirms: 'Great! I'll proceed with Hotel Budget'"
+            ),
         ),
+        # Distractor 1: Enthusiastic acceptance
         ChoiceOption(
             id=2,
-            category=MoveCategory.REJECTION,
-            utterance="No, show me more options",
-            description="[Distractor] Search continues, new options to IUN",
-            expected_trajectory="System expands search, presents more alternatives",
+            category=MoveCategory.EXPECTED,
+            utterance="Perfect! That's exactly what I need",
+            description=("[Distractor] Enthusiastic acceptance → Same as standard acceptance"),
+            expected_trajectory=("System clears IUN, commits to Hotel Budget, ends negotiation"),
         ),
+        # Distractor 2: Reject and request more options
         ChoiceOption(
             id=3,
             category=MoveCategory.REJECTION,
-            utterance="Actually, let me think about it",
-            description="[Distractor] Rejection (soft) → IUN preserved, dialogue paused",
-            expected_trajectory="System keeps options in IUN, pauses negotiation",
+            utterance="No, show me more options",
+            description=("[Distractor] Rejection → Search expansion, more alternatives to IUN"),
+            expected_trajectory=(
+                "System removes Hotel Budget from IUN, "
+                "IUN now: [], "
+                "performs expanded search, "
+                "adds new options to IUN, "
+                "presents new alternatives for negotiation"
+            ),
         ),
+        # Distractor 3: Defer decision
         ChoiceOption(
             id=4,
+            category=MoveCategory.REJECTION,
+            utterance="Actually, let me think about it",
+            description=("[Distractor] Soft rejection → IUN preserved, dialogue paused"),
+            expected_trajectory=(
+                "System keeps Hotel Budget in IUN, "
+                "pauses negotiation, "
+                "acknowledges: 'Take your time. Let me know when you decide', "
+                "dialogue enters waiting state"
+            ),
+        ),
+        # Distractor 4: Accept with booking action
+        ChoiceOption(
+            id=5,
             category=MoveCategory.VOLUNTEER_INFO,
-            utterance="Yes, and book it for January 5-10",
-            description="[Distractor] Volunteer info → Commitment + action queued",
-            expected_trajectory="System commits to hotel AND queues booking action",
+            utterance="Yes, and book it for January 5-10, 2025",
+            description=("[Distractor] Volunteer dates + booking → Commitment + action queued"),
+            expected_trajectory=(
+                "System clears IUN, "
+                "makes commitment: hotel_selected(Hotel Budget), "
+                "extracts dates: 2025-01-05 to 2025-01-10, "
+                "forms booking action: book_hotel(Hotel Budget, 2025-01-05, 2025-01-10), "
+                "adds to action queue, "
+                "requests confirmation for booking"
+            ),
+        ),
+        # Distractor 5: Ask for more details before deciding
+        ChoiceOption(
+            id=6,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="What are the check-in and check-out times?",
+            description=(
+                "[Distractor] Information request → QUD push, provide info, return to negotiation"
+            ),
+            expected_trajectory=(
+                "System pushes hotel policy question to QUD, "
+                "provides answer: 'Check-in 3pm, check-out 11am', "
+                "pops question, "
+                "returns to negotiation: 'Would you like Hotel Budget?'"
+            ),
+        ),
+        # Distractor 6: Reject with new constraint
+        ChoiceOption(
+            id=7,
+            category=MoveCategory.REJECTION,
+            utterance="No, I need a hotel with free parking",
+            description=("[Distractor] Rejection with constraint → Filtered new search"),
+            expected_trajectory=(
+                "System removes Hotel Budget from IUN, "
+                "extracts constraint: amenities(parking), "
+                "performs new search with parking constraint, "
+                "adds matching options to IUN, "
+                "presents new alternatives"
+            ),
+        ),
+        # Distractor 7: Counter-proposal on budget option
+        ChoiceOption(
+            id=8,
+            category=MoveCategory.CLARIFICATION_REQUEST,
+            utterance="I'll take it if it includes breakfast",
+            description=("[Distractor] Conditional acceptance → Constraint verification"),
+            expected_trajectory=(
+                "System extracts condition: must_include(breakfast), "
+                "checks if Hotel Budget includes breakfast, "
+                "if YES: clears IUN, commits to hotel, "
+                "if NO: asks if user still wants it or search for alternatives with breakfast"
+            ),
+        ),
+        # Distractor 8: Ask to compare with rejected option
+        ChoiceOption(
+            id=9,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="Can you remind me how this compares to Hotel Expensive?",
+            description=("[Distractor] Comparison request → QUD push, compare, return to IUN"),
+            expected_trajectory=(
+                "System pushes comparison question to QUD, "
+                "compares Hotel Budget vs Hotel Expensive: "
+                "price ($120 vs $200), amenities, location, "
+                "pops question, "
+                "returns to negotiation: 'Would you like Hotel Budget?'"
+            ),
+        ),
+        # Distractor 9: Accept and volunteer additional preferences
+        ChoiceOption(
+            id=10,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="Yes, and I'd also like to book a rental car",
+            description=("[Distractor] Accept + volunteer new task → Sequential task handling"),
+            expected_trajectory=(
+                "System clears IUN, commits to Hotel Budget, "
+                "extracts new task: book_rental_car, "
+                "ends hotel negotiation, "
+                "initiates rental car dialogue: 'What type of car do you need?'"
+            ),
+        ),
+        # Distractor 10: Request to reconsider previous option
+        ChoiceOption(
+            id=11,
+            category=MoveCategory.CORRECTION,
+            utterance="Actually, maybe Hotel Expensive wasn't so bad. Can I reconsider?",
+            description=("[Distractor] Reconsider rejected option → Re-add to IUN"),
+            expected_trajectory=(
+                "System re-adds Hotel Expensive to IUN, "
+                "IUN now: [Hotel Budget, Hotel Expensive], "
+                "presents both options again for reconsideration, "
+                "restarts negotiation with both alternatives"
+            ),
+        ),
+        # Distractor 11: Reject and ask for different location
+        ChoiceOption(
+            id=12,
+            category=MoveCategory.REJECTION,
+            utterance="No, I'd rather look for hotels in a different area",
+            description=("[Distractor] Location change → Clear IUN, new search with new location"),
+            expected_trajectory=(
+                "System clears IUN, "
+                "asks clarification: 'Which area would you prefer?', "
+                "after answer, performs new location-based search, "
+                "populates IUN with new results"
+            ),
         ),
     ]
 
 
 def get_rollback_turn0_distractors() -> list[ChoiceOption]:
-    """Distractors for Rollback Turn 0 (Booking request)."""
+    """Distractors for Rollback Turn 0 (Booking request).
+
+    Expected: "Book Hotel de Paris for January 5-10, 2025"
+    Context: User initiates booking with optimistic execution
+            This will trigger rollback scenario when payment fails
+    """
     return [
+        # Expected move (always option 1)
         ChoiceOption(
             id=1,
             category=MoveCategory.EXPECTED,
             utterance="Book Hotel de Paris for January 5-10, 2025",
-            description="[Expected] Action queued → Optimistic execution attempt",
-            expected_trajectory="System queues action, attempts optimistic execution",
+            description="[Expected] Action queued → Optimistic execution, will fail and rollback",
+            expected_trajectory=(
+                "System forms booking action: book_hotel(Hotel de Paris, 2025-01-05, 2025-01-10), "
+                "adds to action queue, "
+                "executes optimistically (no confirmation in optimistic mode), "
+                "makes optimistic commitment: hotel_booked(...), "
+                "execution fails: payment declined, "
+                "performs rollback: removes commitment, "
+                "offers recovery: 'Would you like to try a different payment method?'"
+            ),
         ),
+        # Distractor 1: Missing dates parameter
         ChoiceOption(
             id=2,
             category=MoveCategory.INVALID_ANSWER,
             utterance="Book Hotel de Paris",
-            description="[Distractor] Missing parameters → Clarification needed",
-            expected_trajectory="System asks for missing dates",
+            description=("[Distractor] Missing dates → Clarification dialogue before action"),
+            expected_trajectory=(
+                "System detects incomplete action (missing dates), "
+                "forms clarification questions: 'When is check-in?', 'When is check-out?', "
+                "after collecting dates, queues action, "
+                "executes optimistically"
+            ),
         ),
+        # Distractor 2: Multiple actions volunteered
         ChoiceOption(
             id=3,
             category=MoveCategory.VOLUNTEER_INFO,
             utterance=(
                 "Book Hotel de Paris for January 5-10, 2025, and send confirmation to my email"
             ),
-            description="[Distractor] Volunteer action → Multiple action sequence",
-            expected_trajectory="System queues two actions: book + send_email",
+            description=(
+                "[Distractor] Multiple actions → "
+                "Sequential execution, both may need rollback if booking fails"
+            ),
+            expected_trajectory=(
+                "System forms two actions: book_hotel(...), send_email(confirmation), "
+                "adds both to queue (FIFO), "
+                "executes booking optimistically, "
+                "if booking fails: rolls back, skips email action, "
+                "if booking succeeds: proceeds with email action"
+            ),
         ),
+        # Distractor 3: Tentative/conditional request
         ChoiceOption(
             id=4,
             category=MoveCategory.CLARIFICATION_REQUEST,
-            utterance="Try to book Hotel de Paris, but don't worry if it fails",
-            description="[Distractor] Conditional action → Different error handling",
-            expected_trajectory="System sets tentative mode, handles failure silently",
+            utterance="Try to book Hotel de Paris for January 5-10, but don't worry if it fails",
+            description=(
+                "[Distractor] Tentative action → Softer error handling, no recovery offered"
+            ),
+            expected_trajectory=(
+                "System detects tentative mode ('try', 'don't worry'), "
+                "forms action with tentative flag, "
+                "executes optimistically, "
+                "if fails: performs rollback, "
+                "reports failure but doesn't offer recovery (user said not to worry)"
+            ),
+        ),
+        # Distractor 4: Request with payment method specified
+        ChoiceOption(
+            id=5,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance=(
+                "Book Hotel de Paris for January 5-10, 2025, using my credit card ending in 1234"
+            ),
+            description=(
+                "[Distractor] Volunteer payment method → "
+                "Explicit payment, may prevent failure or provide different error"
+            ),
+            expected_trajectory=(
+                "System extracts payment method: credit_card(1234), "
+                "forms action with payment method, "
+                "executes optimistically with specified payment, "
+                "may still fail for different reason (insufficient funds), "
+                "rollback and recovery with payment context"
+            ),
+        ),
+        # Distractor 5: Request with cancellation insurance
+        ChoiceOption(
+            id=6,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance=("Book Hotel de Paris for January 5-10, 2025, with cancellation insurance"),
+            description=(
+                "[Distractor] Volunteer add-on → More complex action, more to rollback on failure"
+            ),
+            expected_trajectory=(
+                "System forms action with add-on: book_hotel(..., insurance=True), "
+                "executes optimistically, "
+                "if fails: rolls back both booking AND insurance, "
+                "recovery offer includes option to try without insurance"
+            ),
+        ),
+        # Distractor 6: Cautious request (wants confirmation)
+        ChoiceOption(
+            id=7,
+            category=MoveCategory.CLARIFICATION_REQUEST,
+            utterance="Please confirm before booking Hotel de Paris for January 5-10, 2025",
+            description=(
+                "[Distractor] Request confirmation → "
+                "Switches to cautious mode, no optimistic execution, no rollback needed"
+            ),
+            expected_trajectory=(
+                "System detects confirmation request ('please confirm'), "
+                "overrides optimistic mode → cautious mode, "
+                "forms action but doesn't execute immediately, "
+                "asks confirmation: 'Should I book Hotel de Paris?', "
+                "waits for user approval before execution"
+            ),
+        ),
+        # Distractor 7: Request with specific room type
+        ChoiceOption(
+            id=8,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="Book a deluxe suite at Hotel de Paris for January 5-10, 2025",
+            description=(
+                "[Distractor] Volunteer room type → "
+                "Constraint in booking, may fail due to unavailability"
+            ),
+            expected_trajectory=(
+                "System forms action with room constraint: "
+                "book_hotel(Hotel de Paris, room_type=deluxe_suite, ...), "
+                "executes optimistically, "
+                "if fails (unavailable or payment): performs rollback, "
+                "recovery may offer alternative room types"
+            ),
+        ),
+        # Distractor 8: Request check availability first
+        ChoiceOption(
+            id=9,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="Is Hotel de Paris available January 5-10, 2025? If so, book it",
+            description=(
+                "[Distractor] Check before booking → Two-step process, verification then action"
+            ),
+            expected_trajectory=(
+                "System forms availability check question, "
+                "pushes to QUD, "
+                "performs availability lookup, "
+                "if available: forms booking action, executes optimistically, "
+                "if not available: reports unavailability, skips booking"
+            ),
+        ),
+        # Distractor 9: Request with price constraint
+        ChoiceOption(
+            id=10,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="Book Hotel de Paris for January 5-10, 2025, if it's under $200/night",
+            description=(
+                "[Distractor] Conditional with price → "
+                "Pre-execution check, may prevent action entirely"
+            ),
+            expected_trajectory=(
+                "System extracts price constraint: max_price(200), "
+                "checks Hotel de Paris price, "
+                "if under $200: executes booking optimistically, "
+                "if over $200: skips action, "
+                "reports: 'Hotel de Paris is $250/night, exceeds your budget'"
+            ),
+        ),
+        # Distractor 10: Request immediate booking with urgency
+        ChoiceOption(
+            id=11,
+            category=MoveCategory.CLARIFICATION_REQUEST,
+            utterance="Book Hotel de Paris for January 5-10, 2025, ASAP! It's urgent",
+            description=(
+                "[Distractor] Urgent request → "
+                "Optimistic execution emphasized, same rollback but urgency noted"
+            ),
+            expected_trajectory=(
+                "System detects urgency markers ('ASAP', 'urgent'), "
+                "prioritizes action execution, "
+                "executes optimistically without delay, "
+                "if fails: performs rollback, "
+                "recovery offers expedited alternatives"
+            ),
         ),
     ]
 
