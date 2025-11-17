@@ -62,38 +62,141 @@ def scenario_incremental_questioning() -> DemoScenario:
             ScenarioStep(
                 speaker="user",
                 utterance="I need to draft an NDA",
-                description="User initiates task - system forms plan with questions",
-                expected_state={"plan": "active", "private.issues": "4 questions"},
+                description="User initiates task - system forms plan with 5 questions",
+                expected_state={"plan": "active", "private.issues": "5 questions"},
             ),
             ScenarioStep(
                 speaker="system",
                 utterance="What are the parties to the NDA?",
-                description="System asks FIRST question (not all 4 at once)",
-                expected_state={"qud": "1 question", "private.issues": "3 questions"},
+                description="System asks FIRST question (not all 5 at once)",
+                expected_state={"qud": "1 question", "private.issues": "4 questions"},
             ),
             ScenarioStep(
                 speaker="user",
                 utterance="Acme Corp and Smith Inc",
-                description="User answers current question",
+                description="User answers first question",
+                expected_state={"commitments": "+1", "qud": "0"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="Should this be a mutual or one-way NDA?",
+                description="System asks SECOND question (NDA type)",
+                expected_state={"qud": "1 question", "private.issues": "3 questions"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="Mutual",
+                description="User answers NDA type question",
                 expected_state={"commitments": "+1", "qud": "0"},
             ),
             ScenarioStep(
                 speaker="system",
                 utterance="What is the effective date?",
-                description="System asks NEXT question (incrementally)",
+                description="System asks THIRD question (incrementally)",
                 expected_state={"qud": "1 question", "private.issues": "2 questions"},
             ),
             ScenarioStep(
                 speaker="user",
                 utterance="January 1, 2025",
-                description="User answers second question",
+                description="User answers effective date question",
                 expected_state={"commitments": "+1", "qud": "0"},
             ),
             ScenarioStep(
                 speaker="system",
                 utterance="What is the duration of confidentiality obligations?",
-                description="System continues incrementally through plan",
+                description="System asks FOURTH question (duration)",
                 expected_state={"qud": "1 question", "private.issues": "1 question"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="5 years",
+                description="User answers duration question",
+                expected_state={"commitments": "+1", "qud": "0"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="Which state law should govern this agreement?",
+                description="System asks FIFTH and FINAL question (governing law)",
+                expected_state={"qud": "1 question", "private.issues": "0 questions"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="California",
+                description="User answers final question - plan complete",
+                expected_state={"commitments": "+1", "qud": "0", "plan": "complete"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="I have all the information needed to draft your NDA.",
+                description="System confirms plan completion",
+                expected_state={"qud": "0", "private.issues": "0"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="""Here is your Non-Disclosure Agreement:
+
+═══════════════════════════════════════════════════════════════════════
+                    MUTUAL NON-DISCLOSURE AGREEMENT
+═══════════════════════════════════════════════════════════════════════
+
+This Mutual Non-Disclosure Agreement (the "Agreement") is entered into
+as of January 1, 2025 (the "Effective Date") by and between:
+
+    Acme Corp ("First Party")
+    and
+    Smith Inc ("Second Party")
+
+(collectively, the "Parties")
+
+WHEREAS, the Parties wish to explore a business relationship and may
+disclose certain confidential information to each other;
+
+NOW, THEREFORE, in consideration of the mutual covenants and agreements
+contained herein, the Parties agree as follows:
+
+1. CONFIDENTIAL INFORMATION
+   Each Party agrees to hold in strict confidence any information marked
+   as confidential or that would reasonably be considered confidential.
+
+2. OBLIGATIONS
+   Each Party shall:
+   (a) Not disclose Confidential Information to third parties
+   (b) Use Confidential Information only for the intended purpose
+   (c) Protect such information with the same care as its own confidential
+       information
+
+3. TERM
+   This Agreement shall remain in effect for a period of 5 years from
+   the Effective Date.
+
+4. GOVERNING LAW
+   This Agreement shall be governed by and construed in accordance with
+   the laws of the State of California, without regard to its conflict
+   of law provisions.
+
+5. ENTIRE AGREEMENT
+   This Agreement constitutes the entire agreement between the Parties
+   concerning the subject matter hereof.
+
+IN WITNESS WHEREOF, the Parties have executed this Agreement as of the
+Effective Date.
+
+_____________________________          _____________________________
+Acme Corp                             Smith Inc
+Authorized Signature                  Authorized Signature
+
+═══════════════════════════════════════════════════════════════════════
+                    [End of Document]
+═══════════════════════════════════════════════════════════════════════
+
+✓ NDA successfully generated using your specifications
+✓ Ready for review and execution""",
+                description="System generates complete NDA document using all collected information",
+                expected_state={
+                    "qud": "0",
+                    "private.issues": "0",
+                    "document_generated": "true",
+                },
             ),
         ],
     )
