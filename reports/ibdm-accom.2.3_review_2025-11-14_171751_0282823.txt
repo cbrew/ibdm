@@ -1,0 +1,30 @@
+================================================================================
+LARSSON ALIGNMENT REVIEW
+================================================================================
+Task ID: ibdm-accom.2.3
+Completed: 2025-11-14_171751
+Git Hash: 0282823
+
+SCORE SUMMARY:
+  Baseline: 57.4/100
+  Final:    57.4/100
+  Delta:    0.0
+
+PREDICTION:
+PREDICTION:
+
+
+
+DETAILED COMPARISON:
+See baseline: ibdm-accom.2.3_manual_baseline.json
+See final: ibdm-accom.2.3_final_2025-11-14_171746_0282823.json
+
+Component Changes:
+--------------------------------------------------------------------------------
+  → Architectural Compliance        35.0 →  35.0 (+0.0)
+  → Information State Structure     92.5 →  92.5 (+0.0)
+  → Semantic Operations Coverage    50.0 →  50.0 (+0.0)
+  → Rules Coverage                  41.6 →  41.6 (+0.0)
+  → Domain Independence             72.3 →  72.3 (+0.0)
+
+================================================================================\n

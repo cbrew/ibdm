@@ -1,0 +1,110 @@
+{
+  "overall_score": 57.428333333333335,
+  "passed": false,
+  "components": {
+    "architectural_compliance": {
+      "name": "Architectural Compliance",
+      "score": 35.0,
+      "passed": false,
+      "details": {
+        "four_phase_architecture": 0.0,
+        "control_flow_order": 0.0,
+        "single_rule_per_cycle": 50.0,
+        "explicit_state_passing": 100.0,
+        "turn_taking_principle": 50.0
+      },
+      "issues": [
+        "four_phase_architecture: 0/100",
+        "control_flow_order: 0/100",
+        "single_rule_per_cycle: 50/100",
+        "turn_taking_principle: 50/100"
+      ],
+      "recommendations": [
+        "Review four_phase_architecture implementation against Algorithm 2.2",
+        "Review control_flow_order implementation against Algorithm 2.2",
+        "Review single_rule_per_cycle implementation against Algorithm 2.2",
+        "Review turn_taking_principle implementation against Algorithm 2.2"
+      ]
+    },
+    "information_state": {
+      "name": "Information State Structure",
+      "score": 92.5,
+      "passed": true,
+      "details": {
+        "private_shared_separation": 100.0,
+        "private_fields": 80.0,
+        "shared_fields": 100.0,
+        "qud_stack_semantics": 100.0,
+        "no_hidden_state": 75.0
+      },
+      "issues": [
+        "private_fields: 80/100",
+        "no_hidden_state: 75/100"
+      ],
+      "recommendations": [
+        "Ensure InformationState follows Larsson's IBiS1/3/4 structure",
+        "QUD must be LIFO stack (list with push/pop semantics)",
+        "No hidden state in engine classes"
+      ]
+    },
+    "semantic_operations": {
+      "name": "Semantic Operations Coverage",
+      "score": 50.0,
+      "passed": false,
+      "details": {
+        "resolves": 100.0,
+        "combines": 50.0,
+        "relevant": 0.0,
+        "depends": 0.0,
+        "postcond": 50.0,
+        "dominates": 50.0
+      },
+      "issues": [
+        "Missing or incomplete: combines, relevant, depends, postcond, dominates"
+      ],
+      "recommendations": [
+        "Implement resolves() in Question classes",
+        "Implement combines() in DomainModel",
+        "Add depends() for dependent questions (IBiS3)"
+      ]
+    },
+    "rules_coverage": {
+      "name": "Rules Coverage",
+      "score": 41.6,
+      "passed": false,
+      "details": {
+        "update_rules": 16.0,
+        "selection_rules": 80.0
+      },
+      "issues": [
+        "Update rules: 16/100",
+        "Selection rules: 80/100"
+      ],
+      "recommendations": [
+        "Implement IBiS1 update rules: IntegrateAsk, IntegrateAnswer, DowndateQUD",
+        "Implement IBiS1 selection rules: SelectFromPlan, SelectAsk, SelectAnswer",
+        "Consider IBiS3 accommodation rules for advanced features"
+      ]
+    },
+    "domain_independence": {
+      "name": "Domain Independence",
+      "score": 72.33333333333333,
+      "passed": false,
+      "details": {
+        "no_hardcoded_predicates": 30.0,
+        "domain_model_exists": 100.0,
+        "plan_builders_registered": 100.0,
+        "rules_use_domain": 66.66666666666666
+      },
+      "issues": [
+        "no_hardcoded_predicates: 30/100",
+        "rules_use_domain: 67/100"
+      ],
+      "recommendations": [
+        "Move all domain-specific knowledge to DomainModel",
+        "Rules should use domain.resolves(), domain.get_plan(), etc.",
+        "No hardcoded predicate strings in rules"
+      ]
+    }
+  }
+}

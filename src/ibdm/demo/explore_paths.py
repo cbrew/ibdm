@@ -70,16 +70,25 @@ def main() -> None:
 
     # Select depth
     while True:
-        depth_choice = input("\nMaximum depth (1-3, default: 3): ").strip()
+        depth_choice = input("\nMaximum depth (default: 3, recommend ≤5): ").strip()
         if not depth_choice:
             max_depth = 3
             break
 
         try:
             max_depth = int(depth_choice)
-            if 1 <= max_depth <= 3:
-                break
-            print("Please enter a number between 1 and 3")
+            if max_depth >= 1:
+                if max_depth > 5:
+                    confirm = input(
+                        f"Warning: Depth {max_depth} may generate many paths "
+                        f"and take significant time. Continue? (y/n): "
+                    ).strip()
+                    if confirm.lower() == "y":
+                        break
+                else:
+                    break
+            else:
+                print("Please enter a positive number")
         except ValueError:
             print("Invalid input. Please enter a number")
 

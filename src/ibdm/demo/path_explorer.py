@@ -1,6 +1,9 @@
 """Exhaustive path exploration for dialogue scenarios.
 
 Explores all possible dialogue paths up to a specified depth using breadth-first search.
+Depth is configurable - default is 3, but can be set to any positive integer.
+Note: Path count grows exponentially (depth 5+ may generate thousands of paths).
+
 Useful for:
 - Testing all distractor behaviors
 - Understanding state transitions
@@ -148,7 +151,9 @@ class PathExplorer:
         """Explore all dialogue paths up to specified depth.
 
         Args:
-            max_depth: Maximum depth to explore (default: 3)
+            max_depth: Maximum depth to explore (default: 3).
+                Can be any positive integer. Note that path count grows
+                exponentially - depth 5+ may generate thousands of paths.
 
         Returns:
             ExplorationResult with all explored paths and metrics

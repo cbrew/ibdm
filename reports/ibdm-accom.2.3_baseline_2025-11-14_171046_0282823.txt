@@ -1,0 +1,173 @@
+================================================================================
+IBDM LARSSON FIDELITY REPORT
+Generated: 2025-11-14 17:11:01
+================================================================================
+
+======================================================================
+LARSSON FIDELITY METRICS REPORT
+======================================================================
+
+Overall Score: 57.4/100 ✗ FAIL
+Target: ≥90% (py-trindikit baseline: ~95%)
+
+Component Scores:
+----------------------------------------------------------------------
+  ✗ FAIL Architectural Compliance: 35.0/100
+  ✓ PASS Information State Structure: 92.5/100
+  ✗ FAIL Semantic Operations Coverage: 50.0/100
+  ✗ FAIL Rules Coverage: 41.6/100
+  ✗ FAIL Domain Independence: 72.3/100
+
+Issues Found:
+----------------------------------------------------------------------
+  • four_phase_architecture: 0/100
+  • control_flow_order: 0/100
+  • single_rule_per_cycle: 50/100
+  • turn_taking_principle: 50/100
+  • private_fields: 80/100
+  • no_hidden_state: 75/100
+  • Missing or incomplete: combines, relevant, depends, postcond, dominates
+  • Update rules: 16/100
+  • Selection rules: 80/100
+  • no_hardcoded_predicates: 30/100
+  • rules_use_domain: 67/100
+
+Recommendations:
+----------------------------------------------------------------------
+  • Move all domain-specific knowledge to DomainModel
+  • Implement IBiS1 update rules: IntegrateAsk, IntegrateAnswer, DowndateQUD
+  • Review control_flow_order implementation against Algorithm 2.2
+  • QUD must be LIFO stack (list with push/pop semantics)
+  • Ensure InformationState follows Larsson's IBiS1/3/4 structure
+  • Add depends() for dependent questions (IBiS3)
+  • Implement combines() in DomainModel
+  • No hidden state in engine classes
+  • Consider IBiS3 accommodation rules for advanced features
+  • Rules should use domain.resolves(), domain.get_plan(), etc.
+  • Review single_rule_per_cycle implementation against Algorithm 2.2
+  • No hardcoded predicate strings in rules
+  • Review four_phase_architecture implementation against Algorithm 2.2
+  • Implement resolves() in Question classes
+  • Implement IBiS1 selection rules: SelectFromPlan, SelectAsk, SelectAnswer
+  • Review turn_taking_principle implementation against Algorithm 2.2
+
+======================================================================
+
+================================================================================
+DETAILED BREAKDOWN
+================================================================================
+
+
+### Architectural Compliance
+Score: 35.0/100
+Status: ✗ FAIL
+
+Details:
+  • four_phase_architecture: 0.0/100
+  • control_flow_order: 0.0/100
+  • single_rule_per_cycle: 50.0/100
+  • explicit_state_passing: 100.0/100
+  • turn_taking_principle: 50.0/100
+
+Issues:
+  • four_phase_architecture: 0/100
+  • control_flow_order: 0/100
+  • single_rule_per_cycle: 50/100
+  • turn_taking_principle: 50/100
+
+Recommendations:
+  • Review four_phase_architecture implementation against Algorithm 2.2
+  • Review control_flow_order implementation against Algorithm 2.2
+  • Review single_rule_per_cycle implementation against Algorithm 2.2
+  • Review turn_taking_principle implementation against Algorithm 2.2
+
+
+### Information State Structure
+Score: 92.5/100
+Status: ✓ PASS
+
+Details:
+  • private_shared_separation: 100.0/100
+  • private_fields: 80.0/100
+  • shared_fields: 100.0/100
+  • qud_stack_semantics: 100.0/100
+  • no_hidden_state: 75.0/100
+
+Issues:
+  • private_fields: 80/100
+  • no_hidden_state: 75/100
+
+Recommendations:
+  • Ensure InformationState follows Larsson's IBiS1/3/4 structure
+  • QUD must be LIFO stack (list with push/pop semantics)
+  • No hidden state in engine classes
+
+
+### Semantic Operations Coverage
+Score: 50.0/100
+Status: ✗ FAIL
+
+Details:
+  • resolves: 100.0/100
+  • combines: 50.0/100
+  • relevant: 0.0/100
+  • depends: 0.0/100
+  • postcond: 50.0/100
+  • dominates: 50.0/100
+
+Issues:
+  • Missing or incomplete: combines, relevant, depends, postcond, dominates
+
+Recommendations:
+  • Implement resolves() in Question classes
+  • Implement combines() in DomainModel
+  • Add depends() for dependent questions (IBiS3)
+
+
+### Rules Coverage
+Score: 41.6/100
+Status: ✗ FAIL
+
+Details:
+  • update_rules: 16.0/100
+  • selection_rules: 80.0/100
+
+Issues:
+  • Update rules: 16/100
+  • Selection rules: 80/100
+
+Recommendations:
+  • Implement IBiS1 update rules: IntegrateAsk, IntegrateAnswer, DowndateQUD
+  • Implement IBiS1 selection rules: SelectFromPlan, SelectAsk, SelectAnswer
+  • Consider IBiS3 accommodation rules for advanced features
+
+
+### Domain Independence
+Score: 72.3/100
+Status: ✗ FAIL
+
+Details:
+  • no_hardcoded_predicates: 30.0/100
+  • domain_model_exists: 100.0/100
+  • plan_builders_registered: 100.0/100
+  • rules_use_domain: 66.7/100
+
+Issues:
+  • no_hardcoded_predicates: 30/100
+  • rules_use_domain: 67/100
+
+Recommendations:
+  • Move all domain-specific knowledge to DomainModel
+  • Rules should use domain.resolves(), domain.get_plan(), etc.
+  • No hardcoded predicate strings in rules
+
+================================================================================
+CONCLUSION
+================================================================================
+
+✗ LOW: Overall fidelity 57.4% is insufficient
+  Significant work needed for Larsson compliance
+
+Target: ≥90% (py-trindikit baseline: ~95%)
+
+================================================================================
