@@ -1,6 +1,6 @@
 # IBDM Documentation Index
 
-**Last Updated**: 2025-11-15
+**Last Updated**: 2025-11-17
 
 Quick navigation to all IBDM documentation, organized by purpose and currency.
 
@@ -75,6 +75,30 @@ Quick navigation to all IBDM documentation, organized by purpose and currency.
 
 ---
 
+## 🎮 Demo & Scenarios
+
+### Running Demos
+
+| Document | Purpose |
+|----------|---------|
+| [SCENARIO_EXECUTION_GUIDE.md](SCENARIO_EXECUTION_GUIDE.md) | **Start here** - How to run all demos and scenarios |
+| [INTERACTIVE_SCENARIO_EXPLORER.md](INTERACTIVE_SCENARIO_EXPLORER.md) | Choice-based scenario navigation tool |
+| [PATH_EXPLORER_GUIDE.md](PATH_EXPLORER_GUIDE.md) | Exhaustive path exploration and analysis tool |
+| [scenario_explorer_guide.md](scenario_explorer_guide.md) | Additional scenario explorer documentation |
+
+### Scenario Definitions
+
+| Document | Purpose |
+|----------|---------|
+| [ibis1_demo_scenarios.md](ibis1_demo_scenarios.md) | IBiS-1 scenario specifications |
+| [ibis2_demo_scenarios.md](ibis2_demo_scenarios.md) | IBiS-2 (grounding) scenario specifications |
+| [ibis3_demo_scenarios.md](ibis3_demo_scenarios.md) | IBiS-3 (accommodation) scenario specifications |
+| [ibis4_demo_scenarios.md](ibis4_demo_scenarios.md) | IBiS-4 (actions) scenario specifications |
+| [ibis_scenarios_presentation.md](ibis_scenarios_presentation.md) | Scenario presentation material |
+| [scenario1_distractors.md](scenario1_distractors.md) | Distractor specification reference |
+
+---
+
 ## 🗄️ Historical Documentation
 
 See [archive/README.md](archive/README.md) for organization of historical docs.
@@ -126,9 +150,12 @@ Documents use these status markers in headers:
 |------|------|
 | **Start work NOW** | **[NEXT-TASK.md](../NEXT-TASK.md)** ← **Immediate next task** |
 | **Complete IBiS variants** | **[IBIS_VARIANTS_PRIORITY.md](../IBIS_VARIANTS_PRIORITY.md)** ← **22-28 week roadmap** |
+| **Run demos** | **[SCENARIO_EXECUTION_GUIDE.md](SCENARIO_EXECUTION_GUIDE.md)** ← **How to run all scenarios** |
 | Start development | [CLAUDE.md](../CLAUDE.md) → [GETTING_STARTED.md](../GETTING_STARTED.md) |
 | Understand architecture | [architecture_principles.md](architecture_principles.md) → [LARSSON_ALGORITHMS.md](LARSSON_ALGORITHMS.md) |
 | Understand IBiS progression | [IBIS_PROGRESSION_GUIDE.md](../IBIS_PROGRESSION_GUIDE.md) |
+| Explore scenarios interactively | [INTERACTIVE_SCENARIO_EXPLORER.md](INTERACTIVE_SCENARIO_EXPLORER.md) |
+| Analyze all dialogue paths | [PATH_EXPLORER_GUIDE.md](PATH_EXPLORER_GUIDE.md) |
 | Check IBD-1 status | [IBD-1 Completion Analysis](../reports/ibd-1-completion-analysis.md) |
 | Check detailed status | [Project Status (2025-11-16)](../reports/project-status-2025-11-16.md) |
 | Set up environment | [environment_setup.md](environment_setup.md) → [llm_configuration.md](llm_configuration.md) |
