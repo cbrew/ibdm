@@ -655,3 +655,94 @@ def generate_tree_visualization(result: ExplorationResult, max_depth: int = 2) -
     lines.append("=" * 70)
 
     return "\n".join(lines)
+
+
+def generate_top_paths_report(
+    result: ExplorationResult, scenario: DemoScenario, top_n: int = 5
+) -> str:
+    """Generate a report of the top N highest-scoring paths that reach payoff states.
+
+    Args:
+        result: Exploration result
+        scenario: The scenario being explored
+        top_n: Number of top paths to display (default: 5)
+
+    Returns:
+        Report string showing top scoring successful paths
+    """
+    lines: list[str] = []
+    lines.append(f"Top {top_n} Highest-Scoring Paths: {result.scenario_name}")
+    lines.append("=" * 70)
+    lines.append("")
+
+    # Collect all paths that reach a payoff state
+    payoff_paths: list[PathNode] = []
+    for depth_paths in result.paths_by_depth.values():
+        for node in depth_paths:
+            # Check if this node is at a payoff step
+            if node.step_index < len(scenario.steps):
+                current_step = scenario.steps[node.step_index]
+                if current_step.is_payoff:
+                    payoff_paths.append(node)
+
+    if not payoff_paths:
+        lines.append("⚠ No paths reached payoff states")
+        lines.append("")
+        lines.append("Try:")
+        lines.append("  - Increase max depth to allow paths to reach completion")
+        lines.append("  - Check that scenario has payoff states (⭐ marker)")
+        lines.append("  - Verify distractors exist for this scenario")
+        return "\n".join(lines)
+
+    # Sort by score (descending) and take top N
+    payoff_paths.sort(key=lambda n: n.score, reverse=True)
+    top_paths = payoff_paths[:top_n]
+
+    lines.append(f"Found {len(payoff_paths)} paths that reach payoff state")
+    lines.append(f"Showing top {len(top_paths)} highest-scoring paths:")
+    lines.append("")
+
+    for rank, node in enumerate(top_paths, 1):
+        lines.append(f"{'─' * 70}")
+        lines.append(f"Rank #{rank} - Score: {node.score:.1f}")
+        lines.append(f"{'─' * 70}")
+
+        # Get path details
+        path_choices = node.get_path_choices()
+        commitments = node.state_snapshot.get("commitments", set())
+
+        lines.append(f"Path ID:      {node.path_id}")
+        lines.append(f"Depth:        {node.depth} turns")
+        lines.append(f"Commitments:  {len(commitments)}")
+        lines.append(f"Step:         {node.step_index + 1}/{len(scenario.steps)}")
+        lines.append("")
+
+        # Show the dialogue path
+        lines.append("Dialogue Flow:")
+        for i, choice in enumerate(path_choices, 1):
+            # Truncate long utterances
+            utterance = choice[:60] + "..." if len(choice) > 60 else choice
+            lines.append(f"  Turn {i}: {utterance}")
+
+        lines.append("")
+
+        # Show commitments
+        if commitments:
+            lines.append("Commitments Collected:")
+            for commitment in sorted(commitments):
+                lines.append(f"  ✓ {commitment}")
+        else:
+            lines.append("Commitments: None")
+
+        lines.append("")
+
+    lines.append("=" * 70)
+    lines.append("")
+    lines.append("Legend:")
+    lines.append("  Score:       Higher = better quality path")
+    lines.append("  Depth:       Number of user turns")
+    lines.append("  Commitments: Information gathered during dialogue")
+    lines.append("  Path ID:     Sequence of choice IDs (e.g., 1→2→5)")
+    lines.append("")
+
+    return "\n".join(lines)

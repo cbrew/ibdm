@@ -9,6 +9,7 @@ from typing import Any
 from ibdm.demo.path_explorer import (
     PathExplorer,
     generate_exploration_report,
+    generate_top_paths_report,
     generate_tree_visualization,
 )
 from ibdm.demo.scenario_distractors import SCENARIO_DISTRACTORS
@@ -179,7 +180,8 @@ def main() -> None:
         print("  2. Tree visualization (depth 1)")
         print("  3. Tree visualization (depth 2)")
         print("  4. Tree visualization (full depth)")
-        print("  5. Exit")
+        print("  5. Top 5 highest-scoring paths to payoff")
+        print("  6. Exit")
         print()
 
         option = input("Select option: ").strip()
@@ -209,11 +211,17 @@ def main() -> None:
             print()
 
         elif option == "5":
+            print()
+            top_paths = generate_top_paths_report(result, selected_scenario, top_n=5)
+            print(top_paths)
+            print()
+
+        elif option == "6":
             print("\nGoodbye!")
             break
 
         else:
-            print("Invalid option. Please select 1-5.\n")
+            print("Invalid option. Please select 1-6.\n")
 
 
 if __name__ == "__main__":
