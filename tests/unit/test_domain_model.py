@@ -244,3 +244,182 @@ class TestDomainTypeChecking:
 
         # Should pass (no predicate attribute)
         assert domain._check_types(answer, not_a_question) is True
+
+
+class TestDomainDominance:
+    """Tests for dominance relations (IBiS4 - Larsson Section 5.7.3)."""
+
+    def test_register_dominance_function(self):
+        """Test registering a dominance function."""
+        from ibdm.core.actions import Proposition
+
+        domain = DomainModel(name="test")
+
+        def price_dominance(p1: Proposition, p2: Proposition) -> bool:
+            """Lower price dominates higher price."""
+            price1 = float(p1.arguments.get("price", float("inf")))
+            price2 = float(p2.arguments.get("price", float("inf")))
+            return price1 < price2
+
+        domain.register_dominance_function("hotel", price_dominance)
+
+        # Check that function was registered
+        assert hasattr(domain, "_dominance_functions")
+        assert "hotel" in domain._dominance_functions
+
+    def test_dominates_with_registered_function(self):
+        """Test dominance check with registered function."""
+        from ibdm.core.actions import Proposition
+
+        domain = DomainModel(name="test")
+
+        def price_dominance(p1: Proposition, p2: Proposition) -> bool:
+            """Lower price dominates higher price."""
+            price1 = float(p1.arguments.get("price", float("inf")))
+            price2 = float(p2.arguments.get("price", float("inf")))
+            return price1 < price2
+
+        domain.register_dominance_function("hotel", price_dominance)
+
+        # Cheaper hotel dominates expensive hotel
+        cheap = Proposition(predicate="hotel", arguments={"price": "150"})
+        expensive = Proposition(predicate="hotel", arguments={"price": "200"})
+
+        assert domain.dominates(cheap, expensive)
+        assert not domain.dominates(expensive, cheap)
+
+    def test_dominates_different_predicates(self):
+        """Test that dominance returns False for different predicates."""
+        from ibdm.core.actions import Proposition
+
+        domain = DomainModel(name="test")
+
+        hotel = Proposition(predicate="hotel", arguments={"price": "150"})
+        flight = Proposition(predicate="flight", arguments={"price": "200"})
+
+        # Different predicates - no dominance relation
+        assert not domain.dominates(hotel, flight)
+        assert not domain.dominates(flight, hotel)
+
+    def test_dominates_without_registered_function(self):
+        """Test dominance without registered function (should return False)."""
+        from ibdm.core.actions import Proposition
+
+        domain = DomainModel(name="test")
+
+        prop1 = Proposition(predicate="hotel", arguments={"price": "150"})
+        prop2 = Proposition(predicate="hotel", arguments={"price": "200"})
+
+        # No dominance function registered - no dominance relation
+        assert not domain.dominates(prop1, prop2)
+
+    def test_get_better_alternative_found(self):
+        """Test finding a better alternative that dominates."""
+        from ibdm.core.actions import Proposition
+
+        domain = DomainModel(name="test")
+
+        def price_dominance(p1: Proposition, p2: Proposition) -> bool:
+            """Lower price dominates higher price."""
+            price1 = float(p1.arguments.get("price", float("inf")))
+            price2 = float(p2.arguments.get("price", float("inf")))
+            return price1 < price2
+
+        domain.register_dominance_function("hotel", price_dominance)
+
+        # User rejected expensive hotel
+        rejected = Proposition(predicate="hotel", arguments={"price": "200"})
+
+        # Alternatives available
+        alternatives = {
+            Proposition(predicate="hotel", arguments={"price": "150"}),
+            Proposition(predicate="hotel", arguments={"price": "250"}),
+        }
+
+        # Should find the cheaper alternative
+        better = domain.get_better_alternative(rejected, alternatives)
+
+        assert better is not None
+        assert better.arguments["price"] == "150"
+
+    def test_get_better_alternative_not_found(self):
+        """Test when no better alternative exists."""
+        from ibdm.core.actions import Proposition
+
+        domain = DomainModel(name="test")
+
+        def price_dominance(p1: Proposition, p2: Proposition) -> bool:
+            """Lower price dominates higher price."""
+            price1 = float(p1.arguments.get("price", float("inf")))
+            price2 = float(p2.arguments.get("price", float("inf")))
+            return price1 < price2
+
+        domain.register_dominance_function("hotel", price_dominance)
+
+        # User rejected cheap hotel
+        rejected = Proposition(predicate="hotel", arguments={"price": "100"})
+
+        # All alternatives are more expensive
+        alternatives = {
+            Proposition(predicate="hotel", arguments={"price": "150"}),
+            Proposition(predicate="hotel", arguments={"price": "200"}),
+        }
+
+        # Should not find a better alternative
+        better = domain.get_better_alternative(rejected, alternatives)
+
+        assert better is None
+
+    def test_get_better_alternative_different_predicate(self):
+        """Test that alternatives with different predicates are ignored."""
+        from ibdm.core.actions import Proposition
+
+        domain = DomainModel(name="test")
+
+        rejected = Proposition(predicate="hotel", arguments={"price": "200"})
+
+        # Alternatives with different predicate
+        alternatives = {
+            Proposition(predicate="flight", arguments={"price": "150"}),
+        }
+
+        # Should not find a better alternative (different predicate)
+        better = domain.get_better_alternative(rejected, alternatives)
+
+        assert better is None
+
+    def test_dominance_with_rating(self):
+        """Test dominance with rating (higher rating dominates)."""
+        from ibdm.core.actions import Proposition
+
+        domain = DomainModel(name="test")
+
+        def rating_dominance(p1: Proposition, p2: Proposition) -> bool:
+            """Higher rating dominates lower rating."""
+            rating1 = float(p1.arguments.get("rating", 0))
+            rating2 = float(p2.arguments.get("rating", 0))
+            return rating1 > rating2
+
+        domain.register_dominance_function("hotel", rating_dominance)
+
+        # Higher rated hotel dominates lower rated
+        high_rating = Proposition(predicate="hotel", arguments={"rating": "4.5"})
+        low_rating = Proposition(predicate="hotel", arguments={"rating": "3.0"})
+
+        assert domain.dominates(high_rating, low_rating)
+        assert not domain.dominates(low_rating, high_rating)
+
+    def test_repr_includes_dominance_count(self):
+        """Test that __repr__ includes dominance function count."""
+        from ibdm.core.actions import Proposition
+
+        domain = DomainModel(name="test")
+
+        def price_dominance(p1: Proposition, p2: Proposition) -> bool:
+            return True
+
+        domain.register_dominance_function("hotel", price_dominance)
+        domain.register_dominance_function("flight", price_dominance)
+
+        repr_str = repr(domain)
+        assert "dominance_functions=2" in repr_str
