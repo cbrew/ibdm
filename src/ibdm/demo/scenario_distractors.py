@@ -1575,6 +1575,268 @@ def get_rollback_turn0_distractors() -> list[ChoiceOption]:
     ]
 
 
+# IBiS-3 Additional Scenario Distractors
+
+
+def get_volunteer_info_turn0_distractors() -> list[ChoiceOption]:
+    """Distractors for Volunteer Information Turn 0 (NDA request).
+
+    Expected: "I need to draft an NDA"
+    Context: User initiates NDA drafting task
+    """
+    return [
+        ChoiceOption(
+            id=1,
+            category=MoveCategory.EXPECTED,
+            utterance="I need to draft an NDA",
+            description="[Expected] Clear task initiation",
+            expected_trajectory=(
+                "System forms NDA drafting plan, "
+                "accommodates questions to private.issues: [parties, type, date, duration, law], "
+                "raises first question to QUD"
+            ),
+        ),
+        ChoiceOption(
+            id=2,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="I need to draft an NDA between Acme Corp and Smith Inc",
+            description="[Distractor] Volunteer parties immediately → Skip first question",
+            expected_trajectory=(
+                "System forms plan, "
+                "accommodates parties answer to shared.commitments, "
+                "removes parties question from private.issues, "
+                "raises next question (NDA type) to QUD"
+            ),
+        ),
+        ChoiceOption(
+            id=3,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="I need a mutual NDA effective January 1, 2025",
+            description="[Distractor] Volunteer type and date → Skip multiple questions",
+            expected_trajectory=(
+                "System forms plan, "
+                "accommodates type and date to commitments, "
+                "removes both questions from issues, "
+                "raises next unanswered question to QUD"
+            ),
+        ),
+        ChoiceOption(
+            id=4,
+            category=MoveCategory.CLARIFICATION_REQUEST,
+            utterance="Help me create an NDA",
+            description="[Distractor] Vague request → System provides guidance",
+            expected_trajectory=(
+                "System recognizes help request, "
+                "provides NDA explanation/guidance, "
+                "then initiates NDA plan with first question"
+            ),
+        ),
+        ChoiceOption(
+            id=5,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="What is an NDA?",
+            description="[Distractor] Definition question → QUD push before task",
+            expected_trajectory=(
+                "System pushes definition question to QUD, "
+                "provides explanation, "
+                "pops question, "
+                "asks if user wants to proceed with NDA drafting"
+            ),
+        ),
+        ChoiceOption(
+            id=6,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance=(
+                "I need an NDA between Acme and Smith, mutual, "
+                "5 years, California law, effective now"
+            ),
+            description="[Distractor] Volunteer ALL info → Direct to generation",
+            expected_trajectory=(
+                "System extracts all parameters, "
+                "accommodates all to commitments, "
+                "plan immediately complete, "
+                "skips all questions, "
+                "generates NDA document directly"
+            ),
+        ),
+    ]
+
+
+def get_volunteer_info_turn2_distractors() -> list[ChoiceOption]:
+    """Distractors for Volunteer Information Turn 2 (Parties + date).
+
+    Expected: "Acme Corp and Smith Inc, effective January 1, 2025"
+    Context: System asked "What are the parties to the NDA?"
+            User volunteers parties AND effective date
+    """
+    return [
+        ChoiceOption(
+            id=1,
+            category=MoveCategory.EXPECTED,
+            utterance="Acme Corp and Smith Inc, effective January 1, 2025",
+            description=("[Expected] Answer parties + volunteer date → Skip date question"),
+            expected_trajectory=(
+                "System accommodates both commitments, "
+                "pops parties question from QUD, "
+                "removes date question from private.issues, "
+                "raises next question (duration) to QUD"
+            ),
+        ),
+        ChoiceOption(
+            id=2,
+            category=MoveCategory.EXPECTED,
+            utterance="Acme Corp and Smith Inc",
+            description="[Distractor] Answer only what's asked → Normal flow",
+            expected_trajectory=(
+                "System accommodates parties to commitments, "
+                "pops question from QUD, "
+                "raises next question (NDA type) to QUD"
+            ),
+        ),
+        ChoiceOption(
+            id=3,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance=(
+                "Acme Corp and Smith Inc, mutual NDA, 3 years, "
+                "California law, effective January 1, 2025"
+            ),
+            description="[Distractor] Volunteer ALL remaining → Complete plan",
+            expected_trajectory=(
+                "System accommodates all commitments, "
+                "clears all private.issues, "
+                "plan complete, "
+                "proceeds to NDA generation"
+            ),
+        ),
+        ChoiceOption(
+            id=4,
+            category=MoveCategory.INVALID_ANSWER,
+            utterance="Acme and Smith",
+            description="[Distractor] Ambiguous/incomplete → Clarification needed",
+            expected_trajectory=(
+                "System detects ambiguity (informal names), "
+                "asks clarification: 'Do you mean Acme Corp and Smith Inc?', "
+                "raises clarification to QUD"
+            ),
+        ),
+        ChoiceOption(
+            id=5,
+            category=MoveCategory.CORRECTION,
+            utterance="Actually, it's between Acme Corp and Jones LLC, not Smith",
+            description="[Distractor] Self-correction → Update belief",
+            expected_trajectory=(
+                "System accommodates corrected parties, "
+                "if prior commitment existed: revises it, "
+                "pops question, "
+                "continues with next question"
+            ),
+        ),
+        ChoiceOption(
+            id=6,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="Can the NDA have three parties instead of two?",
+            description="[Distractor] Question about constraints → QUD push",
+            expected_trajectory=(
+                "System pushes constraint question to QUD, "
+                "answers: 'Yes, multi-party NDAs are supported', "
+                "pops question, "
+                "returns to parties question"
+            ),
+        ),
+    ]
+
+
+def get_volunteer_info_turn4_distractors() -> list[ChoiceOption]:
+    """Distractors for Volunteer Information Turn 4 (Duration + type + law).
+
+    Expected: "3 years, mutual NDA, California law"
+    Context: System asked "What is the duration of confidentiality obligations?"
+            User volunteers duration, type, AND governing law
+    """
+    return [
+        ChoiceOption(
+            id=1,
+            category=MoveCategory.EXPECTED,
+            utterance="3 years, mutual NDA, California law",
+            description="[Expected] Volunteer all remaining → Plan complete",
+            expected_trajectory=(
+                "System accommodates all three commitments, "
+                "clears all private.issues, "
+                "plan complete, "
+                "generates NDA document"
+            ),
+        ),
+        ChoiceOption(
+            id=2,
+            category=MoveCategory.EXPECTED,
+            utterance="3 years",
+            description="[Distractor] Answer only duration → Continue questioning",
+            expected_trajectory=(
+                "System accommodates duration, "
+                "pops question, "
+                "raises next question (NDA type) to QUD"
+            ),
+        ),
+        ChoiceOption(
+            id=3,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="3 years, one-way NDA protecting Acme Corp",
+            description="[Distractor] Duration + type + specifics → Partial volunteer",
+            expected_trajectory=(
+                "System accommodates duration and type, "
+                "notes protecting party detail, "
+                "raises governing law question"
+            ),
+        ),
+        ChoiceOption(
+            id=4,
+            category=MoveCategory.INVALID_ANSWER,
+            utterance="Perpetual",
+            description="[Distractor] Just duration (unusual) → May ask confirmation",
+            expected_trajectory=(
+                "System accommodates perpetual duration, "
+                "may ask confirmation: 'Perpetual NDAs are uncommon. Is this correct?', "
+                "then continues with next question"
+            ),
+        ),
+        ChoiceOption(
+            id=5,
+            category=MoveCategory.CLARIFICATION_REQUEST,
+            utterance="What's the difference between mutual and one-way NDAs?",
+            description="[Distractor] Question instead of answer → QUD push",
+            expected_trajectory=(
+                "System pushes definition question to QUD, "
+                "explains difference, "
+                "pops question, "
+                "returns to duration question"
+            ),
+        ),
+        ChoiceOption(
+            id=6,
+            category=MoveCategory.CORRECTION,
+            utterance="Wait, make it 5 years instead of 3",
+            description="[Distractor] Correction without initial answer → Assumes 3",
+            expected_trajectory=(
+                "System infers correction relates to unstated 3-year duration, "
+                "accommodates 5 years, "
+                "pops question, "
+                "continues"
+            ),
+        ),
+        ChoiceOption(
+            id=7,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="5 years, mutual, governed by Delaware law",
+            description="[Distractor] Different values volunteered → Completes plan",
+            expected_trajectory=(
+                "System accommodates all commitments, "
+                "plan complete, "
+                "generates NDA with volunteered parameters"
+            ),
+        ),
+    ]
+
+
 # Mapping from scenario and turn to distractors
 SCENARIO_DISTRACTORS = {
     "Incremental Questioning": {
@@ -1584,6 +1846,11 @@ SCENARIO_DISTRACTORS = {
         6: get_scenario1_turn3_distractors,  # Turn 6: Effective date answer (moved)
         8: get_scenario1_turn4_distractors,  # Turn 8: Duration answer (NEW)
         10: get_scenario1_turn5_distractors,  # Turn 10: Governing law answer (NEW)
+    },
+    "Volunteer Information": {
+        0: get_volunteer_info_turn0_distractors,  # Turn 0: NDA request
+        2: get_volunteer_info_turn2_distractors,  # Turn 2: Parties + date volunteer
+        4: get_volunteer_info_turn4_distractors,  # Turn 4: Duration + type + law volunteer
     },
     "Action Confirmation": {
         0: get_action_confirmation_turn0_distractors,  # Turn 0: Booking request
