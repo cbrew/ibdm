@@ -354,6 +354,19 @@ class PathExplorer:
         }
 
 
+def _path_has_result(node: PathNode) -> bool:
+    """Check if a path has produced a result (has commitments).
+
+    Args:
+        node: Path node to check
+
+    Returns:
+        True if path has at least one commitment, False otherwise
+    """
+    commitments = node.state_snapshot.get("commitments", set())
+    return len(commitments) > 0
+
+
 def generate_exploration_report(result: ExplorationResult) -> str:
     """Generate a human-readable exploration report.
 
@@ -377,10 +390,13 @@ def generate_exploration_report(result: ExplorationResult) -> str:
     lines.append("-" * 70)
     lines.append(f"Total paths explored: {result.total_paths}")
     lines.append(f"Unique states reached: {len(result.unique_states)}")
-    convergence_count = sum(
-        1 for nodes in result.state_convergence.values() if len(nodes) > 1
-    )
+    convergence_count = sum(1 for nodes in result.state_convergence.values() if len(nodes) > 1)
     lines.append(f"State convergence instances: {convergence_count}")
+
+    # Count paths with results
+    all_paths = [path for paths in result.paths_by_depth.values() for path in paths]
+    paths_with_results = sum(1 for path in all_paths if _path_has_result(path))
+    lines.append(f"Paths with results: {paths_with_results}/{result.total_paths}")
     lines.append("")
 
     # Coverage
@@ -405,7 +421,10 @@ def generate_exploration_report(result: ExplorationResult) -> str:
             path_desc = path.path_id if path.path_id != "root" else "root"
             commitments = len(path.state_snapshot.get("commitments", set()))
             qud = path.state_snapshot.get("qud_size", 0)
-            lines.append(f"  [{path_desc}] commitments: {commitments}, qud: {qud}")
+            result_indicator = "✓" if _path_has_result(path) else "✗"
+            lines.append(
+                f"  {result_indicator} [{path_desc}] commitments: {commitments}, qud: {qud}"
+            )
 
         if len(paths) > 10:
             lines.append(f"  ... and {len(paths) - 10} more paths")
@@ -471,9 +490,12 @@ def generate_tree_visualization(result: ExplorationResult, max_depth: int = 2) -
             choice_desc = node.choice_made.utterance[:40] if node.choice_made else "?"
             category = node.choice_made.category.value if node.choice_made else "?"
             commitments = len(node.state_snapshot.get("commitments", set()))
-            lines.append(
-                f'{prefix}{connector}[{node.path_id}] {category}: "{choice_desc}" (C:{commitments})'
+            result_indicator = "✓" if _path_has_result(node) else "✗"
+            node_info = (
+                f"{prefix}{connector}{result_indicator} [{node.path_id}] "
+                f'{category}: "{choice_desc}" (C:{commitments})'
             )
+            lines.append(node_info)
 
         # Render children
         if node.children:
