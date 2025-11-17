@@ -86,15 +86,15 @@ def main() -> None:
 
     # Select depth
     while True:
-        depth_choice = input("\nMaximum depth (default: 3, recommend ≤5): ").strip()
+        depth_choice = input("\nMaximum depth (default: 20): ").strip()
         if not depth_choice:
-            max_depth = 3
+            max_depth = 20
             break
 
         try:
             max_depth = int(depth_choice)
             if max_depth >= 1:
-                if max_depth > 5:
+                if max_depth > 30:
                     confirm = input(
                         f"Warning: Depth {max_depth} may generate many paths "
                         f"and take significant time. Continue? (y/n): "
