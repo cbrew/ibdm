@@ -1,6 +1,6 @@
-"""CLI for exhaustive path exploration.
+"""CLI for best-first beam search path exploration.
 
-Run scenario exploration to discover all possible dialogue paths.
+Run scenario exploration using beam search to discover high-quality dialogue paths.
 """
 
 import sys
@@ -23,7 +23,7 @@ from ibdm.domains.travel_domain import get_travel_domain
 def main() -> None:
     """Main entry point for path exploration."""
     print("\n" + "=" * 70)
-    print("  IBiS Path Explorer - Exhaustive Dialogue Path Analysis")
+    print("  IBiS Path Explorer - Best-First Beam Search")
     print("=" * 70)
     print()
 
@@ -92,8 +92,25 @@ def main() -> None:
         except ValueError:
             print("Invalid input. Please enter a number")
 
+    # Select beam size
+    while True:
+        beam_choice = input("\nBeam size (default: 200): ").strip()
+        if not beam_choice:
+            beam_size = 200
+            break
+
+        try:
+            beam_size = int(beam_choice)
+            if beam_size >= 1:
+                break
+            else:
+                print("Please enter a positive number")
+        except ValueError:
+            print("Invalid input. Please enter a number")
+
     print(f"\n✓ Selected: {selected_scenario.name}")
     print(f"✓ Max depth: {max_depth}")
+    print(f"✓ Beam size: {beam_size}")
     print()
 
     # Determine domain
@@ -106,11 +123,11 @@ def main() -> None:
         print("✓ Domain: Travel")
 
     # Create explorer
-    print(f"\nExploring all paths up to depth {max_depth}...")
-    print("This may take a few seconds for depth 3...")
+    print(f"\nExploring paths up to depth {max_depth} with beam size {beam_size}...")
+    print("Using best-first beam search...")
     print()
 
-    explorer = PathExplorer(selected_scenario, domain)
+    explorer = PathExplorer(selected_scenario, domain, beam_size=beam_size)
     result = explorer.explore_paths(max_depth=max_depth)
 
     print("✓ Exploration complete!")
