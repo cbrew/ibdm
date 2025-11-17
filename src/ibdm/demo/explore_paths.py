@@ -11,6 +11,7 @@ from ibdm.demo.path_explorer import (
     generate_exploration_report,
     generate_tree_visualization,
 )
+from ibdm.demo.scenario_distractors import SCENARIO_DISTRACTORS
 from ibdm.demo.scenarios import (
     get_ibis2_scenarios,
     get_ibis3_scenarios,
@@ -37,18 +38,32 @@ def main() -> None:
     print("-" * 70)
     print("\nIBiS-3 Scenarios (Question Accommodation):")
     for i, scenario in enumerate(ibis3_scenarios, 1):
-        print(f"  {i}. {scenario.name}")
+        has_distractors = scenario.name in SCENARIO_DISTRACTORS
+        marker = "✓" if has_distractors else " "
+        has_payoff = any(step.is_payoff for step in scenario.steps)
+        payoff_marker = "⭐" if has_payoff else " "
+        print(f"  {i}. [{marker}] {scenario.name} {payoff_marker}")
 
     offset = len(ibis3_scenarios)
     print("\nIBiS-2 Scenarios (Grounding & Feedback):")
     for i, scenario in enumerate(ibis2_scenarios, offset + 1):
-        print(f"  {i}. {scenario.name}")
+        has_distractors = scenario.name in SCENARIO_DISTRACTORS
+        marker = "✓" if has_distractors else " "
+        has_payoff = any(step.is_payoff for step in scenario.steps)
+        payoff_marker = "⭐" if has_payoff else " "
+        print(f"  {i}. [{marker}] {scenario.name} {payoff_marker}")
 
     offset += len(ibis2_scenarios)
     print("\nIBiS-4 Scenarios (Action-Oriented Dialogue):")
     for i, scenario in enumerate(ibis4_scenarios, offset + 1):
-        print(f"  {i}. {scenario.name}")
+        has_distractors = scenario.name in SCENARIO_DISTRACTORS
+        marker = "✓" if has_distractors else " "
+        has_payoff = any(step.is_payoff for step in scenario.steps)
+        payoff_marker = "⭐" if has_payoff else " "
+        print(f"  {i}. [{marker}] {scenario.name} {payoff_marker}")
 
+    print("-" * 70)
+    print("\nLegend: [✓] = Has distractors  ⭐ = Has payoff state")
     print("-" * 70)
 
     # Select scenario
