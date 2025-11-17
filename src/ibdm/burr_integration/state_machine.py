@@ -237,7 +237,7 @@ class DialogueStateMachine:
 
     def reset(self) -> None:
         """Reset the state machine to initial state."""
-        # Reset the iI nformation state in Burr State
+        # Reset the information state in Burr State
         engine = self.app.state.get("engine")
         if engine is not None:
             initial_state = engine.create_initial_state()
