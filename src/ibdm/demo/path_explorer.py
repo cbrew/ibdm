@@ -62,6 +62,7 @@ class PathNode:
     Attributes:
         depth: How many user choices deep (0 = initial state)
         step_index: Current position in scenario
+        user_turn_index: The index of the user turn in the scenario steps
         choice_made: The choice that led to this node (None for root)
         state_snapshot: Snapshot of dialogue state at this node
         parent: Parent node in the tree (None for root)
@@ -72,6 +73,7 @@ class PathNode:
 
     depth: int
     step_index: int
+    user_turn_index: int
     choice_made: ChoiceOption | None
     state_snapshot: dict[str, Any]
     parent: PathNode | None
@@ -79,16 +81,16 @@ class PathNode:
     children: list[PathNode] = field(default_factory=lambda: [])
     score: float = 0.0
 
-    def get_path_choices(self) -> list[str]:
-        """Get the sequence of choices that led to this node.
+    def get_path(self) -> list[PathNode]:
+        """Get the sequence of nodes that led to this node.
 
         Returns:
-            List of choice utterances from root to this node
+            List of nodes from root to this node
         """
-        path: list[str] = []
+        path: list[PathNode] = []
         node: PathNode | None = self
-        while node is not None and node.choice_made is not None:
-            path.append(node.choice_made.utterance)
+        while node is not None:
+            path.append(node)
             node = node.parent
         return list(reversed(path))
 
@@ -251,6 +253,7 @@ class PathExplorer:
         root = PathNode(
             depth=0,
             step_index=0,
+            user_turn_index=0,
             choice_made=None,
             state_snapshot=self._capture_state(initial_state),
             parent=None,
@@ -284,7 +287,7 @@ class PathExplorer:
                 continue
 
             # Get available choices at this node
-            choices = self._get_choices_at_node(node, initial_state)
+            choices, user_turn_index = self._get_choices_at_node(node, initial_state)
             if not choices:
                 continue
 
@@ -299,7 +302,8 @@ class PathExplorer:
 
                 child = PathNode(
                     depth=node.depth + 1,
-                    step_index=node.step_index + 1,
+                    step_index=user_turn_index + 1,
+                    user_turn_index=user_turn_index,
                     choice_made=choice,
                     state_snapshot=self._capture_state(child_state),
                     parent=node,
@@ -371,7 +375,7 @@ class PathExplorer:
 
     def _get_choices_at_node(
         self, node: PathNode, base_state: InformationState
-    ) -> list[ChoiceOption]:
+    ) -> tuple[list[ChoiceOption], int]:
         """Get available choices at a given node.
 
         Args:
@@ -379,12 +383,12 @@ class PathExplorer:
             base_state: Base information state
 
         Returns:
-            List of available choices
+            Tuple of (List of available choices, step_index of the user turn)
         """
         # Find the current user turn
         step_index = node.step_index
         if step_index >= len(self.scenario.steps):
-            return []
+            return [], -1
 
         # Skip system turns
         while step_index < len(self.scenario.steps):
@@ -394,7 +398,7 @@ class PathExplorer:
             step_index += 1
 
         if step_index >= len(self.scenario.steps):
-            return []
+            return [], -1
 
         # Get choices for this turn
         assert self.explorer is not None
@@ -404,7 +408,7 @@ class PathExplorer:
         choices = self.explorer.get_current_choices()
         self.explorer.current_step_index = original_index
 
-        return choices
+        return choices, step_index
 
     def _simulate_choice(
         self, node: PathNode, choice: ChoiceOption, base_state: InformationState
@@ -716,7 +720,7 @@ def generate_top_paths_report(
         lines.append(f"{'─' * 70}")
 
         # Get path details
-        path_choices = node.get_path_choices()
+        path_nodes = node.get_path()
         commitments = node.state_snapshot.get("commitments", set())
 
         lines.append(f"Path ID:      {node.path_id}")
@@ -727,10 +731,25 @@ def generate_top_paths_report(
 
         # Show the dialogue path
         lines.append("Dialogue Flow:")
-        for i, choice in enumerate(path_choices, 1):
-            # Truncate long utterances
-            utterance = choice[:60] + "..." if len(choice) > 60 else choice
-            lines.append(f"  Turn {i}: {utterance}")
+        last_system_turn_index = -1
+        for path_node in path_nodes:
+            if not path_node.choice_made:
+                continue
+
+            # Find the system turn leading up to this user choice
+            start_index = last_system_turn_index + 1
+            for i in range(start_index, path_node.user_turn_index):
+                step = scenario.steps[i]
+                if step.speaker == "system":
+                    utterance = step.utterance.strip().split("\n")[0]
+                    utterance = utterance[:70] + "..." if len(utterance) > 70 else utterance
+                    lines.append(f"  System: {utterance}")
+                    last_system_turn_index = i
+
+            # Show user choice
+            utterance = path_node.choice_made.utterance
+            utterance = utterance[:70] + "..." if len(utterance) > 70 else utterance
+            lines.append(f"  User:   {utterance}")
 
         lines.append("")
 
