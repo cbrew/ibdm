@@ -1837,6 +1837,574 @@ def get_volunteer_info_turn4_distractors() -> list[ChoiceOption]:
     ]
 
 
+# IBiS-3 Clarification Scenario Distractors
+
+
+def get_clarification_turn0_distractors() -> list[ChoiceOption]:
+    """Distractors for Clarification Turn 0 (NDA request).
+
+    Expected: "I need to draft an NDA"
+    Context: User initiates NDA drafting, scenario will test clarification on Turn 2
+    """
+    return [
+        ChoiceOption(
+            id=1,
+            category=MoveCategory.EXPECTED,
+            utterance="I need to draft an NDA",
+            description="[Expected] Clear task initiation",
+            expected_trajectory=(
+                "System forms NDA drafting plan, "
+                "accommodates questions to private.issues, "
+                "raises 'parties' question to QUD"
+            ),
+        ),
+        ChoiceOption(
+            id=2,
+            category=MoveCategory.CLARIFICATION_REQUEST,
+            utterance="I need help with an agreement",
+            description="[Distractor] Vague request → System asks for clarification",
+            expected_trajectory=(
+                "System detects vague request, "
+                "asks clarification: 'What type of agreement?', "
+                "user must specify NDA"
+            ),
+        ),
+        ChoiceOption(
+            id=3,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="I need to draft an NDA for Acme Corp and Smith Inc",
+            description="[Distractor] Volunteer parties → Skip first question",
+            expected_trajectory=(
+                "System forms plan with parties pre-filled, "
+                "removes parties from private.issues, "
+                "raises next question (NDA type) to QUD"
+            ),
+        ),
+        ChoiceOption(
+            id=4,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="What is an NDA and when do I need one?",
+            description="[Distractor] Information request → QUD push before task",
+            expected_trajectory=(
+                "System pushes explanation question to QUD, "
+                "provides NDA explanation, "
+                "pops question, "
+                "asks if user wants to proceed with drafting"
+            ),
+        ),
+        ChoiceOption(
+            id=5,
+            category=MoveCategory.EXPECTED,
+            utterance="Draft a confidentiality agreement",
+            description="[Distractor] Alternative terminology → Same as NDA",
+            expected_trajectory=(
+                "System recognizes 'confidentiality agreement' as NDA synonym, "
+                "forms NDA plan, "
+                "proceeds with parties question"
+            ),
+        ),
+    ]
+
+
+def get_clarification_turn2_distractors() -> list[ChoiceOption]:
+    """Distractors for Clarification Turn 2 (Invalid parties answer).
+
+    Expected: "blue"
+    Context: System asked "What are the parties to the NDA?"
+            This turn demonstrates Rule 4.3 (IssueClarification)
+    """
+    return [
+        ChoiceOption(
+            id=1,
+            category=MoveCategory.EXPECTED,
+            utterance="blue",
+            description="[Expected] Invalid answer → Triggers clarification (Rule 4.3)",
+            expected_trajectory=(
+                "System validates: domain.resolves('blue', Q_parties) → False, "
+                "creates clarification question: 'What is a valid parties?', "
+                "pushes CQ to QUD above Q_parties, "
+                "QUD now: [Q_parties, CQ_valid_parties]"
+            ),
+        ),
+        ChoiceOption(
+            id=2,
+            category=MoveCategory.EXPECTED,
+            utterance="Acme Corp and Smith Inc",
+            description="[Distractor] Valid answer → Normal flow, no clarification",
+            expected_trajectory=(
+                "System validates: domain.resolves() → True, "
+                "accommodates parties commitment, "
+                "pops Q_parties from QUD, "
+                "raises next question to QUD"
+            ),
+        ),
+        ChoiceOption(
+            id=3,
+            category=MoveCategory.INVALID_ANSWER,
+            utterance="42",
+            description="[Distractor] Numeric nonsense → Clarification needed",
+            expected_trajectory=(
+                "System validates: number is not valid parties, "
+                "creates clarification: 'Please provide party names (legal entities)', "
+                "pushes CQ to QUD"
+            ),
+        ),
+        ChoiceOption(
+            id=4,
+            category=MoveCategory.INVALID_ANSWER,
+            utterance="Just one company",
+            description="[Distractor] Incomplete/vague → Clarification for specifics",
+            expected_trajectory=(
+                "System detects vague/incomplete answer, "
+                "creates clarification: 'What is the name of the company? And the second party?', "
+                "pushes CQ to QUD"
+            ),
+        ),
+        ChoiceOption(
+            id=5,
+            category=MoveCategory.INVALID_ANSWER,
+            utterance="Me and my friend",
+            description="[Distractor] Informal reference → Clarification for legal names",
+            expected_trajectory=(
+                "System detects informal references, "
+                "creates clarification: 'Please provide full legal names of both parties', "
+                "pushes CQ to QUD"
+            ),
+        ),
+        ChoiceOption(
+            id=6,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="Can an NDA have more than two parties?",
+            description="[Distractor] Question instead of answer → QUD push",
+            expected_trajectory=(
+                "System pushes user's question to QUD: [Q_parties, Q_multi_party], "
+                "answers: 'Yes, multi-party NDAs are supported', "
+                "pops Q_multi_party, "
+                "returns to Q_parties: 'What are the parties?'"
+            ),
+        ),
+        ChoiceOption(
+            id=7,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="Acme Corp and Smith Inc, effective January 1, 2025",
+            description="[Distractor] Valid answer + volunteer date → Skip date question",
+            expected_trajectory=(
+                "System validates and accommodates both commitments, "
+                "pops Q_parties, "
+                "removes Q_effective_date from private.issues, "
+                "raises next question"
+            ),
+        ),
+        ChoiceOption(
+            id=8,
+            category=MoveCategory.REJECTION,
+            utterance="Actually, I don't want to do this anymore",
+            description="[Distractor] Task abandonment → Clear plan",
+            expected_trajectory=(
+                "System detects task cancellation, "
+                "clears private.plan, private.issues, shared.qud, "
+                "returns to idle: 'Okay. How can I help you?'"
+            ),
+        ),
+    ]
+
+
+def get_clarification_turn4_distractors() -> list[ChoiceOption]:
+    """Distractors for Clarification Turn 4 (Response to clarification).
+
+    Expected: "Acme Corp and Smith Inc"
+    Context: System asked "What is a valid parties?" (clarification question)
+            QUD: [Q_parties, CQ_valid_parties]
+            User previously said "blue" (invalid)
+    """
+    return [
+        ChoiceOption(
+            id=1,
+            category=MoveCategory.EXPECTED,
+            utterance="Acme Corp and Smith Inc",
+            description="[Expected] Valid clarification response → Resolve both questions",
+            expected_trajectory=(
+                "System validates answer as valid parties, "
+                "pops CQ_valid_parties from QUD, "
+                "uses answer to resolve original Q_parties, "
+                "pops Q_parties from QUD, "
+                "accommodates commitment: parties(Acme Corp, Smith Inc), "
+                "raises next question to QUD"
+            ),
+        ),
+        ChoiceOption(
+            id=2,
+            category=MoveCategory.INVALID_ANSWER,
+            utterance="red",
+            description="[Distractor] Still invalid → Additional clarification layer",
+            expected_trajectory=(
+                "System validates: still not valid parties, "
+                "may create nested clarification or provide examples: "
+                "'Please provide company names like Acme Corp and Smith Inc', "
+                "keeps CQ in QUD"
+            ),
+        ),
+        ChoiceOption(
+            id=3,
+            category=MoveCategory.INVALID_ANSWER,
+            utterance="I don't know",
+            description="[Distractor] Explicit confusion → System provides help",
+            expected_trajectory=(
+                "System detects user confusion, "
+                "provides guidance/examples: "
+                "'Parties are the legal entities entering the NDA, like companies or individuals', "
+                "may offer to help formulate answer"
+            ),
+        ),
+        ChoiceOption(
+            id=4,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="What do you mean by valid parties?",
+            description="[Distractor] Meta-question about clarification → Further QUD nesting",
+            expected_trajectory=(
+                "System pushes meta-question to QUD: "
+                "[Q_parties, CQ_valid_parties, Q_what_is_valid], "
+                "explains validation criteria: 'Valid parties are legal entity names', "
+                "pops Q_what_is_valid, "
+                "returns to CQ_valid_parties"
+            ),
+        ),
+        ChoiceOption(
+            id=5,
+            category=MoveCategory.EXPECTED,
+            utterance="TechCorp and InnovateLLC",
+            description="[Distractor] Different valid parties → Resolves clarification",
+            expected_trajectory=(
+                "System validates as valid parties, "
+                "resolves clarification and original question, "
+                "accommodates: parties(TechCorp, InnovateLLC), "
+                "continues with next question"
+            ),
+        ),
+        ChoiceOption(
+            id=6,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="Acme Corp and Smith Inc, mutual NDA, effective now",
+            description="[Distractor] Valid + volunteer extras → Resolve + skip questions",
+            expected_trajectory=(
+                "System resolves clarification with valid parties, "
+                "accommodates additional volunteered info (type, date), "
+                "removes corresponding questions from private.issues, "
+                "continues with remaining questions"
+            ),
+        ),
+        ChoiceOption(
+            id=7,
+            category=MoveCategory.CORRECTION,
+            utterance="Sorry, I meant to say Acme Corp and Smith Inc earlier",
+            description="[Distractor] Explicit correction acknowledgment → Valid resolution",
+            expected_trajectory=(
+                "System recognizes correction acknowledgment, "
+                "validates new answer, "
+                "resolves both clarification and original question, "
+                "accommodates valid parties"
+            ),
+        ),
+        ChoiceOption(
+            id=8,
+            category=MoveCategory.REJECTION,
+            utterance="Never mind, I'll draft it myself",
+            description="[Distractor] Task abandonment during clarification → Clear all",
+            expected_trajectory=(
+                "System detects abandonment, "
+                "clears QUD (all questions including clarification), "
+                "clears plan and issues, "
+                "returns to idle"
+            ),
+        ),
+    ]
+
+
+# IBiS-3 Dependent Questions Scenario Distractors
+
+
+def get_dependent_questions_turn0_distractors() -> list[ChoiceOption]:
+    """Distractors for Dependent Questions Turn 0 (Flight booking request).
+
+    Expected: "I need to book a flight"
+    Context: User initiates flight booking with dependent questions (price depends on route)
+    """
+    return [
+        ChoiceOption(
+            id=1,
+            category=MoveCategory.EXPECTED,
+            utterance="I need to book a flight",
+            description="[Expected] Clear flight booking request",
+            expected_trajectory=(
+                "System forms flight booking plan with dependent questions, "
+                "accommodates to private.issues: [departure, destination, dates, price, ...], "
+                "dependencies: price depends on [departure, destination], "
+                "raises first prerequisite question (departure) to QUD"
+            ),
+        ),
+        ChoiceOption(
+            id=2,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="I need to book a flight from London to New York",
+            description="[Distractor] Volunteer departure and destination → Skip prerequisites",
+            expected_trajectory=(
+                "System forms plan, "
+                "accommodates departure(London) and destination(New York) to commitments, "
+                "removes both from private.issues, "
+                "dependent question 'price' now has prerequisites satisfied, "
+                "can raise price or other questions to QUD"
+            ),
+        ),
+        ChoiceOption(
+            id=3,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="Book a flight from London to New York on January 15, 2025",
+            description="[Distractor] Volunteer route and date → Skip multiple prerequisites",
+            expected_trajectory=(
+                "System extracts departure, destination, date, "
+                "accommodates all to commitments, "
+                "dependent questions can now be asked (prerequisites met), "
+                "raises next question (return date, class, etc.)"
+            ),
+        ),
+        ChoiceOption(
+            id=4,
+            category=MoveCategory.INVALID_ANSWER,
+            utterance="Book a flight",
+            description="[Distractor] Missing parameters → Asks prerequisites in order",
+            expected_trajectory=(
+                "System forms flight plan, "
+                "all parameters missing, "
+                "follows dependency order: asks prerequisite questions first, "
+                "then dependent questions"
+            ),
+        ),
+        ChoiceOption(
+            id=5,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="What information do you need to book a flight?",
+            description="[Distractor] Meta-question about requirements → QUD push",
+            expected_trajectory=(
+                "System pushes meta-question to QUD, "
+                "explains flight booking requirements and dependencies: "
+                "'I need departure, destination, dates, then I can find prices', "
+                "pops question, "
+                "asks if user wants to proceed"
+            ),
+        ),
+        ChoiceOption(
+            id=6,
+            category=MoveCategory.CLARIFICATION_REQUEST,
+            utterance="Help me find a flight",
+            description="[Distractor] Help request → System provides guidance then proceeds",
+            expected_trajectory=(
+                "System provides guidance about flight booking, "
+                "then initiates plan with first question"
+            ),
+        ),
+    ]
+
+
+def get_dependent_questions_turn2_distractors() -> list[ChoiceOption]:
+    """Distractors for Dependent Questions Turn 2 (Departure city answer).
+
+    Expected: "London"
+    Context: System asked "What's your departure city?"
+            This is a prerequisite for price question
+    """
+    return [
+        ChoiceOption(
+            id=1,
+            category=MoveCategory.EXPECTED,
+            utterance="London",
+            description="[Expected] Answer prerequisite question",
+            expected_trajectory=(
+                "System accommodates departure(London) to commitments, "
+                "pops departure question from QUD, "
+                "prerequisite satisfied but price still needs destination, "
+                "raises next prerequisite question (destination) to QUD"
+            ),
+        ),
+        ChoiceOption(
+            id=2,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="London to New York",
+            description="[Distractor] Volunteer destination too → Satisfy multiple prerequisites",
+            expected_trajectory=(
+                "System extracts both departure(London) and destination(New York), "
+                "accommodates both to commitments, "
+                "both prerequisites for price now satisfied, "
+                "can raise price or other questions to QUD"
+            ),
+        ),
+        ChoiceOption(
+            id=3,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="London, flying out January 15, 2025",
+            description="[Distractor] Volunteer departure date → Partial skip",
+            expected_trajectory=(
+                "System accommodates departure(London) and date(Jan 15), "
+                "pops departure question, "
+                "skips date question from issues, "
+                "raises destination question (still prerequisite for price)"
+            ),
+        ),
+        ChoiceOption(
+            id=4,
+            category=MoveCategory.INVALID_ANSWER,
+            utterance="I'm not sure, somewhere in Europe",
+            description="[Distractor] Vague answer → Clarification needed",
+            expected_trajectory=(
+                "System detects vague/incomplete answer, "
+                "creates clarification: 'Which specific city in Europe?', "
+                "pushes CQ to QUD"
+            ),
+        ),
+        ChoiceOption(
+            id=5,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="Which cities do you fly from?",
+            description="[Distractor] Information request → QUD push",
+            expected_trajectory=(
+                "System pushes question to QUD, "
+                "provides list of available departure cities, "
+                "pops question, "
+                "returns to departure question"
+            ),
+        ),
+        ChoiceOption(
+            id=6,
+            category=MoveCategory.INVALID_ANSWER,
+            utterance="The airport near me",
+            description="[Distractor] Ambiguous reference → Clarification required",
+            expected_trajectory=(
+                "System cannot resolve 'airport near me', "
+                "asks clarification: 'Which airport is that?', "
+                "pushes CQ to QUD"
+            ),
+        ),
+        ChoiceOption(
+            id=7,
+            category=MoveCategory.EXPECTED,
+            utterance="Heathrow",
+            description="[Distractor] Specific airport → Valid answer",
+            expected_trajectory=(
+                "System resolves Heathrow to London, "
+                "accommodates departure(London/Heathrow), "
+                "continues with destination question"
+            ),
+        ),
+    ]
+
+
+def get_dependent_questions_turn4_distractors() -> list[ChoiceOption]:
+    """Distractors for Dependent Questions Turn 4 (Destination city answer).
+
+    Expected: "New York"
+    Context: System asked "What's your destination city?"
+            Departure already answered (London)
+            This is the FINAL prerequisite for price question
+    """
+    return [
+        ChoiceOption(
+            id=1,
+            category=MoveCategory.EXPECTED,
+            utterance="New York",
+            description="[Expected] Answer final prerequisite → Price question unlocked",
+            expected_trajectory=(
+                "System accommodates destination(New York) to commitments, "
+                "pops destination question from QUD, "
+                "ALL prerequisites for price now satisfied, "
+                "price question moves from blocked to available, "
+                "raises price question to QUD (demonstrates Rule 4.4)"
+            ),
+        ),
+        ChoiceOption(
+            id=2,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="New York, departing January 15, returning January 20",
+            description="[Distractor] Volunteer dates → Skip date questions, unlock price",
+            expected_trajectory=(
+                "System accommodates destination, departure date, return date, "
+                "all prerequisites for price satisfied, "
+                "removes date questions from issues, "
+                "raises price question to QUD"
+            ),
+        ),
+        ChoiceOption(
+            id=3,
+            category=MoveCategory.CORRECTION,
+            utterance="Actually, change departure to Paris instead of London",
+            description="[Distractor] Correct previous answer → Updates prerequisite",
+            expected_trajectory=(
+                "System detects correction of departure commitment, "
+                "retracts old: departure(London), "
+                "accommodates new: departure(Paris), "
+                "prerequisite still satisfied (just different value), "
+                "continues with destination question"
+            ),
+        ),
+        ChoiceOption(
+            id=4,
+            category=MoveCategory.INVALID_ANSWER,
+            utterance="Somewhere in the United States",
+            description="[Distractor] Vague answer → Clarification before unlocking price",
+            expected_trajectory=(
+                "System detects vague destination, "
+                "creates clarification: 'Which specific city in the US?', "
+                "price question remains blocked until specific destination provided"
+            ),
+        ),
+        ChoiceOption(
+            id=5,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="What destinations are available from London?",
+            description="[Distractor] Route options request → QUD push",
+            expected_trajectory=(
+                "System pushes route query to QUD, "
+                "provides list of destinations from London, "
+                "pops question, "
+                "returns to destination question"
+            ),
+        ),
+        ChoiceOption(
+            id=6,
+            category=MoveCategory.EXPECTED,
+            utterance="JFK Airport, New York",
+            description="[Distractor] Specific airport → Resolves to city, unlocks price",
+            expected_trajectory=(
+                "System resolves JFK to New York, "
+                "accommodates destination(New York/JFK), "
+                "prerequisites satisfied, "
+                "raises price question"
+            ),
+        ),
+        ChoiceOption(
+            id=7,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="New York, economy class, under $500",
+            description="[Distractor] Volunteer class and price constraint → Skip to search",
+            expected_trajectory=(
+                "System accommodates destination, class, price constraint, "
+                "all prerequisites for search satisfied, "
+                "may skip price question (constraint provided), "
+                "proceeds to search with constraints"
+            ),
+        ),
+        ChoiceOption(
+            id=8,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="How much will it cost to fly there?",
+            description="[Distractor] Ask dependent question prematurely → Explain dependency",
+            expected_trajectory=(
+                "System recognizes premature dependent question, "
+                "explains: 'I need to know the destination first to check prices', "
+                "returns to destination question"
+            ),
+        ),
+    ]
+
+
 # Mapping from scenario and turn to distractors
 SCENARIO_DISTRACTORS = {
     "Incremental Questioning": {
@@ -1851,6 +2419,16 @@ SCENARIO_DISTRACTORS = {
         0: get_volunteer_info_turn0_distractors,  # Turn 0: NDA request
         2: get_volunteer_info_turn2_distractors,  # Turn 2: Parties + date volunteer
         4: get_volunteer_info_turn4_distractors,  # Turn 4: Duration + type + law volunteer
+    },
+    "Clarification Questions": {
+        0: get_clarification_turn0_distractors,  # Turn 0: NDA request
+        2: get_clarification_turn2_distractors,  # Turn 2: Invalid answer ("blue")
+        4: get_clarification_turn4_distractors,  # Turn 4: Clarification response
+    },
+    "Dependent Questions": {
+        0: get_dependent_questions_turn0_distractors,  # Turn 0: Flight booking request
+        2: get_dependent_questions_turn2_distractors,  # Turn 2: Departure city answer
+        4: get_dependent_questions_turn4_distractors,  # Turn 4: Destination city answer
     },
     "Action Confirmation": {
         0: get_action_confirmation_turn0_distractors,  # Turn 0: Booking request
