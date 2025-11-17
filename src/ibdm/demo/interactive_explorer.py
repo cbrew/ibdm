@@ -12,6 +12,7 @@ from ibdm.demo.scenarios import (
     DemoScenario,
     get_ibis2_scenarios,
     get_ibis3_scenarios,
+    get_ibis4_scenarios,
 )
 from ibdm.domains.nda_domain import get_nda_domain
 from ibdm.domains.travel_domain import get_travel_domain
@@ -81,7 +82,8 @@ class InteractiveExplorerCLI:
         """
         ibis3_scenarios = get_ibis3_scenarios()
         ibis2_scenarios = get_ibis2_scenarios()
-        all_scenarios = ibis3_scenarios + ibis2_scenarios
+        ibis4_scenarios = get_ibis4_scenarios()
+        all_scenarios = ibis3_scenarios + ibis2_scenarios + ibis4_scenarios
 
         print("\nAvailable Scenarios:")
         print("=" * 70)
@@ -94,6 +96,12 @@ class InteractiveExplorerCLI:
         offset = len(ibis3_scenarios)
         print("\nIBiS-2 Scenarios (Grounding & Feedback):")
         for i, scenario in enumerate(ibis2_scenarios, offset + 1):
+            print(f"  {i}. {scenario.name}")
+            print(f"     {scenario.description}")
+
+        offset += len(ibis2_scenarios)
+        print("\nIBiS-4 Scenarios (Action-Oriented Dialogue):")
+        for i, scenario in enumerate(ibis4_scenarios, offset + 1):
             print(f"  {i}. {scenario.name}")
             print(f"     {scenario.description}")
 
@@ -259,7 +267,8 @@ class InteractiveExplorerCLI:
                 return choice
 
             print(
-                f"Invalid choice. Please enter a number 1-{len(choices)} or a command (/help, /quit)"
+                f"Invalid choice. Please enter a number 1-{len(choices)} "
+                f"or a command (/help, /quit)"
             )
 
     def _apply_user_move(self, choice: ChoiceOption) -> None:

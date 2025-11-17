@@ -560,6 +560,240 @@ def get_scenario1_turn5_distractors() -> list[ChoiceOption]:
     ]
 
 
+# IBiS-4 Distractors
+
+
+def get_action_confirmation_turn0_distractors() -> list[ChoiceOption]:
+    """Distractors for Action Confirmation Turn 0 (Initial request)."""
+    return [
+        ChoiceOption(
+            id=1,
+            category=MoveCategory.EXPECTED,
+            utterance="Book a hotel in Paris from January 5 to January 10, 2025",
+            description="[Expected] Complete action request with all parameters",
+            expected_trajectory="System forms booking plan and requests confirmation",
+        ),
+        ChoiceOption(
+            id=2,
+            category=MoveCategory.INVALID_ANSWER,
+            utterance="Book a hotel in Paris",
+            description="[Distractor] Missing parameters → System must ask follow-up questions",
+            expected_trajectory="System asks for missing dates → clarification dialogue",
+        ),
+        ChoiceOption(
+            id=3,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance=(
+                "Book a hotel in Paris from January 5 to January 10, "
+                "cancel my previous booking"
+            ),
+            description="[Distractor] Volunteer action → Multiple actions in queue",
+            expected_trajectory="System queues two actions: cancel + book",
+        ),
+        ChoiceOption(
+            id=4,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="What hotels are available in Paris?",
+            description="[Distractor] Nested question → QUD stack operations before action",
+            expected_trajectory="System pushes search question to QUD before booking action",
+        ),
+        ChoiceOption(
+            id=5,
+            category=MoveCategory.CLARIFICATION_REQUEST,
+            utterance="Book Hotel de Paris immediately without asking",
+            description="[Distractor] User requests no confirmation → different flow",
+            expected_trajectory="System bypasses confirmation (optimistic mode)",
+        ),
+    ]
+
+
+def get_action_confirmation_turn2_distractors() -> list[ChoiceOption]:
+    """Distractors for Action Confirmation Turn 2 (Confirmation response)."""
+    return [
+        ChoiceOption(
+            id=1,
+            category=MoveCategory.EXPECTED,
+            utterance="Yes",
+            description="[Expected] User confirms → action executes",
+            expected_trajectory="System executes action, reports success",
+        ),
+        ChoiceOption(
+            id=2,
+            category=MoveCategory.REJECTION,
+            utterance="No",
+            description="[Distractor] Rejection → Action cancelled, plan aborted",
+            expected_trajectory="System cancels action, clears action queue",
+        ),
+        ChoiceOption(
+            id=3,
+            category=MoveCategory.CORRECTION,
+            utterance="Wait, change the dates to January 6-11",
+            description="[Distractor] Correction → Parameter revision, new confirmation cycle",
+            expected_trajectory="System updates action parameters, asks for re-confirmation",
+        ),
+        ChoiceOption(
+            id=4,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="What are the cancellation terms?",
+            description="[Distractor] Nested question → QUD push, then return to confirmation",
+            expected_trajectory="System answers policy question, returns to confirmation",
+        ),
+        ChoiceOption(
+            id=5,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="Yes, and also book a flight to Paris",
+            description="[Distractor] Volunteer action → Sequential action execution",
+            expected_trajectory="System confirms hotel, then queues flight booking",
+        ),
+    ]
+
+
+def get_negotiation_turn0_distractors() -> list[ChoiceOption]:
+    """Distractors for Negotiation Turn 0 (Hotel search request)."""
+    return [
+        ChoiceOption(
+            id=1,
+            category=MoveCategory.EXPECTED,
+            utterance="Find me a hotel in Paris",
+            description="[Expected] Initiates search → alternatives to IUN",
+            expected_trajectory="System searches, presents alternatives in IUN",
+        ),
+        ChoiceOption(
+            id=2,
+            category=MoveCategory.CLARIFICATION_REQUEST,
+            utterance="Find me the cheapest hotel in Paris",
+            description="[Distractor] Constraint → May skip negotiation",
+            expected_trajectory="System applies price filter, shows single best option",
+        ),
+        ChoiceOption(
+            id=3,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="Find me a hotel in Paris under $150 with free breakfast",
+            description="[Distractor] Volunteer constraints → Narrowed search space",
+            expected_trajectory="System filters by price and amenities",
+        ),
+        ChoiceOption(
+            id=4,
+            category=MoveCategory.INVALID_ANSWER,
+            utterance="What hotels are there?",
+            description="[Distractor] Missing parameter → Clarification needed",
+            expected_trajectory="System asks for clarification: which city?",
+        ),
+    ]
+
+
+def get_negotiation_turn2_distractors() -> list[ChoiceOption]:
+    """Distractors for Negotiation Turn 2 (Rejection of expensive option)."""
+    return [
+        ChoiceOption(
+            id=1,
+            category=MoveCategory.EXPECTED,
+            utterance="No, Hotel Expensive is too expensive",
+            description="[Expected] Rejection → IUN update, next option",
+            expected_trajectory="System removes from IUN, proposes next alternative",
+        ),
+        ChoiceOption(
+            id=2,
+            category=MoveCategory.CORRECTION,
+            utterance="Yes, I'll take Hotel Expensive",
+            description="[Distractor] Accept first → Negotiation ends immediately",
+            expected_trajectory="System commits to expensive option, ends negotiation",
+        ),
+        ChoiceOption(
+            id=3,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="Show me more hotels",
+            description="[Distractor] Search expansion, more alternatives",
+            expected_trajectory="System expands search, adds more options to IUN",
+        ),
+        ChoiceOption(
+            id=4,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="What amenities does Hotel Expensive have?",
+            description="[Distractor] Information request → QUD push, return to IUN",
+            expected_trajectory="System provides details, returns to negotiation",
+        ),
+        ChoiceOption(
+            id=5,
+            category=MoveCategory.CLARIFICATION_REQUEST,
+            utterance="I'll take Hotel Expensive if you can get it for $150",
+            description="[Distractor] Counter-proposal → Price negotiation sub-dialogue",
+            expected_trajectory="System attempts counter-offer negotiation",
+        ),
+    ]
+
+
+def get_negotiation_turn4_distractors() -> list[ChoiceOption]:
+    """Distractors for Negotiation Turn 4 (Acceptance of budget option)."""
+    return [
+        ChoiceOption(
+            id=1,
+            category=MoveCategory.EXPECTED,
+            utterance="Yes, that works!",
+            description="[Expected] Accept → IUN cleared, commitment added",
+            expected_trajectory="System clears IUN, commits to hotel, proceeds",
+        ),
+        ChoiceOption(
+            id=2,
+            category=MoveCategory.REJECTION,
+            utterance="No, show me more options",
+            description="[Distractor] Search continues, new options to IUN",
+            expected_trajectory="System expands search, presents more alternatives",
+        ),
+        ChoiceOption(
+            id=3,
+            category=MoveCategory.REJECTION,
+            utterance="Actually, let me think about it",
+            description="[Distractor] Rejection (soft) → IUN preserved, dialogue paused",
+            expected_trajectory="System keeps options in IUN, pauses negotiation",
+        ),
+        ChoiceOption(
+            id=4,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="Yes, and book it for January 5-10",
+            description="[Distractor] Volunteer info → Commitment + action queued",
+            expected_trajectory="System commits to hotel AND queues booking action",
+        ),
+    ]
+
+
+def get_rollback_turn0_distractors() -> list[ChoiceOption]:
+    """Distractors for Rollback Turn 0 (Booking request)."""
+    return [
+        ChoiceOption(
+            id=1,
+            category=MoveCategory.EXPECTED,
+            utterance="Book Hotel de Paris for January 5-10, 2025",
+            description="[Expected] Action queued → Optimistic execution attempt",
+            expected_trajectory="System queues action, attempts optimistic execution",
+        ),
+        ChoiceOption(
+            id=2,
+            category=MoveCategory.INVALID_ANSWER,
+            utterance="Book Hotel de Paris",
+            description="[Distractor] Missing parameters → Clarification needed",
+            expected_trajectory="System asks for missing dates",
+        ),
+        ChoiceOption(
+            id=3,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance=(
+                "Book Hotel de Paris for January 5-10, 2025, "
+                "and send confirmation to my email"
+            ),
+            description="[Distractor] Volunteer action → Multiple action sequence",
+            expected_trajectory="System queues two actions: book + send_email",
+        ),
+        ChoiceOption(
+            id=4,
+            category=MoveCategory.CLARIFICATION_REQUEST,
+            utterance="Try to book Hotel de Paris, but don't worry if it fails",
+            description="[Distractor] Conditional action → Different error handling",
+            expected_trajectory="System sets tentative mode, handles failure silently",
+        ),
+    ]
+
+
 # Mapping from scenario and turn to distractors
 SCENARIO_DISTRACTORS = {
     "Incremental Questioning": {
@@ -569,7 +803,19 @@ SCENARIO_DISTRACTORS = {
         6: get_scenario1_turn3_distractors,  # Turn 6: Effective date answer (moved)
         8: get_scenario1_turn4_distractors,  # Turn 8: Duration answer (NEW)
         10: get_scenario1_turn5_distractors,  # Turn 10: Governing law answer (NEW)
-    }
+    },
+    "Action Confirmation": {
+        0: get_action_confirmation_turn0_distractors,  # Turn 0: Booking request
+        2: get_action_confirmation_turn2_distractors,  # Turn 2: Confirmation response
+    },
+    "Negotiation with Alternatives": {
+        0: get_negotiation_turn0_distractors,  # Turn 0: Hotel search
+        2: get_negotiation_turn2_distractors,  # Turn 2: Reject expensive
+        4: get_negotiation_turn4_distractors,  # Turn 4: Accept budget
+    },
+    "Action Rollback": {
+        0: get_rollback_turn0_distractors,  # Turn 0: Booking request
+    },
 }
 
 

@@ -376,6 +376,46 @@ Press Enter to continue...
 
 ---
 
+## IBiS-4 Scenarios
+
+### New Action-Oriented Scenarios
+
+Added three scenarios demonstrating action execution, negotiation, and error handling:
+
+**Scenario 10: Action Confirmation**
+- 4 dialogue steps
+- Demonstrates action execution with user confirmation
+- Features: Action queuing, confirmation requests, device interface
+- Distractors: Missing parameters, volunteer actions, nested questions
+
+**Scenario 11: Negotiation with Alternatives**
+- 6 dialogue steps
+- Demonstrates IUN (Issues Under Negotiation) and alternative handling
+- Features: Multiple alternatives, rejection handling, preference expression
+- Distractors: Accept first, request more, query amenities, counter-proposals
+
+**Scenario 12: Action Rollback**
+- 5 dialogue steps
+- Demonstrates error handling and rollback of optimistic commitments
+- Features: Action failure, rollback mechanism, error recovery
+- Distractors: Missing parameters, volunteer actions, conditional requests
+
+### IBiS-4 Distractor Coverage
+
+**Action Confirmation Scenario**: 10 options
+- Turn 0 (Request): 5 options
+- Turn 2 (Confirmation): 5 options
+
+**Negotiation Scenario**: 13 options
+- Turn 0 (Search): 4 options
+- Turn 2 (Rejection): 5 options
+- Turn 4 (Acceptance): 4 options
+
+**Action Rollback Scenario**: 4 options
+- Turn 0 (Request): 4 options
+
+**Total IBiS-4 options**: 27 dialogue choices
+
 ## Metrics
 
 ### Code Statistics
@@ -383,11 +423,13 @@ Press Enter to continue...
 | Metric | Value |
 |--------|-------|
 | Total new files | 8 |
-| Total lines of code | ~2,000 |
-| Total lines of documentation | ~1,400 |
-| Scenarios enhanced | 1 (Scenario 1) |
-| Distractor options created | 33 |
-| IBiS rules demonstrated | 8 |
+| Total lines of code | ~2,400 |
+| Total lines of documentation | ~1,600 |
+| Scenarios total | 12 (5 IBiS-3 + 4 IBiS-2 + 3 IBiS-4) |
+| IBiS-3 distractor options | 33 |
+| IBiS-4 distractor options | 27 |
+| Total distractor options | 60 |
+| IBiS rules demonstrated | 12+ |
 
 ### Scenario 1 Statistics
 

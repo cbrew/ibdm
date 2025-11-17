@@ -191,7 +191,9 @@ Authorized Signature                  Authorized Signature
 
 ✓ NDA successfully generated using your specifications
 ✓ Ready for review and execution""",
-                description="System generates complete NDA document using all collected information",
+                description=(
+                    "System generates complete NDA document using all collected information"
+                ),
                 expected_state={
                     "qud": "0",
                     "private.issues": "0",
@@ -572,6 +574,164 @@ def scenario_grounding_mixed() -> DemoScenario:
     )
 
 
+# IBiS4 Scenarios (Action-Oriented Dialogue)
+
+
+def scenario_action_confirmation() -> DemoScenario:
+    """Scenario demonstrating action execution with confirmation.
+
+    Shows how the system requests confirmation before executing
+    critical actions (booking, payment, etc.).
+    """
+    return DemoScenario(
+        name="Action Confirmation",
+        description="Demonstrates action execution with user confirmation (IBiS-4)",
+        features=["Action execution", "Confirmation requests", "Device interface"],
+        confidence_mode="cautious",
+        steps=[
+            ScenarioStep(
+                speaker="user",
+                utterance="Book a hotel in Paris from January 5 to January 10, 2025",
+                description="User requests action - system forms booking plan",
+                expected_state={"actions": "1 queued", "plan": "active"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="Should I book Hotel de Paris for January 5-10, 2025?",
+                description="System requests confirmation before executing action",
+                expected_state={"qud": "1 question (confirmation)"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="Yes",
+                description="User confirms action",
+                expected_state={"qud": "0"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="Booking confirmed. Hotel de Paris reserved for January 5-10, 2025.",
+                description="System executes action and reports success",
+                expected_state={
+                    "actions": "0 remaining",
+                    "commitments": "+1 (hotel_booked)",
+                    "action_result": "success",
+                },
+            ),
+        ],
+    )
+
+
+def scenario_negotiation_alternatives() -> DemoScenario:
+    """Scenario demonstrating negotiation with alternatives.
+
+    Shows how the system presents alternatives and handles
+    acceptance/rejection using Issues Under Negotiation (IUN).
+    """
+    return DemoScenario(
+        name="Negotiation with Alternatives",
+        description="Demonstrates negotiation and alternative selection (IBiS-4)",
+        features=["IUN (Issues Under Negotiation)", "Alternative proposals", "Rejection handling"],
+        confidence_mode="optimistic",
+        steps=[
+            ScenarioStep(
+                speaker="user",
+                utterance="Find me a hotel in Paris",
+                description="User requests hotel search",
+                expected_state={"plan": "active"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance=(
+                    "I found two hotels: Hotel Expensive ($200/night) "
+                    "or Hotel Budget ($120/night)"
+                ),
+                description="System presents alternatives - both added to IUN",
+                expected_state={"iun": "2 options"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="No, Hotel Expensive is too expensive",
+                description="User rejects first option",
+                expected_state={"iun": "1 option remaining"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="How about Hotel Budget at $120/night?",
+                description="System proposes remaining alternative",
+                expected_state={"iun": "1 option", "qud": "1 question"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="Yes, that works!",
+                description="User accepts alternative",
+                expected_state={
+                    "iun": "0",
+                    "commitments": "+1 (hotel selected)",
+                    "qud": "0",
+                },
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="Great! I'll proceed with Hotel Budget.",
+                description="System confirms negotiation resolution",
+                expected_state={"plan": "progressing"},
+            ),
+        ],
+    )
+
+
+def scenario_action_rollback() -> DemoScenario:
+    """Scenario demonstrating action rollback on failure.
+
+    Shows how the system handles action failures and rolls back
+    optimistic commitments when execution fails.
+    """
+    return DemoScenario(
+        name="Action Rollback",
+        description="Demonstrates error handling and rollback (IBiS-4)",
+        features=["Action failure", "Rollback mechanism", "Error recovery"],
+        confidence_mode="optimistic",
+        steps=[
+            ScenarioStep(
+                speaker="user",
+                utterance="Book Hotel de Paris for January 5-10, 2025",
+                description="User requests booking",
+                expected_state={"actions": "1 queued"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="Booking Hotel de Paris...",
+                description="System attempts action (optimistic commitment)",
+                expected_state={
+                    "commitments": "+1 (hotel_booked - optimistic)",
+                    "action_status": "executing",
+                },
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="I'm sorry, the booking failed: Payment declined",
+                description="System detects action failure",
+                expected_state={"action_result": "failure"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="I've rolled back the booking. The hotel was not reserved.",
+                description="System performs rollback - removes optimistic commitment",
+                expected_state={
+                    "commitments": "-1 (hotel_booked removed)",
+                    "rollback": "performed",
+                },
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="Would you like to try a different payment method?",
+                description="System offers recovery option",
+                expected_state={"qud": "1 question (recovery)"},
+            ),
+        ],
+    )
+
+
 # Scenario registry
 
 ALL_SCENARIOS: dict[str, DemoScenario] = {
@@ -584,6 +744,9 @@ ALL_SCENARIOS: dict[str, DemoScenario] = {
     "grounding-cautious": scenario_grounding_cautious(),
     "grounding-pessimistic": scenario_grounding_pessimistic(),
     "grounding-mixed": scenario_grounding_mixed(),
+    "action-confirmation": scenario_action_confirmation(),
+    "negotiation": scenario_negotiation_alternatives(),
+    "rollback": scenario_action_rollback(),
 }
 
 
@@ -634,4 +797,17 @@ def get_ibis2_scenarios() -> list[DemoScenario]:
         scenario_grounding_cautious(),
         scenario_grounding_pessimistic(),
         scenario_grounding_mixed(),
+    ]
+
+
+def get_ibis4_scenarios() -> list[DemoScenario]:
+    """Get all IBiS4 (action-oriented) scenarios.
+
+    Returns:
+        List of IBiS4 scenarios
+    """
+    return [
+        scenario_action_confirmation(),
+        scenario_negotiation_alternatives(),
+        scenario_action_rollback(),
     ]
