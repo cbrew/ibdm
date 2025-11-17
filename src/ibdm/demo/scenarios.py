@@ -261,7 +261,6 @@ Parties:     Acme Corp and Smith Inc
 Effective:   January 1, 2025
 Term:        3 years
 Type:        Mutual (both parties bound)
-Governing:   California law
 
 ✓ Document ready for execution
 ✓ Efficiently gathered via volunteer information""",
