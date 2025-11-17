@@ -121,18 +121,21 @@ def _empty_beam_metrics() -> dict[str, Any]:
     return {}
 
 
-def _calculate_path_score(node: PathNode, scenario: DemoScenario) -> float:
+def _calculate_path_score(
+    node: PathNode, scenario: DemoScenario, turn_penalty: float = 5.0
+) -> float:
     """Calculate quality score for a path (higher is better).
 
     Scoring components:
     - Completeness: Paths with commitments are prioritized
-    - Progress: Deeper paths with more commitments score higher
+    - Turn efficiency: Penalize each turn to favor shorter dialogues
     - Expected choices: Paths following expected choices score higher
     - Scenario completion: Paths near end of scenario score higher
 
     Args:
         node: Path node to score
         scenario: Scenario being explored
+        turn_penalty: Penalty per turn (default: 5.0, favors shorter paths)
 
     Returns:
         Quality score (higher is better)
@@ -145,8 +148,9 @@ def _calculate_path_score(node: PathNode, scenario: DemoScenario) -> float:
         score += 100.0  # Base bonus for any result
         score += commitments * 50.0  # Additional bonus per commitment
 
-    # Progress: Reward depth (exploration)
-    score += node.depth * 10.0
+    # Turn efficiency: Penalize each turn to favor shorter dialogues
+    # This encourages finding efficient paths to goals
+    score -= node.depth * turn_penalty
 
     # Expected path bonus: Prioritize following expected choices
     # Count how many choices in path are "expected"
@@ -198,17 +202,21 @@ class ExplorationResult:
 class PathExplorer:
     """Best-first beam search path exploration engine."""
 
-    def __init__(self, scenario: DemoScenario, domain: Any, beam_size: int = 200) -> None:
+    def __init__(
+        self, scenario: DemoScenario, domain: Any, beam_size: int = 200, turn_penalty: float = 5.0
+    ) -> None:
         """Initialize path explorer.
 
         Args:
             scenario: Scenario to explore
             domain: Domain model for the scenario
             beam_size: Maximum number of paths to maintain (default: 200)
+            turn_penalty: Penalty per turn to favor shorter dialogues (default: 5.0)
         """
         self.scenario = scenario
         self.domain = domain
         self.beam_size = beam_size
+        self.turn_penalty = turn_penalty
         self.explorer: ScenarioExplorer | None = None
 
     def explore_paths(self, max_depth: int = 3) -> ExplorationResult:
@@ -289,7 +297,7 @@ class PathExplorer:
                 )
 
                 # Calculate score for child
-                child.score = _calculate_path_score(child, self.scenario)
+                child.score = _calculate_path_score(child, self.scenario, self.turn_penalty)
                 scores_tracked.append(child.score)
 
                 # Track state

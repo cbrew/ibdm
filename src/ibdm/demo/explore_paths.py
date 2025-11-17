@@ -108,9 +108,28 @@ def main() -> None:
         except ValueError:
             print("Invalid input. Please enter a number")
 
+    # Select turn penalty
+    while True:
+        penalty_choice = input(
+            "\nTurn penalty (default: 5.0, higher favors shorter paths): "
+        ).strip()
+        if not penalty_choice:
+            turn_penalty = 5.0
+            break
+
+        try:
+            turn_penalty = float(penalty_choice)
+            if turn_penalty >= 0:
+                break
+            else:
+                print("Please enter a non-negative number")
+        except ValueError:
+            print("Invalid input. Please enter a number")
+
     print(f"\n✓ Selected: {selected_scenario.name}")
     print(f"✓ Max depth: {max_depth}")
     print(f"✓ Beam size: {beam_size}")
+    print(f"✓ Turn penalty: {turn_penalty}")
     print()
 
     # Determine domain
@@ -124,10 +143,13 @@ def main() -> None:
 
     # Create explorer
     print(f"\nExploring paths up to depth {max_depth} with beam size {beam_size}...")
+    print(f"Turn penalty: {turn_penalty} (favors shorter dialogues)")
     print("Using best-first beam search...")
     print()
 
-    explorer = PathExplorer(selected_scenario, domain, beam_size=beam_size)
+    explorer = PathExplorer(
+        selected_scenario, domain, beam_size=beam_size, turn_penalty=turn_penalty
+    )
     result = explorer.explore_paths(max_depth=max_depth)
 
     print("✓ Exploration complete!")
