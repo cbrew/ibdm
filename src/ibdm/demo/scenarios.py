@@ -17,12 +17,14 @@ class ScenarioStep:
         utterance: What they say
         description: What this demonstrates
         expected_state: Expected internal state changes
+        is_payoff: True if this step represents a high-value final product/output
     """
 
     speaker: str
     utterance: str
     description: str | None = None
     expected_state: dict[str, str] | None = None
+    is_payoff: bool = False
 
 
 @dataclass
@@ -199,6 +201,7 @@ Authorized Signature                  Authorized Signature
                     "private.issues": "0",
                     "document_generated": "true",
                 },
+                is_payoff=True,  # PAYOFF: High-value NDA document generated
             ),
         ],
     )
@@ -239,6 +242,32 @@ def scenario_volunteer_information() -> DemoScenario:
                 utterance="What is the duration of confidentiality obligations?",
                 description="System SKIPS date question (already answered) - asks next",
                 expected_state={"qud": "1 question", "private.issues": "1 question"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="3 years, mutual NDA, California law",
+                description="User volunteers remaining information efficiently",
+                expected_state={"commitments": "+3", "qud": "0", "plan": "complete"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="""Perfect! I have all the details. Here's your NDA:
+
+╔══════════════════════════════════════════════════════════════╗
+║          MUTUAL NON-DISCLOSURE AGREEMENT                     ║
+╚══════════════════════════════════════════════════════════════╝
+
+Parties:     Acme Corp and Smith Inc
+Effective:   January 1, 2025
+Term:        3 years
+Type:        Mutual (both parties bound)
+Governing:   California law
+
+✓ Document ready for execution
+✓ Efficiently gathered via volunteer information""",
+                description="System generates NDA using volunteered information",
+                expected_state={"document_generated": "true"},
+                is_payoff=True,  # PAYOFF: Efficient NDA generation
             ),
         ],
     )
@@ -617,6 +646,33 @@ def scenario_action_confirmation() -> DemoScenario:
                     "action_result": "success",
                 },
             ),
+            ScenarioStep(
+                speaker="system",
+                utterance="""
+╔══════════════════════════════════════════════════════════════╗
+║            BOOKING CONFIRMATION                              ║
+╚══════════════════════════════════════════════════════════════╝
+
+Confirmation #: HDP-2025-00142
+Status:         ✓ CONFIRMED
+
+Hotel:          Hotel de Paris
+Location:       Paris, France
+Check-in:       January 5, 2025 (3:00 PM)
+Check-out:      January 10, 2025 (11:00 AM)
+Duration:       5 nights
+
+Room Type:      Standard Double
+Rate:           $180/night
+Total:          $900
+
+✓ Reservation confirmed
+✓ Confirmation email sent
+✓ Mobile check-in available""",
+                description="System generates booking confirmation",
+                expected_state={"confirmation_generated": "true"},
+                is_payoff=True,  # PAYOFF: Professional booking confirmation
+            ),
         ],
     )
 
@@ -642,8 +698,7 @@ def scenario_negotiation_alternatives() -> DemoScenario:
             ScenarioStep(
                 speaker="system",
                 utterance=(
-                    "I found two hotels: Hotel Expensive ($200/night) "
-                    "or Hotel Budget ($120/night)"
+                    "I found two hotels: Hotel Expensive ($200/night) or Hotel Budget ($120/night)"
                 ),
                 description="System presents alternatives - both added to IUN",
                 expected_state={"iun": "2 options"},
@@ -675,6 +730,35 @@ def scenario_negotiation_alternatives() -> DemoScenario:
                 utterance="Great! I'll proceed with Hotel Budget.",
                 description="System confirms negotiation resolution",
                 expected_state={"plan": "progressing"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="""
+╔══════════════════════════════════════════════════════════════╗
+║           HOTEL SELECTION SUMMARY                            ║
+╚══════════════════════════════════════════════════════════════╝
+
+Selected Hotel:  Hotel Budget
+Location:        Paris, France
+Rate:            $120/night
+Rating:          ⭐⭐⭐⭐ (4.2/5)
+
+Amenities:
+  ✓ Free WiFi
+  ✓ Breakfast included
+  ✓ 24-hour reception
+
+Negotiation Summary:
+  • Alternatives presented: 2 options
+  • Hotel Expensive ($200/night) - Rejected (too expensive)
+  • Hotel Budget ($120/night) - Accepted
+  • Savings: $80/night vs. expensive option
+
+✓ Selection finalized via negotiation
+✓ Ready to proceed with booking""",
+                description="System generates selection summary",
+                expected_state={"selection_summary": "generated"},
+                is_payoff=True,  # PAYOFF: Negotiation result summary
             ),
         ],
     )
@@ -727,6 +811,44 @@ def scenario_action_rollback() -> DemoScenario:
                 utterance="Would you like to try a different payment method?",
                 description="System offers recovery option",
                 expected_state={"qud": "1 question (recovery)"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="""
+╔══════════════════════════════════════════════════════════════╗
+║         ERROR RECOVERY REPORT                                ║
+╚══════════════════════════════════════════════════════════════╝
+
+Transaction ID: HDP-2025-FAIL-142
+Status:         ✗ FAILED → ✓ RECOVERED
+
+Original Request:
+  Hotel:        Hotel de Paris
+  Dates:        January 5-10, 2025
+  Status:       Attempted (optimistic)
+
+Error Details:
+  Type:         Payment declined
+  Code:         PAY-001
+  Detected:     During execution
+  Impact:       Booking not completed
+
+Recovery Actions Taken:
+  ✓ Optimistic commitment rolled back
+  ✓ No charges applied
+  ✓ System state restored to pre-booking
+  ✓ Alternative payment options offered
+
+System Integrity:
+  ✓ Clean rollback performed
+  ✓ No inconsistent state
+  ✓ User informed of failure
+  ✓ Recovery path provided
+
+Ready for retry with alternative payment method.""",
+                description="System generates error recovery report",
+                expected_state={"recovery_report": "generated"},
+                is_payoff=True,  # PAYOFF: Error handling and recovery report
             ),
         ],
     )

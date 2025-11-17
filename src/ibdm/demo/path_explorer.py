@@ -131,6 +131,7 @@ def _calculate_path_score(
     - Turn efficiency: Penalize each turn to favor shorter dialogues
     - Expected choices: Paths following expected choices score higher
     - Scenario completion: Paths near end of scenario score higher
+    - Payoff states: HUGE bonus for reaching high-value output states
 
     Args:
         node: Path node to score
@@ -141,6 +142,13 @@ def _calculate_path_score(
         Quality score (higher is better)
     """
     score = 0.0
+
+    # Payoff state: MASSIVE bonus for reaching a payoff state (final product)
+    # This is the primary goal - generating high-value outputs
+    if node.step_index < len(scenario.steps):
+        current_step = scenario.steps[node.step_index]
+        if current_step.is_payoff:
+            score += 500.0  # Dominant bonus - payoff states are the goal!
 
     # Completeness: Strong bonus for having commitments (indicates progress)
     commitments = len(node.state_snapshot.get("commitments", set()))
