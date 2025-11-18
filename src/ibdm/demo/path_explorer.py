@@ -215,7 +215,12 @@ class PathExplorer:
     """Best-first beam search path exploration engine."""
 
     def __init__(
-        self, scenario: DemoScenario, domain: Any, beam_size: int = 200, turn_penalty: float = 5.0
+        self,
+        scenario: DemoScenario,
+        domain: Any,
+        beam_size: int = 200,
+        turn_penalty: float = 5.0,
+        expected_only: bool = False,
     ) -> None:
         """Initialize path explorer.
 
@@ -224,11 +229,13 @@ class PathExplorer:
             domain: Domain model for the scenario
             beam_size: Maximum number of paths to maintain (default: 200)
             turn_penalty: Penalty per turn to favor shorter dialogues (default: 5.0)
+            expected_only: If True, only follow expected choices (no distractors)
         """
         self.scenario = scenario
         self.domain = domain
         self.beam_size = beam_size
         self.turn_penalty = turn_penalty
+        self.expected_only = expected_only
         self.explorer: ScenarioExplorer | None = None
 
     def explore_paths(self, max_depth: int = 3) -> ExplorationResult:
@@ -407,6 +414,12 @@ class PathExplorer:
         self.explorer.current_step_index = step_index
         choices = self.explorer.get_current_choices()
         self.explorer.current_step_index = original_index
+
+        # Filter to expected choices only if in expected-only mode
+        if self.expected_only:
+            from ibdm.demo.scenario_explorer import MoveCategory
+
+            choices = [c for c in choices if c.category == MoveCategory.EXPECTED]
 
         return choices, step_index
 

@@ -142,10 +142,28 @@ def main() -> None:
         except ValueError:
             print("Invalid input. Please enter a number")
 
+    # Select exploration mode
+    while True:
+        mode_choice = input(
+            "\nExploration mode:\n"
+            "  1. Full exploration (all choices including distractors)\n"
+            "  2. Expected path only (no distractors)\n"
+            "Select (1-2, default: 1): "
+        ).strip()
+        if not mode_choice or mode_choice == "1":
+            expected_only = False
+            break
+        elif mode_choice == "2":
+            expected_only = True
+            break
+        else:
+            print("Invalid input. Please enter 1 or 2")
+
     print(f"\n✓ Selected: {selected_scenario.name}")
     print(f"✓ Max depth: {max_depth}")
     print(f"✓ Beam size: {beam_size}")
     print(f"✓ Turn penalty: {turn_penalty}")
+    print(f"✓ Mode: {'Expected path only' if expected_only else 'Full exploration'}")
     print()
 
     # Determine domain
@@ -160,11 +178,18 @@ def main() -> None:
     # Create explorer
     print(f"\nExploring paths up to depth {max_depth} with beam size {beam_size}...")
     print(f"Turn penalty: {turn_penalty} (favors shorter dialogues)")
+    print(
+        f"Mode: {'Expected path only' if expected_only else 'Full exploration (with distractors)'}"
+    )
     print("Using best-first beam search...")
     print()
 
     explorer = PathExplorer(
-        selected_scenario, domain, beam_size=beam_size, turn_penalty=turn_penalty
+        selected_scenario,
+        domain,
+        beam_size=beam_size,
+        turn_penalty=turn_penalty,
+        expected_only=expected_only,
     )
     result = explorer.explore_paths(max_depth=max_depth)
 
