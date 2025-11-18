@@ -934,7 +934,36 @@ Authorized Signature                  Authorized Signature
 
 ✓ NDA successfully generated using optimistic grounding strategy
 ✓ Zero confirmation overhead - maximum efficiency achieved
-✓ Task completed in 6 turns (vs 12+ turns with cautious grounding)""",
+✓ Task completed in 6 turns (vs 12+ turns with cautious grounding)
+
+═══════════════════════════════════════════════════════════════════════
+                    EFFICIENCY METRICS DASHBOARD
+═══════════════════════════════════════════════════════════════════════
+
+Performance Summary:
+  Total Turns:              6 turns
+  Time Elapsed:             ~2 minutes (estimated at 20sec/turn)
+  Success Rate:             100% (task completed successfully)
+
+Efficiency vs Manual Baseline:
+  Manual Process:           ~2 hours (lawyer drafting NDA)
+  IBDM System:              ~2 minutes
+  Time Saved:               ~118 minutes (98% reduction)
+  Cost Savings:             $472 (assuming $240/hour lawyer cost)
+
+Dialogue Strategy Impact:
+  Strategy Used:            Optimistic Grounding
+  Turns Saved vs Cautious:  6 turns (12 total vs 6, 50% reduction)
+  Grounding Efficiency:     6/6 inputs accepted immediately (100%)
+  Error Rate:               0% (no misunderstandings requiring repair)
+
+ROI Calculation:
+  Business Value Delivered: Professional NDA document
+  Estimated Value:          $500 (standard NDA drafting fee)
+  System Cost:              ~$0.15 (API calls + compute)
+  Net ROI:                  $499.85 (333,233% return)
+
+═══════════════════════════════════════════════════════════════════════""",
                 description="System generates complete NDA document - BUSINESS VALUE DELIVERED",
                 expected_state={
                     "qud": "0",
@@ -1124,7 +1153,38 @@ Authorized Signature                  Authorized Signature
 
 ✓ NDA successfully generated using cautious grounding strategy
 ✓ Task correctly identified through confirmation (prevented mismatch)
-✓ Balanced efficiency: 1 safety check avoided potential rework""",
+✓ Balanced efficiency: 1 safety check avoided potential rework
+
+═══════════════════════════════════════════════════════════════════════
+                    EFFICIENCY METRICS DASHBOARD
+═══════════════════════════════════════════════════════════════════════
+
+Performance Summary:
+  Total Turns:              8 turns
+  Time Elapsed:             ~2.7 minutes (estimated at 20sec/turn)
+  Success Rate:             100% (task completed successfully)
+
+Efficiency vs Manual Baseline:
+  Manual Process:           ~2 hours (lawyer drafting NDA)
+  IBDM System:              ~2.7 minutes
+  Time Saved:               ~117 minutes (98% reduction)
+  Cost Savings:             $468 (assuming $240/hour lawyer cost)
+
+Dialogue Strategy Impact:
+  Strategy Used:            Cautious Grounding
+  Confirmation Checks:      1 check (medium-confidence utterance)
+  Grounding Efficiency:     6/6 inputs grounded (1 via confirmation)
+  Error Rate:               0% (prevented 1 potential misunderstanding)
+  Safety Benefit:           Avoided rework cost of $120 (30min correction)
+
+ROI Calculation:
+  Business Value Delivered: Professional NDA document
+  Estimated Value:          $500 (standard NDA drafting fee)
+  System Cost:              ~$0.18 (API calls + compute)
+  Risk Mitigation Value:    $120 (prevented misunderstanding cost)
+  Net ROI:                  $619.82 (344,344% return)
+
+═══════════════════════════════════════════════════════════════════════""",
                 description="System generates complete NDA document - BUSINESS VALUE DELIVERED",
                 expected_state={
                     "qud": "0",
@@ -1315,7 +1375,38 @@ Authorized Signature                  Authorized Signature
 
 ✓ NDA successfully generated using pessimistic grounding strategy
 ✓ Repetition request ensured task was correctly understood
-✓ Safety-first approach: 1 extra turn prevented potential major error""",
+✓ Safety-first approach: 1 extra turn prevented potential major error
+
+═══════════════════════════════════════════════════════════════════════
+                    EFFICIENCY METRICS DASHBOARD
+═══════════════════════════════════════════════════════════════════════
+
+Performance Summary:
+  Total Turns:              8 turns
+  Time Elapsed:             ~2.7 minutes (estimated at 20sec/turn)
+  Success Rate:             100% (task completed successfully)
+
+Efficiency vs Manual Baseline:
+  Manual Process:           ~2 hours (lawyer drafting NDA)
+  IBDM System:              ~2.7 minutes
+  Time Saved:               ~117 minutes (98% reduction)
+  Cost Savings:             $468 (assuming $240/hour lawyer cost)
+
+Dialogue Strategy Impact:
+  Strategy Used:            Pessimistic Grounding
+  Clarification Requests:   1 request (low-confidence utterance)
+  Grounding Efficiency:     6/6 inputs grounded (1 via repetition)
+  Error Rate:               0% (prevented 1 potential critical error)
+  Safety Benefit:           Avoided major rework cost of $480 (2hr correction)
+
+ROI Calculation:
+  Business Value Delivered: Professional NDA document
+  Estimated Value:          $500 (standard NDA drafting fee)
+  System Cost:              ~$0.18 (API calls + compute)
+  Risk Mitigation Value:    $480 (prevented critical misunderstanding)
+  Net ROI:                  $979.82 (544,344% return)
+
+═══════════════════════════════════════════════════════════════════════""",
                 description="System generates complete NDA document - BUSINESS VALUE DELIVERED",
                 expected_state={
                     "qud": "0",
@@ -1517,7 +1608,38 @@ Authorized Signature                  Authorized Signature
 
 ✓ NDA successfully generated using adaptive grounding strategy
 ✓ Strategy adapted dynamically based on confidence (1 safety check)
-✓ Optimal balance: Fast completion with targeted safety where needed""",
+✓ Optimal balance: Fast completion with targeted safety where needed
+
+═══════════════════════════════════════════════════════════════════════
+                    EFFICIENCY METRICS DASHBOARD
+═══════════════════════════════════════════════════════════════════════
+
+Performance Summary:
+  Total Turns:              7 turns
+  Time Elapsed:             ~2.3 minutes (estimated at 20sec/turn)
+  Success Rate:             100% (task completed successfully)
+
+Efficiency vs Manual Baseline:
+  Manual Process:           ~2 hours (lawyer drafting NDA)
+  IBDM System:              ~2.3 minutes
+  Time Saved:               ~118 minutes (98% reduction)
+  Cost Savings:             $470 (assuming $240/hour lawyer cost)
+
+Dialogue Strategy Impact:
+  Strategy Used:            Mixed/Adaptive Grounding
+  Adaptive Checks:          1 strategic check (confidence-driven)
+  Grounding Efficiency:     6/6 inputs grounded (5 optimistic, 1 cautious)
+  Error Rate:               0% (optimal balance of speed and safety)
+  Adaptivity Benefit:       Combined speed of optimistic + safety of cautious
+
+ROI Calculation:
+  Business Value Delivered: Professional NDA document
+  Estimated Value:          $500 (standard NDA drafting fee)
+  System Cost:              ~$0.16 (API calls + compute)
+  Efficiency Gain:          Best of both worlds (speed + safety)
+  Net ROI:                  $499.84 (312,400% return)
+
+═══════════════════════════════════════════════════════════════════════""",
                 description="System generates complete NDA document - BUSINESS VALUE DELIVERED",
                 expected_state={
                     "qud": "0",
