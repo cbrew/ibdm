@@ -63,7 +63,9 @@ class DistractorGenerator:
                 id=1,
                 category=MoveCategory.EXPECTED,
                 utterance=expected_step.utterance,
-                description=f"[Expected] {expected_step.description or 'Continue on scenario path'}",
+                description=(
+                    f"[Expected] {expected_step.description or 'Continue on scenario path'}"
+                ),
                 expected_trajectory="Scenario continues as expected",
             )
         )
@@ -106,7 +108,9 @@ class DistractorGenerator:
             category=MoveCategory.INVALID_ANSWER,
             utterance=invalid,
             description="[Distractor] Invalid answer → System asks for clarification",
-            expected_trajectory="System detects invalid answer, generates clarification question (Rule 4.3)",
+            expected_trajectory=(
+                "System detects invalid answer, generates clarification question (Rule 4.3)"
+            ),
         )
 
     def _generate_nested_question(self, predicate: str | None, option_id: int) -> ChoiceOption:
@@ -124,8 +128,13 @@ class DistractorGenerator:
             id=option_id,
             category=MoveCategory.NESTED_QUESTION,
             utterance=question,
-            description="[Distractor] User asks clarifying question → Pushed to QUD above current question",
-            expected_trajectory="System pushes user's question to QUD (stack), answers it, then returns to original question",
+            description=(
+                "[Distractor] User asks clarifying question → Pushed to QUD above current question"
+            ),
+            expected_trajectory=(
+                "System pushes user's question to QUD (stack), "
+                "answers it, then returns to original question"
+            ),
         )
 
     def _generate_volunteer_info(self, state: InformationState, option_id: int) -> ChoiceOption:
@@ -140,7 +149,11 @@ class DistractorGenerator:
                 category=MoveCategory.VOLUNTEER_INFO,
                 utterance="Acme Corp and Smith Inc, effective January 1, 2025",
                 description="[Distractor] Volunteer multiple facts → System processes both",
-                expected_trajectory="System accepts current answer + volunteers next answer, skips asking for volunteered info",
+                expected_trajectory=(
+                    "System accepts current answer + "
+                    "volunteers next answer, skips asking for "
+                    "volunteered info"
+                ),
             )
 
         # Generate volunteer info based on predicates
@@ -162,8 +175,14 @@ class DistractorGenerator:
             id=option_id,
             category=MoveCategory.VOLUNTEER_INFO,
             utterance=utterance,
-            description=f"[Distractor] Volunteer info for {next_pred} → System removes it from issues, skips asking",
-            expected_trajectory=f"System integrates both answers, removes {next_pred} from private.issues, skips that question",
+            description=(
+                f"[Distractor] Volunteer info for {next_pred} → "
+                "System removes it from issues, skips asking"
+            ),
+            expected_trajectory=(
+                f"System integrates both answers, removes {next_pred} "
+                "from private.issues, skips that question"
+            ),
         )
 
     def _generate_correction(self, state: InformationState, option_id: int) -> ChoiceOption:
@@ -174,7 +193,10 @@ class DistractorGenerator:
                 category=MoveCategory.CORRECTION,
                 utterance="Actually, let me change my previous answer",
                 description="[Distractor] User corrects previous answer → Belief revision",
-                expected_trajectory="System retracts old commitment, re-accommodates question, integrates new answer",
+                expected_trajectory=(
+                    "System retracts old commitment, "
+                    "re-accommodates question, integrates new answer"
+                ),
             )
 
         # Get first commitment to correct
@@ -198,8 +220,15 @@ class DistractorGenerator:
             id=option_id,
             category=MoveCategory.CORRECTION,
             utterance=utterance,
-            description="[Distractor] Correction → System retracts commitment, re-accommodates question (Rules 4.6-4.8)",
-            expected_trajectory="Retract old commitment → Re-accommodate question to issues → Integrate new answer → Check dependent questions",
+            description=(
+                "[Distractor] Correction → System retracts commitment, "
+                "re-accommodates question (Rules 4.6-4.8)"
+            ),
+            expected_trajectory=(
+                "Retract old commitment → Re-accommodate question to "
+                "issues → Integrate new answer → Check dependent "
+                "questions"
+            ),
         )
 
 

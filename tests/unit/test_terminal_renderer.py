@@ -52,7 +52,7 @@ class TestTerminalRenderer:
     def test_print_state(self, renderer, sample_state):
         """Test printing state to console."""
         renderer.print_state(sample_state, title="Test State")
-        
+
         # Verify output was generated
         output = renderer.console.export_text()
         assert "Test State" in output
@@ -87,10 +87,10 @@ class TestTerminalRenderer:
         snapshot1 = StateSnapshot.from_state(state, timestamp=0, label="Before")
         snapshot2 = StateSnapshot.from_state(state, timestamp=1, label="After")
         diff = compute_diff(snapshot1, snapshot2)
-        
+
         panel = renderer.render_diff(diff)
         assert panel is not None
-        
+
         renderer.print_diff(diff)
         output = renderer.console.export_text()
         assert "No changes" in output
@@ -100,17 +100,17 @@ class TestTerminalRenderer:
         # Before state
         state1 = InformationState()
         snapshot1 = StateSnapshot.from_state(state1, timestamp=0, label="Before")
-        
+
         # After state (add question to QUD)
         question = WhQuestion(predicate="destination", variable="city")
         state2 = InformationState(shared=SharedIS(qud=[question]))
         snapshot2 = StateSnapshot.from_state(state2, timestamp=1, label="After")
-        
+
         diff = compute_diff(snapshot1, snapshot2)
-        
+
         renderer.print_diff(diff, title="Test Diff")
         output = renderer.console.export_text()
-        
+
         assert "Test Diff" in output
         assert "qud" in output
         assert "ADDED" in output or "changes" in output
@@ -121,16 +121,16 @@ class TestTerminalRenderer:
         question = WhQuestion(predicate="destination", variable="city")
         state1 = InformationState(shared=SharedIS(qud=[question]))
         snapshot1 = StateSnapshot.from_state(state1, timestamp=0, label="Before")
-        
+
         # Remove question
         state2 = InformationState()
         snapshot2 = StateSnapshot.from_state(state2, timestamp=1, label="After")
-        
+
         diff = compute_diff(snapshot1, snapshot2)
-        
+
         renderer.print_diff(diff)
         output = renderer.console.export_text()
-        
+
         # Should show removal
         assert "REMOVED" in output or "-" in output
 
@@ -142,7 +142,7 @@ class TestTerminalRenderer:
             label="Test Trace",
             selected_rule="integrate_answer",
         )
-        
+
         panel = renderer.render_rule_trace(trace)
         assert panel is not None
         assert "integrate" in panel.title or "Rule" in panel.title
@@ -171,10 +171,10 @@ class TestTerminalRenderer:
                 ),
             ],
         )
-        
+
         renderer.print_rule_trace(trace)
         output = renderer.console.export_text()
-        
+
         assert "integrate_answer" in output
         assert "integrate_question" in output
         # Should show checkmarks or crosses for preconditions
@@ -185,13 +185,13 @@ class TestTerminalRenderer:
         # Create before/after states
         state1 = InformationState()
         snapshot1 = StateSnapshot.from_state(state1, timestamp=0, label="Before")
-        
+
         question = WhQuestion(predicate="destination", variable="city")
         state2 = InformationState(shared=SharedIS(qud=[question]))
         snapshot2 = StateSnapshot.from_state(state2, timestamp=1, label="After")
-        
+
         diff = compute_diff(snapshot1, snapshot2)
-        
+
         trace = RuleTrace(
             phase="integrate",
             timestamp=1,
@@ -201,20 +201,20 @@ class TestTerminalRenderer:
             diff=diff,
             selected_rule="integrate_question",
         )
-        
+
         renderer.print_rule_trace(trace)
         output = renderer.console.export_text()
-        
+
         assert "State Changes" in output or "changes" in output
 
     def test_console_width_respected(self):
         """Test that console width is respected."""
         console = Console(record=True, width=80)
         renderer = TerminalRenderer(console=console, width=80)
-        
+
         state = InformationState()
         renderer.print_state(state)
-        
+
         # Just verify it doesn't crash with narrower width
         output = renderer.console.export_text()
         assert output is not None
@@ -225,7 +225,7 @@ class TestTerminalRenderer:
             WhQuestion(predicate="destination", variable="city"),
             WhQuestion(predicate="date", variable="when"),
         ]
-        
+
         text = renderer._format_question_list(questions)
         assert text is not None
         assert len(text) > 0
@@ -236,7 +236,7 @@ class TestTerminalRenderer:
             DialogueMove(move_type="ask", content="Where?", speaker="system"),
             DialogueMove(move_type="answer", content="Paris", speaker="user"),
         ]
-        
+
         text = renderer._format_move_list(moves)
         assert text is not None
 
@@ -246,7 +246,7 @@ class TestTerminalRenderer:
             Plan(plan_type="findout", content="destination"),
             Plan(plan_type="inform", content="result"),
         ]
-        
+
         text = renderer._format_plan_list(plans)
         assert text is not None
 
@@ -258,29 +258,29 @@ class TestTerminalRendererIntegration:
         """Test complete workflow from state creation to visualization."""
         console = Console(record=True, width=120)
         renderer = TerminalRenderer(console=console)
-        
+
         # Create initial state
         question = WhQuestion(predicate="destination", variable="city")
         state = InformationState(
             shared=SharedIS(qud=[question]),
             private=PrivateIS(beliefs={"user_intent": "travel_planning"}),
         )
-        
+
         # Render state
         renderer.print_state(state, title="Travel Planning State")
-        
+
         # Create snapshots and diff
         snapshot1 = StateSnapshot.from_state(state, timestamp=0, label="Initial")
-        
+
         # Modify state (add commitment)
         state.shared.commitments.add("destination: Paris")
         snapshot2 = StateSnapshot.from_state(state, timestamp=1, label="After answer")
-        
+
         diff = compute_diff(snapshot1, snapshot2)
-        
+
         # Render diff
         renderer.print_diff(diff, title="User Answered")
-        
+
         # Create and render rule trace
         trace = RuleTrace(
             phase="integrate",
@@ -300,9 +300,9 @@ class TestTerminalRendererIntegration:
                 )
             ],
         )
-        
+
         renderer.print_rule_trace(trace, title="Integration Phase")
-        
+
         # Verify all outputs were generated
         output = renderer.console.export_text()
         assert "Travel Planning State" in output
@@ -321,38 +321,38 @@ class TestChangeFormatting:
     def test_format_change_added(self, renderer):
         """Test formatting ADDED change."""
         from ibdm.visualization.state_diff import ChangedField
-        
+
         changed = ChangedField(
             field_name="test",
             change_type=ChangeType.ADDED,
             added_items=["item1"],
         )
-        
+
         text = renderer._format_change(changed)
         assert "+ ADDED" in str(text) or "ADDED" in str(text)
 
     def test_format_change_removed(self, renderer):
         """Test formatting REMOVED change."""
         from ibdm.visualization.state_diff import ChangedField
-        
+
         changed = ChangedField(
             field_name="test",
             change_type=ChangeType.REMOVED,
             removed_items=["item1"],
         )
-        
+
         text = renderer._format_change(changed)
         assert "- REMOVED" in str(text) or "REMOVED" in str(text)
 
     def test_format_change_modified(self, renderer):
         """Test formatting MODIFIED change."""
         from ibdm.visualization.state_diff import ChangedField
-        
+
         changed = ChangedField(
             field_name="test",
             change_type=ChangeType.MODIFIED,
             modified_items=[("old", "new")],
         )
-        
+
         text = renderer._format_change(changed)
         assert "~ MODIFIED" in str(text) or "MODIFIED" in str(text)

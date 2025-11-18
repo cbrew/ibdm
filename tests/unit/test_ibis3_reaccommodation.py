@@ -59,7 +59,7 @@ def state_with_dependent_commitments():
     return state
 
 
-class TestRule46_QuestionReaccommodation:
+class TestRule46QuestionReaccommodation:
     """Test Rule 4.6 - QuestionReaccommodation (accommodate Com 2Issues)."""
 
     def test_conflicting_answer_triggers_reaccommodation(self, state_with_commitment):
@@ -130,7 +130,7 @@ class TestRule46_QuestionReaccommodation:
         assert reaccommodate_rule.preconditions(state) is False
 
 
-class TestRule47_RetractIncompatibleCommitment:
+class TestRule47RetractIncompatibleCommitment:
     """Test Rule 4.7 - Retract incompatible commitment."""
 
     def test_retract_old_commitment(self, state_with_commitment):
@@ -168,7 +168,7 @@ class TestRule47_RetractIncompatibleCommitment:
         assert retract_rule.preconditions(state) is False
 
 
-class TestRule48_DependentQuestionReaccommodation:
+class TestRule48DependentQuestionReaccommodation:
     """Test Rule 4.8 - DependentQuestionReaccommodation."""
 
     def test_dependent_question_reaccommodated_when_base_changes(
