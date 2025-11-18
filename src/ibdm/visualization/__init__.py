@@ -8,12 +8,14 @@ Key Components:
 - StateDiff: Representation of changes between two states
 - RuleTrace: Record of rule execution (preconditions, effects, selected rule)
 - DiffEngine: Computes diffs between states
+- TerminalRenderer: Beautiful Rich-based terminal rendering
 """
 
 from ibdm.visualization.diff_engine import DiffEngine, compute_diff
 from ibdm.visualization.rule_trace import RuleTrace
 from ibdm.visualization.state_diff import ChangedField, ChangeType, StateDiff
 from ibdm.visualization.state_snapshot import StateSnapshot
+from ibdm.visualization.terminal_renderer import TerminalRenderer
 
 __all__ = [
     "StateSnapshot",
@@ -23,4 +25,5 @@ __all__ = [
     "RuleTrace",
     "DiffEngine",
     "compute_diff",
+    "TerminalRenderer",
 ]
