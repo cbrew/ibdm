@@ -238,7 +238,7 @@ def get_scenario1_turn2a_distractors() -> list[ChoiceOption]:
             utterance="One-way",
             description="[Distractor] Choose one-way (incomplete) → Triggers clarification",
             expected_trajectory=(
-                "System detects incomplete answer (a one-way NDA requires specifying the disclosing party), "
+                "System detects incomplete answer (one-way NDA needs disclosing party), "
                 "generates clarification question: 'Who is the disclosing party?'"
             ),
         ),
@@ -2404,6 +2404,636 @@ def get_dependent_questions_turn4_distractors() -> list[ChoiceOption]:
     ]
 
 
+# IBiS-3 Belief Revision Scenario Distractors
+
+
+def get_belief_revision_turn0_distractors() -> list[ChoiceOption]:
+    """Distractors for Belief Revision Turn 0 (Flight booking request).
+
+    Expected: "I need to book a flight from London to Paris"
+    Context: User initiates flight booking (will later revise to train)
+    """
+    return [
+        ChoiceOption(
+            id=1,
+            category=MoveCategory.EXPECTED,
+            utterance="I need to book a flight from London to Paris",
+            description="[Expected] Flight booking request",
+            expected_trajectory=(
+                "System forms flight booking plan, "
+                "accommodates flight questions to private.issues, "
+                "raises departure_date question to QUD"
+            ),
+        ),
+        ChoiceOption(
+            id=2,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="I need to book a flight from London to Paris on April 4th",
+            description="[Distractor] Volunteer departure date → Skip date question",
+            expected_trajectory=(
+                "System forms flight plan with date pre-filled, "
+                "removes date from issues, "
+                "raises next question (cabin class) to QUD"
+            ),
+        ),
+        ChoiceOption(
+            id=3,
+            category=MoveCategory.EXPECTED,
+            utterance="I need to book a train from London to Paris",
+            description="[Distractor] Request train directly → No revision needed",
+            expected_trajectory=(
+                "System forms train booking plan, "
+                "accommodates train questions to issues, "
+                "raises departure_date to QUD"
+            ),
+        ),
+        ChoiceOption(
+            id=4,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="I need to travel from London to Paris on April 4th",
+            description="[Distractor] Ambiguous mode (flight/train) → System may ask",
+            expected_trajectory=(
+                "System detects ambiguity (flight or train?), "
+                "may ask clarification: 'Would you like to fly or take the train?', "
+                "then forms appropriate plan"
+            ),
+        ),
+        ChoiceOption(
+            id=5,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="What's the fastest way to get from London to Paris?",
+            description="[Distractor] Information request → QUD push before task",
+            expected_trajectory=(
+                "System pushes comparison question to QUD, "
+                "provides answer: 'Flight is 1h15m, Eurostar train is 2h15m', "
+                "pops question, asks if user wants to proceed with booking"
+            ),
+        ),
+    ]
+
+
+def get_belief_revision_turn2_distractors() -> list[ChoiceOption]:
+    """Distractors for Belief Revision Turn 2 (Date answer).
+
+    Expected: "April 4th"
+    Context: System asked "What's your departure date?" for flight
+    """
+    return [
+        ChoiceOption(
+            id=1,
+            category=MoveCategory.EXPECTED,
+            utterance="April 4th",
+            description="[Expected] Valid date answer",
+            expected_trajectory=(
+                "System accommodates date commitment, "
+                "pops date question from QUD, "
+                "raises cabin_class question"
+            ),
+        ),
+        ChoiceOption(
+            id=2,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="April 4th, economy class",
+            description="[Distractor] Volunteer class → Skip class question",
+            expected_trajectory=(
+                "System accommodates date and class, "
+                "removes class from issues, "
+                "plan may be complete, proceeds to booking"
+            ),
+        ),
+        ChoiceOption(
+            id=3,
+            category=MoveCategory.INVALID_ANSWER,
+            utterance="Next week",
+            description="[Distractor] Vague date → Clarification needed",
+            expected_trajectory=(
+                "System detects vague temporal reference, asks clarification: 'What specific date?'"
+            ),
+        ),
+        ChoiceOption(
+            id=4,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="What dates have the cheapest flights?",
+            description="[Distractor] Price-based question → QUD push, search",
+            expected_trajectory=(
+                "System pushes price query to QUD, "
+                "performs flight price search, "
+                "provides flexible date pricing, "
+                "returns to date question"
+            ),
+        ),
+        ChoiceOption(
+            id=5,
+            category=MoveCategory.CORRECTION,
+            utterance="Actually, I want to take a train instead of flying",
+            description="[Distractor] EARLY revision → Plan change before class question",
+            expected_trajectory=(
+                "System detects plan change (flight → train), "
+                "retracts flight plan, forms train plan, "
+                "date commitment may be compatible, retained, "
+                "raises train-specific questions"
+            ),
+        ),
+    ]
+
+
+def get_belief_revision_turn4_distractors() -> list[ChoiceOption]:
+    """Distractors for Belief Revision Turn 4 (THE MAJOR REVISION).
+
+    Expected: "Actually, I changed my mind - I want to take a train instead"
+    Context: System asked "What cabin class do you prefer?"
+            Date already committed (April 4th)
+            THIS IS THE KEY DEMONSTRATION OF BELIEF REVISION
+    """
+    return [
+        ChoiceOption(
+            id=1,
+            category=MoveCategory.EXPECTED,
+            utterance="Actually, I changed my mind - I want to take a train instead",
+            description="[Expected] MAJOR PLAN CHANGE → Demonstrates Rules 4.6-4.8",
+            expected_trajectory=(
+                "System detects plan revision (flight → train), "
+                "Rule 4.7: Retracts cabin_class question (flight-specific), "
+                "Rule 4.6: Retains date commitment (compatible), "
+                "Forms new train booking plan, "
+                "Rule 4.8: Accommodates train questions, "
+                "Raises departure_time question"
+            ),
+        ),
+        ChoiceOption(
+            id=2,
+            category=MoveCategory.EXPECTED,
+            utterance="Economy class",
+            description="[Distractor] Answer question normally → No revision",
+            expected_trajectory=(
+                "System accommodates cabin_class(economy), "
+                "plan complete, "
+                "proceeds with flight booking"
+            ),
+        ),
+        ChoiceOption(
+            id=3,
+            category=MoveCategory.EXPECTED,
+            utterance="Business class",
+            description="[Distractor] Different class choice → No revision",
+            expected_trajectory=(
+                "System accommodates cabin_class(business), "
+                "plan complete, "
+                "proceeds with flight booking"
+            ),
+        ),
+        ChoiceOption(
+            id=4,
+            category=MoveCategory.CORRECTION,
+            utterance="Wait, change the date to April 5th instead",
+            description="[Distractor] Correct previous answer → Minor revision",
+            expected_trajectory=(
+                "System detects date correction, "
+                "retracts old: date(April 4th), "
+                "accommodates new: date(April 5th), "
+                "returns to cabin_class question"
+            ),
+        ),
+        ChoiceOption(
+            id=5,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="What's the price difference between economy and business?",
+            description="[Distractor] Price comparison → QUD push, return to class",
+            expected_trajectory=(
+                "System pushes price query to QUD, "
+                "provides class price comparison, "
+                "pops question, "
+                "returns to cabin_class question"
+            ),
+        ),
+        ChoiceOption(
+            id=6,
+            category=MoveCategory.REJECTION,
+            utterance="Actually, I don't want to travel anymore",
+            description="[Distractor] Cancel entire task → Clear all",
+            expected_trajectory=(
+                "System detects task cancellation, "
+                "clears plan, issues, QUD, commitments, "
+                "returns to idle"
+            ),
+        ),
+        ChoiceOption(
+            id=7,
+            category=MoveCategory.CORRECTION,
+            utterance="Never mind the flight, book me a hotel in Paris instead",
+            description="[Distractor] Complete task switch → Different domain",
+            expected_trajectory=(
+                "System detects new task (hotel booking), "
+                "clears flight plan, "
+                "forms hotel booking plan, "
+                "raises hotel questions"
+            ),
+        ),
+        ChoiceOption(
+            id=8,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="Economy class, and I'll also need a hotel",
+            description="[Distractor] Answer + new task → Sequential tasks",
+            expected_trajectory=(
+                "System accommodates cabin_class, "
+                "completes flight plan, "
+                "notes hotel task for after flight booking"
+            ),
+        ),
+    ]
+
+
+def get_belief_revision_turn6_distractors() -> list[ChoiceOption]:
+    """Distractors for Belief Revision Turn 6 (Time answer after revision).
+
+    Expected: "Morning, around 9 AM"
+    Context: System asked "What time would you like to depart?" for TRAIN
+            Plan changed from flight to train
+            Date (April 4th) was retained
+    """
+    return [
+        ChoiceOption(
+            id=1,
+            category=MoveCategory.EXPECTED,
+            utterance="Morning, around 9 AM",
+            description="[Expected] Answer train time question",
+            expected_trajectory=(
+                "System accommodates time(9 AM), pops time question, raises train_class question"
+            ),
+        ),
+        ChoiceOption(
+            id=2,
+            category=MoveCategory.EXPECTED,
+            utterance="Evening, around 6 PM",
+            description="[Distractor] Different time → Alternative valid answer",
+            expected_trajectory=(
+                "System accommodates time(6 PM), continues with train_class question"
+            ),
+        ),
+        ChoiceOption(
+            id=3,
+            category=MoveCategory.INVALID_ANSWER,
+            utterance="As soon as possible",
+            description="[Distractor] Vague time → Clarification",
+            expected_trajectory=(
+                "System detects vague time, asks clarification: 'What specific time?'"
+            ),
+        ),
+        ChoiceOption(
+            id=4,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="What train times are available?",
+            description="[Distractor] Schedule query → QUD push, show options",
+            expected_trajectory=(
+                "System pushes schedule query to QUD, "
+                "provides Eurostar schedule for April 4th, "
+                "pops question, returns to time question"
+            ),
+        ),
+        ChoiceOption(
+            id=5,
+            category=MoveCategory.CORRECTION,
+            utterance="Actually, I want to fly after all, not take the train",
+            description="[Distractor] REVERSE revision → Change back to flight",
+            expected_trajectory=(
+                "System detects plan change (train → flight), "
+                "retracts train-specific questions/commitments, "
+                "re-forms flight plan, "
+                "retains compatible commitments (date), "
+                "raises cabin_class question"
+            ),
+        ),
+        ChoiceOption(
+            id=6,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="9 AM, standard class",
+            description="[Distractor] Volunteer class → Skip class question",
+            expected_trajectory=(
+                "System accommodates time and class, plan complete, proceeds to train booking"
+            ),
+        ),
+    ]
+
+
+def get_belief_revision_turn8_distractors() -> list[ChoiceOption]:
+    """Distractors for Belief Revision Turn 8 (Class answer).
+
+    Expected: "Standard class is fine"
+    Context: System asked "Would you like standard or first class?"
+            Train booking plan active
+            Date and time already committed
+    """
+    return [
+        ChoiceOption(
+            id=1,
+            category=MoveCategory.EXPECTED,
+            utterance="Standard class is fine",
+            description="[Expected] Choose standard class → Complete train plan",
+            expected_trajectory=(
+                "System accommodates class(standard), "
+                "plan complete, "
+                "proceeds to train booking execution"
+            ),
+        ),
+        ChoiceOption(
+            id=2,
+            category=MoveCategory.EXPECTED,
+            utterance="First class please",
+            description="[Distractor] Choose first class → Alternative completion",
+            expected_trajectory=(
+                "System accommodates class(first), "
+                "plan complete, "
+                "proceeds with first class train booking"
+            ),
+        ),
+        ChoiceOption(
+            id=3,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="What's included in first class?",
+            description="[Distractor] Amenities query → QUD push",
+            expected_trajectory=(
+                "System pushes amenities question to QUD, "
+                "explains first class benefits (meal, lounge, WiFi), "
+                "pops question, returns to class selection"
+            ),
+        ),
+        ChoiceOption(
+            id=4,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="What's the price difference?",
+            description="[Distractor] Price query → QUD push",
+            expected_trajectory=(
+                "System pushes price query to QUD, "
+                "provides class price comparison, "
+                "pops question, returns to class selection"
+            ),
+        ),
+        ChoiceOption(
+            id=5,
+            category=MoveCategory.CORRECTION,
+            utterance="Actually, change the time to 11 AM instead of 9 AM",
+            description="[Distractor] Correct previous answer → Minor revision",
+            expected_trajectory=(
+                "System retracts time(9 AM), accommodates time(11 AM), returns to class question"
+            ),
+        ),
+        ChoiceOption(
+            id=6,
+            category=MoveCategory.REJECTION,
+            utterance="Never mind, I'll just drive instead",
+            description="[Distractor] Cancel booking → Task abandonment",
+            expected_trajectory=("System detects cancellation, clears train plan, returns to idle"),
+        ),
+    ]
+
+
+# IBiS-4 Complex Contract Negotiation Distractors
+
+
+def get_contract_negotiation_turn0_distractors() -> list[ChoiceOption]:
+    """Distractors for Contract Negotiation Turn 0 (Ambiguous request).
+
+    Expected: "Draft service contract"
+    Context: Low confidence (0.4) - triggers pessimistic grounding
+    """
+    return [
+        ChoiceOption(
+            id=1,
+            category=MoveCategory.EXPECTED,
+            utterance="Draft service contract",
+            description="[Expected] Ambiguous request → Pessimistic grounding (icm:per*neg)",
+            expected_trajectory=(
+                "System detects low confidence (0.4), "
+                "uses pessimistic grounding strategy, "
+                "asks clarification: 'Could you be more specific?'"
+            ),
+        ),
+        ChoiceOption(
+            id=2,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="Draft a software development services contract",
+            description="[Distractor] Clear request → Optimistic grounding, immediate acceptance",
+            expected_trajectory=(
+                "System detects clear request (high confidence), "
+                "uses optimistic grounding, "
+                "forms contract plan, "
+                "raises first question"
+            ),
+        ),
+        ChoiceOption(
+            id=3,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="Create a software development contract for TechCorp and DevStudio",
+            description="[Distractor] Volunteer parties → Skip parties question",
+            expected_trajectory=(
+                "System forms contract plan with parties pre-filled, "
+                "skips parties question, "
+                "raises duration question"
+            ),
+        ),
+        ChoiceOption(
+            id=4,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="What types of contracts can you draft?",
+            description="[Distractor] Meta-question → QUD push",
+            expected_trajectory=(
+                "System pushes question to QUD, "
+                "explains available contract types, "
+                "pops question, asks if user wants to proceed"
+            ),
+        ),
+    ]
+
+
+def get_contract_negotiation_turn8_distractors() -> list[ChoiceOption]:
+    """Distractors for Contract Negotiation Turn 8 (Informal rate).
+
+    Expected: "$15k monthly"
+    Context: Medium confidence (0.65) - informal format triggers cautious grounding
+    """
+    return [
+        ChoiceOption(
+            id=1,
+            category=MoveCategory.EXPECTED,
+            utterance="$15k monthly",
+            description="[Expected] Informal format → Cautious grounding (icm:und*int)",
+            expected_trajectory=(
+                "System detects medium confidence (0.65), informal format, "
+                "uses cautious grounding, "
+                "asks confirmation: 'Did you mean $15,000 per month?'"
+            ),
+        ),
+        ChoiceOption(
+            id=2,
+            category=MoveCategory.EXPECTED,
+            utterance="$15,000 per month",
+            description="[Distractor] Formal format → Optimistic grounding, accept immediately",
+            expected_trajectory=(
+                "System detects formal, clear format (high confidence), "
+                "uses optimistic grounding, "
+                "accepts immediately, continues to payment terms"
+            ),
+        ),
+        ChoiceOption(
+            id=3,
+            category=MoveCategory.INVALID_ANSWER,
+            utterance="A reasonable amount",
+            description="[Distractor] Vague amount → Clarification required",
+            expected_trajectory=(
+                "System detects vague answer, asks clarification: 'What specific monthly rate?'"
+            ),
+        ),
+        ChoiceOption(
+            id=4,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="$15,000 per month, Net 60 payment terms",
+            description="[Distractor] Volunteer payment terms → Skip negotiation",
+            expected_trajectory=(
+                "System accommodates rate and payment terms, "
+                "skips IUN negotiation (user already decided), "
+                "continues to notice period question"
+            ),
+        ),
+        ChoiceOption(
+            id=5,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="What's the market rate for this type of work?",
+            description="[Distractor] Market research query → QUD push",
+            expected_trajectory=(
+                "System pushes market rate question to QUD, "
+                "provides market rate information, "
+                "pops question, returns to rate question"
+            ),
+        ),
+    ]
+
+
+def get_contract_negotiation_turn12_distractors() -> list[ChoiceOption]:
+    """Distractors for Contract Negotiation Turn 12 (IUN negotiation).
+
+    Expected: "Net 30 is too tight, we need Net 60"
+    Context: IUN with two options (Net 30, Net 60)
+    """
+    return [
+        ChoiceOption(
+            id=1,
+            category=MoveCategory.EXPECTED,
+            utterance="Net 30 is too tight, we need Net 60",
+            description="[Expected] Reject first, accept second → IUN resolution",
+            expected_trajectory=(
+                "System removes Net 30 from IUN, "
+                "accepts Net 60, "
+                "clears IUN, "
+                "continues to notice period question"
+            ),
+        ),
+        ChoiceOption(
+            id=2,
+            category=MoveCategory.EXPECTED,
+            utterance="Net 30 works for us",
+            description="[Distractor] Accept first option → Different resolution",
+            expected_trajectory=(
+                "System accepts Net 30, clears IUN, continues to notice period question"
+            ),
+        ),
+        ChoiceOption(
+            id=3,
+            category=MoveCategory.REJECTION,
+            utterance="Neither works. Can we do Net 45?",
+            description="[Distractor] Counter-proposal → New option negotiation",
+            expected_trajectory=(
+                "System considers counter-proposal Net 45, "
+                "may accept as compromise, "
+                "or explain available options"
+            ),
+        ),
+        ChoiceOption(
+            id=4,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="What's the difference between Net 30 and Net 60?",
+            description="[Distractor] Explanation request → QUD push",
+            expected_trajectory=(
+                "System pushes explanation to QUD, "
+                "explains payment term difference (30 vs 60 days), "
+                "pops question, returns to negotiation"
+            ),
+        ),
+        ChoiceOption(
+            id=5,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="Are there any other payment options available?",
+            description="[Distractor] Request more alternatives → Expand IUN",
+            expected_trajectory=(
+                "System may add more payment options to IUN, "
+                "presents expanded alternatives for negotiation"
+            ),
+        ),
+    ]
+
+
+def get_contract_negotiation_turn16_distractors() -> list[ChoiceOption]:
+    """Distractors for Contract Negotiation Turn 16 (Action confirmation).
+
+    Expected: "Yes, generate it"
+    Context: System asks "Should I generate the contract?"
+    """
+    return [
+        ChoiceOption(
+            id=1,
+            category=MoveCategory.EXPECTED,
+            utterance="Yes, generate it",
+            description="[Expected] Confirm action → Contract generation executes",
+            expected_trajectory=(
+                "System pops confirmation from QUD, "
+                "executes contract generation action, "
+                "produces contract document"
+            ),
+        ),
+        ChoiceOption(
+            id=2,
+            category=MoveCategory.REJECTION,
+            utterance="No, wait",
+            description="[Distractor] Reject action → Action cancelled",
+            expected_trajectory=(
+                "System removes action from queue, asks: 'Would you like to make changes?'"
+            ),
+        ),
+        ChoiceOption(
+            id=3,
+            category=MoveCategory.CORRECTION,
+            utterance="Wait, change the duration to 24 months",
+            description="[Distractor] Correction before generation → Update parameters",
+            expected_trajectory=(
+                "System retracts duration(12 months), "
+                "accommodates duration(24 months), "
+                "re-asks confirmation with updated terms"
+            ),
+        ),
+        ChoiceOption(
+            id=4,
+            category=MoveCategory.NESTED_QUESTION,
+            utterance="Can you review all the terms first?",
+            description="[Distractor] Request summary → QUD push",
+            expected_trajectory=(
+                "System pushes review request to QUD, "
+                "summarizes all contract terms, "
+                "pops question, returns to confirmation"
+            ),
+        ),
+        ChoiceOption(
+            id=5,
+            category=MoveCategory.VOLUNTEER_INFO,
+            utterance="Yes, and email it to legal@techcorp.com",
+            description="[Distractor] Confirmation + additional action → Sequential actions",
+            expected_trajectory=(
+                "System confirms generation, "
+                "adds email action to queue, "
+                "executes both actions sequentially"
+            ),
+        ),
+    ]
+
+
 # Mapping from scenario and turn to distractors
 SCENARIO_DISTRACTORS = {
     "Incremental Questioning": {
@@ -2440,6 +3070,53 @@ SCENARIO_DISTRACTORS = {
     },
     "Action Rollback": {
         0: get_rollback_turn0_distractors,  # Turn 0: Booking request
+    },
+    "Belief Revision (Reaccommodation)": {
+        0: get_belief_revision_turn0_distractors,  # Turn 0: Flight request
+        2: get_belief_revision_turn2_distractors,  # Turn 2: Date answer
+        4: get_belief_revision_turn4_distractors,  # Turn 4: MAJOR REVISION (flight → train)
+        6: get_belief_revision_turn6_distractors,  # Turn 6: Time answer (after revision)
+        8: get_belief_revision_turn8_distractors,  # Turn 8: Class answer
+    },
+    # IBiS-2 Grounding scenarios reuse Incremental Questioning distractors
+    # (same dialogue flow, different confidence/grounding behaviors)
+    "Optimistic Grounding": {
+        0: get_scenario1_turn1_distractors,  # Turn 0: NDA request (reused)
+        2: get_scenario1_turn2_distractors,  # Turn 2: Parties
+        4: get_scenario1_turn3_distractors,  # Turn 4: Date
+        6: get_scenario1_turn2a_distractors,  # Turn 6: Type
+        8: get_scenario1_turn4_distractors,  # Turn 8: Duration
+        10: get_scenario1_turn5_distractors,  # Turn 10: Law
+    },
+    "Cautious Grounding": {
+        0: get_scenario1_turn1_distractors,  # Turn 0: NDA request (reused)
+        2: get_scenario1_turn2_distractors,  # Turn 2: Parties
+        4: get_scenario1_turn3_distractors,  # Turn 4: Date
+        6: get_scenario1_turn2a_distractors,  # Turn 6: Type
+        8: get_scenario1_turn4_distractors,  # Turn 8: Duration
+        10: get_scenario1_turn5_distractors,  # Turn 10: Law
+    },
+    "Pessimistic Grounding": {
+        0: get_scenario1_turn1_distractors,  # Turn 0: NDA request (reused)
+        2: get_scenario1_turn2_distractors,  # Turn 2: Parties
+        4: get_scenario1_turn3_distractors,  # Turn 4: Date
+        6: get_scenario1_turn2a_distractors,  # Turn 6: Type
+        8: get_scenario1_turn4_distractors,  # Turn 8: Duration
+        10: get_scenario1_turn5_distractors,  # Turn 10: Law
+    },
+    "Mixed Grounding Strategies": {
+        0: get_scenario1_turn1_distractors,  # Turn 0: NDA request (reused)
+        2: get_scenario1_turn2_distractors,  # Turn 2: Parties
+        4: get_scenario1_turn3_distractors,  # Turn 4: Date
+        6: get_scenario1_turn2a_distractors,  # Turn 6: Type
+        8: get_scenario1_turn4_distractors,  # Turn 8: Duration
+        10: get_scenario1_turn5_distractors,  # Turn 10: Law
+    },
+    "Complex Contract Negotiation": {
+        0: get_contract_negotiation_turn0_distractors,  # Turn 0: Ambiguous request
+        8: get_contract_negotiation_turn8_distractors,  # Turn 8: Informal rate
+        12: get_contract_negotiation_turn12_distractors,  # Turn 12: IUN negotiation
+        16: get_contract_negotiation_turn16_distractors,  # Turn 16: Action confirmation
     },
 }
 
