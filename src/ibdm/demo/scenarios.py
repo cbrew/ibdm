@@ -2013,6 +2013,240 @@ CONFIRMATION DETAILS
     )
 
 
+def scenario_contract_negotiation() -> DemoScenario:
+    """Showcase scenario demonstrating multiple IBiS features in complex workflow.
+
+    Combines IBiS-2 (grounding), IBiS-3 (question accommodation), and
+    IBiS-4 (actions/negotiation) in a realistic business contract scenario.
+    """
+    return DemoScenario(
+        name="Complex Contract Negotiation",
+        description="Showcase: Multi-feature contract negotiation (IBiS-2+3+4)",
+        features=[
+            "Grounding (low-confidence terms)",
+            "Clarification questions",
+            "Dependent questions",
+            "IUN negotiation",
+            "Action confirmation",
+        ],
+        confidence_mode="mixed",
+        steps=[
+            ScenarioStep(
+                speaker="user",
+                utterance="Draft service contract",
+                description="User request (low confidence 0.4 - ambiguous)",
+                expected_state={"grounding": "pessimistic"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="[icm:per*neg] Sorry, could you be more specific?",
+                description="System requests clarification (pessimistic grounding)",
+                expected_state={"grounding_status": "perception_failed"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="I need to create a software development services contract",
+                description="User provides clear request",
+                expected_state={"plan": "contract_drafting", "grounding": "optimistic"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="Who are the parties to this contract?",
+                description="System gathers basic information",
+                expected_state={"qud": "1 question"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="TechCorp Inc as client, DevStudio LLC as service provider",
+                description="User provides parties",
+                expected_state={"commitments": "+1"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="What is the contract duration?",
+                description="System asks for duration",
+                expected_state={"qud": "1 question"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="12 months",
+                description="User provides duration",
+                expected_state={"commitments": "+1"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="What is the monthly rate?",
+                description="System asks dependent question (depends on duration)",
+                expected_state={"qud": "1 question"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="$15k monthly",
+                description="User provides rate (medium confidence 0.65 - informal)",
+                expected_state={"grounding": "cautious"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="[icm:und*int] Did you mean $15,000 per month?",
+                description="System confirms understanding (cautious grounding)",
+                expected_state={"qud": "1 question"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="Yes, that's correct",
+                description="User confirms",
+                expected_state={"commitments": "+1", "grounding": "grounded"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="I found two payment options: Net 30 or Net 60. Which do you prefer?",
+                description="System presents alternatives (IUN negotiation)",
+                expected_state={"iun": "2 options"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="Net 30 is too tight, we need Net 60",
+                description="User rejects first option",
+                expected_state={"iun": "1 option"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="Understood, Net 60 it is. What's the termination notice period?",
+                description="System accepts choice, continues",
+                expected_state={"iun": "0", "commitments": "+1", "qud": "1 question"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="30 days notice",
+                description="User provides notice period",
+                expected_state={"commitments": "+1"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="Should I generate the contract with these terms?",
+                description="System requests action confirmation",
+                expected_state={"qud": "1 question (confirmation)"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="Yes, generate it",
+                description="User confirms contract generation",
+                expected_state={"qud": "0", "actions": "1 executing"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="Contract generated successfully. Generating final document...",
+                description="System executes action",
+                expected_state={"action_result": "success"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="""
+═══════════════════════════════════════════════════════════════════════
+              SOFTWARE DEVELOPMENT SERVICES CONTRACT
+═══════════════════════════════════════════════════════════════════════
+Contract #:        SDSC-2025-5429
+Status:            ✓ DRAFT GENERATED
+Date Generated:    2025-11-18
+
+───────────────────────────────────────────────────────────────────────
+PARTIES
+───────────────────────────────────────────────────────────────────────
+CLIENT:
+  Name:            TechCorp Inc
+  Role:            Client (receives services)
+
+SERVICE PROVIDER:
+  Name:            DevStudio LLC
+  Role:            Service Provider (delivers software development)
+
+───────────────────────────────────────────────────────────────────────
+CONTRACT TERMS
+───────────────────────────────────────────────────────────────────────
+Service Type:      Software Development Services
+Duration:          12 months from contract signing
+Commencement:      Upon execution of this agreement
+
+Monthly Rate:      $15,000.00 USD
+Annual Value:      $180,000.00 USD (12 × $15,000)
+
+Payment Terms:     Net 60 (payment due 60 days after invoice)
+Invoicing:         Monthly in advance
+
+Termination:       30 days written notice by either party
+Notice Period:     Effective 30 days from notice delivery
+
+───────────────────────────────────────────────────────────────────────
+KEY PROVISIONS
+───────────────────────────────────────────────────────────────────────
+✓ Scope of Work:    Custom software development as specified
+✓ Deliverables:     Code, documentation, technical specifications
+✓ IP Rights:        Work product owned by Client
+✓ Confidentiality:  Standard NDA provisions apply
+✓ Liability Cap:    Limited to 12 months of fees ($180,000)
+✓ Governing Law:    State of Delaware
+
+───────────────────────────────────────────────────────────────────────
+NEGOTIATION SUMMARY
+───────────────────────────────────────────────────────────────────────
+Dialogue Features Demonstrated:
+
+IBiS-2 GROUNDING:
+  ✓ Pessimistic: Initial ambiguous request clarified
+  ✓ Cautious:    "$15k monthly" confirmed as "$15,000"
+  ✓ Optimistic:  Clear responses accepted immediately
+
+IBiS-3 QUESTION ACCOMMODATION:
+  ✓ Clarification: Requested expansion of vague input
+  ✓ Dependent:     Payment schedule depends on duration
+
+IBiS-4 ACTIONS:
+  ✓ IUN:          Payment terms negotiated (rejected Net 30, accepted Net 60)
+  ✓ Confirmation: Contract generation confirmed before execution
+  ✓ Execution:    Draft successfully created
+
+───────────────────────────────────────────────────────────────────────
+DIALOGUE EFFICIENCY METRICS
+───────────────────────────────────────────────────────────────────────
+Total User Turns:            10
+Clarifications Needed:        2 (initial request + rate confirmation)
+Grounding Adaptations:        3 (pessimistic → optimistic)
+Negotiation Rounds:           1 (payment terms)
+Action Confirmations:         1 (contract generation)
+
+Information Gathered:
+  ✓ Contract type (software development)
+  ✓ Parties (TechCorp Inc, DevStudio LLC)
+  ✓ Duration (12 months)
+  ✓ Rate ($15,000/month)
+  ✓ Payment terms (Net 60 - negotiated)
+  ✓ Termination notice (30 days)
+
+Business Value:
+  Contract Value:     $180,000
+  Time to Draft:      ~5 minutes (vs ~2 hours manually)
+  Cost Savings:       ~$500 (lawyer time)
+  Accuracy:           100% (all terms captured correctly)
+
+═══════════════════════════════════════════════════════════════════════
+
+✓ Contract draft complete and ready for legal review
+✓ All IBiS features demonstrated in integrated workflow:
+  - Grounding adapted to input quality (pessimistic → cautious → optimistic)
+  - Clarification handled ambiguous requests gracefully
+  - Dependent questions asked in logical order
+  - Negotiation resolved user preferences (payment terms)
+  - Action confirmation ensured user control
+✓ High business value: $180K contract generated in minutes
+✓ Showcases IBDM's capability for complex professional workflows""",
+                description="Complete contract with multi-feature demonstration",
+                expected_state={"contract_generated": "true", "plan": "complete"},
+                is_payoff=True,  # PAYOFF: Contract + comprehensive feature demonstration
+            ),
+        ],
+    )
+
+
 # Scenario registry
 
 ALL_SCENARIOS: dict[str, DemoScenario] = {
@@ -2091,4 +2325,5 @@ def get_ibis4_scenarios() -> list[DemoScenario]:
         scenario_action_confirmation(),
         scenario_negotiation_alternatives(),
         scenario_action_rollback(),
+        scenario_contract_negotiation(),
     ]
