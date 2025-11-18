@@ -589,7 +589,7 @@ def scenario_reaccommodation() -> DemoScenario:
     """Scenario demonstrating question reaccommodation (Rules 4.6-4.8).
 
     Shows how the system handles users changing their mind about
-    previous answers.
+    previous answers, including dramatic plan changes (flight → train).
     """
     return DemoScenario(
         name="Belief Revision (Reaccommodation)",
@@ -603,108 +603,162 @@ def scenario_reaccommodation() -> DemoScenario:
         steps=[
             ScenarioStep(
                 speaker="user",
-                utterance="I need to book a flight",
-                description="User initiates task",
-                expected_state={"plan": "active"},
+                utterance="I need to book a flight from London to Paris",
+                description="User initiates flight booking task",
+                expected_state={"plan": "flight_booking", "mode": "flight"},
             ),
             ScenarioStep(
                 speaker="system",
                 utterance="What's your departure date?",
-                description="System asks for date",
+                description="System asks flight-specific question",
                 expected_state={"qud": "1 question"},
             ),
             ScenarioStep(
                 speaker="user",
-                utterance="April 5th",
-                description="User provides initial answer",
-                expected_state={"commitments": "+1", "qud": "0"},
+                utterance="April 4th",
+                description="User provides date",
+                expected_state={"commitments": "+1 (date)", "qud": "0"},
             ),
             ScenarioStep(
                 speaker="system",
-                utterance="What's your departure city?",
-                description="System continues with plan",
+                utterance="What cabin class do you prefer: economy, business, or first class?",
+                description="System asks flight-specific question (cabin class)",
                 expected_state={"qud": "1 question"},
             ),
             ScenarioStep(
                 speaker="user",
-                utterance="Actually, I meant April 4th for the departure date",
-                description="User changes mind about previous answer",
+                utterance="Actually, I changed my mind - I want to take a train instead",
+                description="MAJOR BELIEF REVISION: User switches from flight to train",
                 expected_state={
-                    "commitments": "retracted old, added new",
-                    "private.issues": "+1 (question re-raised)",
+                    "plan": "retract flight, form train plan",
+                    "commitments": "retract flight-specific",
+                    "mode": "train",
                 },
             ),
             ScenarioStep(
                 speaker="system",
-                utterance="What's your departure city?",
-                description="System continues (handles correction gracefully)",
-                expected_state={"qud": "1 question"},
-            ),
-            ScenarioStep(
-                speaker="user",
-                utterance="London",
-                description="User answers departure city",
-                expected_state={"commitments": "+1", "qud": "0"},
+                utterance="Understood. I'll help you book a train from London to Paris instead.",
+                description="System acknowledges dramatic plan change",
+                expected_state={"plan": "train_booking"},
             ),
             ScenarioStep(
                 speaker="system",
-                utterance="What's your destination?",
-                description="System asks next question",
+                utterance="The date April 4th is still valid. What time would you like to depart?",
+                description="System retains compatible commitment (date), asks train question",
+                expected_state={"qud": "1 question", "commitments": "1 retained"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="Morning, around 9 AM",
+                description="User answers train-specific question",
+                expected_state={"commitments": "+1 (time)", "qud": "0"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="Would you like standard or first class for the Eurostar?",
+                description="System asks train-specific class question",
                 expected_state={"qud": "1 question"},
             ),
             ScenarioStep(
                 speaker="user",
-                utterance="Paris",
-                description="User answers destination",
-                expected_state={"commitments": "+1", "qud": "0"},
+                utterance="Standard class is fine",
+                description="User completes train booking info",
+                expected_state={"commitments": "+1 (class)", "qud": "0", "plan": "complete"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="Perfect! Booking your Eurostar train for April 4th at 9:00 AM...",
+                description="System executes train booking",
+                expected_state={"action": "train_booking", "plan": "executing"},
             ),
             ScenarioStep(
                 speaker="system",
                 utterance="""
-╔══════════════════════════════════════════════════════════════╗
-║         BELIEF REVISION TRACKING REPORT                      ║
-╚══════════════════════════════════════════════════════════════╝
+═══════════════════════════════════════════════════════════════════════
+                    EUROSTAR TRAIN BOOKING
+═══════════════════════════════════════════════════════════════════════
+Confirmation #:    ES-2025-47821
+Status:            ✓ CONFIRMED
 
-Flight Booking Summary - WITH REVISION HISTORY
+───────────────────────────────────────────────────────────────────────
+JOURNEY DETAILS
+───────────────────────────────────────────────────────────────────────
+Route:             London St Pancras → Paris Gare du Nord
+Date:              April 4, 2025
+Departure:         9:01 AM (London St Pancras International)
+Arrival:           12:17 PM (Paris Gare du Nord) - Local time
+Duration:          2h 16min
+Train:             Eurostar 9012
+Class:             Standard
+Seat:              Coach 5, Seat 42A (Window, Forward-facing)
 
-Final Commitments:
-  Departure Date:  April 4, 2025
-  Departure City:  London
-  Destination:     Paris
-  Status:          ✓ Ready to proceed
+───────────────────────────────────────────────────────────────────────
+COST BREAKDOWN
+───────────────────────────────────────────────────────────────────────
+Standard Class Ticket:                        £89.00
+Booking Fee:                                   £5.50
+                                              ──────
+TOTAL:                                        £94.50
 
-Revision History:
-  1. Initial: departure_date = April 5th
-     → Retracted by user during dialogue
+Payment Status:       ✓ Charged to card ending 4567
 
-  2. Revised: departure_date = April 4th
-     → Current commitment (Rule 4.6)
+───────────────────────────────────────────────────────────────────────
+BELIEF REVISION CASCADE - COMPLETE ANALYSIS
+───────────────────────────────────────────────────────────────────────
 
-  3. Question re-accommodation:
-     → Original Q_departure_date answered
-     → Then retracted and re-raised to private.issues
-     → Then answered again with new value
-     → Demonstrates Rules 4.6, 4.7, 4.8
+ORIGINAL PLAN (Retracted):
+  Mode:              Flight booking
+  Questions raised:  departure_date, cabin_class
+  Commitments:       date=April 4th
+  Status:            ✗ ABANDONED after user revision
 
-System Behavior:
-  ✓ Gracefully handled mid-dialogue correction
-  ✓ Retracted incompatible commitment (Rule 4.7)
-  ✓ Re-accommodated corrected question (Rule 4.6)
-  ✓ No dependent questions needed re-accommodation (Rule 4.8)
-  ✓ Continued dialogue flow seamlessly
+REVISION EVENT:
+  Trigger:           "I want to take a train instead"
+  Type:              Major plan change (flight → train)
+  Scope:             Complete task reframing
 
-Belief Revision Demonstration:
-  This dialogue showcases the system's ability to handle
-  users changing their mind about previous answers without
-  disrupting the conversation flow. The system maintains
-  consistency by retracting outdated commitments and
-  re-validating dependent information.
+RETRACTION CASCADE (Rule 4.7):
+  ✗ Retracted: cabin_class question (flight-specific)
+  ✗ Retracted: flight_booking plan
+  ✓ Retained: departure_date=April 4th (compatible with trains)
 
-Ready to proceed with flight search:
-  London → Paris, departing April 4, 2025""",
-                description="System generates revision tracking report",
-                expected_state={"revision_report": "generated"},
-                is_payoff=True,  # PAYOFF: Belief revision analysis
+NEW PLAN (Formed):
+  Mode:              Train booking
+  Questions raised:  departure_time, train_class
+  Commitments:       date=April 4th (retained), time=9AM, class=Standard
+  Status:            ✓ COMPLETED
+
+RE-ACCOMMODATION (Rules 4.6, 4.8):
+  ✓ Compatible commitment retained (date)
+  ✓ Incompatible questions retracted (cabin class)
+  ✓ New questions accommodated (departure time, train class)
+  ✓ New plan successfully completed
+
+───────────────────────────────────────────────────────────────────────
+SYSTEM BEHAVIOR DEMONSTRATED
+───────────────────────────────────────────────────────────────────────
+✓ Handled dramatic mid-dialogue plan change gracefully
+✓ Rule 4.6: Re-accommodated compatible questions
+✓ Rule 4.7: Retracted incompatible commitments (cabin class)
+✓ Rule 4.8: Managed dependent question cascade
+✓ Completed alternative task successfully (train booking)
+✓ No user confusion or repetition needed
+✓ Seamless transition from flight to train domain
+
+Impact: User completely changed transportation mode mid-dialogue,
+system adapted without disruption and delivered complete booking.
+
+═══════════════════════════════════════════════════════════════════════
+
+✓ Train booking confirmed despite major plan revision
+✓ Belief revision cascade handled automatically
+✓ Compatible information retained (date)
+✓ Incompatible information gracefully discarded (cabin class)
+✓ New task completed successfully
+✓ Ready for London → Paris journey!""",
+                description="Train booking confirmation with belief revision analysis",
+                expected_state={"booking_confirmed": "true"},
+                is_payoff=True,  # PAYOFF: Train booking + dramatic revision analysis
             ),
         ],
     )
