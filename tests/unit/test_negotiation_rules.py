@@ -9,7 +9,6 @@ Tests negotiation mechanisms including:
 Based on Larsson (2002) Section 5.7.
 """
 
-
 from ibdm.core import Answer, DialogueMove, InformationState
 from ibdm.core.actions import Proposition
 from ibdm.rules.negotiation_rules import (

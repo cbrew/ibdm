@@ -297,9 +297,7 @@ def _accept_proposal(state: InformationState) -> InformationState:
 
     if accepted_prop:
         # Add to commitments
-        args_str = ", ".join(
-            f"{k}={v}" for k, v in accepted_prop.arguments.items()
-        )
+        args_str = ", ".join(f"{k}={v}" for k, v in accepted_prop.arguments.items())
         commitment_str = f"{accepted_prop.predicate}({args_str})"
         new_state.shared.commitments.add(commitment_str)
 
@@ -478,9 +476,7 @@ def _should_generate_counter_proposal(state: InformationState) -> bool:
             answer_text = str(content.content).lower()
             if answer_text in ["no", "nope", "reject", "no thanks"]:
                 # Only generate if we have a rejected proposition in metadata
-                return bool(
-                    move.metadata and "rejected_proposition" in move.metadata
-                )
+                return bool(move.metadata and "rejected_proposition" in move.metadata)
 
     return False
 

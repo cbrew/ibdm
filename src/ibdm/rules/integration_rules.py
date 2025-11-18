@@ -13,6 +13,7 @@ Based on Larsson (2002) Issue-based Dialogue Management.
 from ibdm.core import Answer, DialogueMove, InformationState, Question
 from ibdm.rules.icm_integration_rules import create_icm_integration_rules
 from ibdm.rules.update_rules import UpdateRule
+from ibdm.utils.skip_detection import is_skip_request
 
 
 def create_integration_rules() -> list[UpdateRule]:
@@ -106,6 +107,16 @@ def create_integration_rules() -> list[UpdateRule]:
                 name="retract_incompatible_commitment",
                 preconditions=_has_incompatible_commitment,
                 effects=_retract_commitment,
+                priority=9,  # Before integrate_answer (8)
+                rule_type="integration",
+            ),
+            # Skip question handling - allow users to override optional questions
+            # When user says "skip that", "I don't have that info", etc.
+            # Must run BEFORE integrate_answer (priority 8)
+            UpdateRule(
+                name="accommodate_skip_question",
+                preconditions=_is_skip_request_move,
+                effects=_accommodate_skip_question,
                 priority=9,  # Before integrate_answer (8)
                 rule_type="integration",
             ),
@@ -264,6 +275,42 @@ def _is_quit_move(state: InformationState) -> bool:
     """Check if the temporary move is a 'quit' move."""
     move = state.private.beliefs.get("_temp_move")
     return isinstance(move, DialogueMove) and move.move_type == "quit"
+
+
+def _is_skip_request_move(state: InformationState) -> bool:
+    """Check if user wants to skip the current question.
+
+    Detects patterns like:
+    - "skip that"
+    - "I don't have that information"
+    - "move on without it"
+    - "proceed anyway"
+    - "don't know"
+
+    This only triggers if:
+    1. User utterance matches skip patterns
+    2. There's a question on QUD
+    3. The question has required=False (optional)
+    """
+    move = state.private.beliefs.get("_temp_move")
+    if not isinstance(move, DialogueMove):
+        return False
+
+    # Check if utterance matches skip patterns
+    utterance = str(move.content) if move.content else ""
+    if not is_skip_request(utterance):
+        return False
+
+    # Only allow skipping if there's a question on QUD
+    top_qud = state.shared.top_qud()
+    if not top_qud:
+        return False
+
+    # Only allow skipping if question is optional (required=False)
+    if getattr(top_qud, "required", True):
+        return False
+
+    return True
 
 
 def _needs_clarification_question(state: InformationState) -> bool:
@@ -508,6 +555,42 @@ def _accommodate_clarification(state: InformationState) -> InformationState:
 
     # Keep the invalid answer in beliefs for context
     # (Selection/generation can use this to provide helpful feedback)
+
+    return new_state
+
+
+def _accommodate_skip_question(state: InformationState) -> InformationState:
+    """Handle user request to skip the current optional question.
+
+    When user says "skip that", "I don't have that info", etc. for an
+    optional question (required=False), this rule:
+    1. Removes the question from QUD
+    2. Adds it to private.overridden_questions for tracking
+    3. Allows dialogue to proceed without that information
+
+    Args:
+        state: Current information state
+
+    Returns:
+        New state with question overridden and removed from QUD
+    """
+    new_state = state.clone()
+
+    # Get the question from top of QUD
+    question = new_state.shared.top_qud()
+    if not question:
+        return new_state
+
+    # Only proceed if question is optional
+    if getattr(question, "required", True):
+        return new_state
+
+    # Remove question from QUD
+    new_state.shared.pop_qud()
+
+    # Track that this question was overridden
+    if question not in new_state.private.overridden_questions:
+        new_state.private.overridden_questions.append(question)
 
     return new_state
 

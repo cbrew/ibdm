@@ -3,10 +3,10 @@
 Simulates payment processing, inventory management, and shipping services.
 """
 
-from typing import Any
 import random
 from datetime import datetime, timedelta
 from decimal import Decimal
+from typing import Any
 
 from ibdm.core.actions import Action
 from ibdm.core.information_state import InformationState

@@ -62,9 +62,7 @@ class MockDevice(DeviceInterface):
         self.should_fail_preconditions = should_fail_preconditions
         self.failure_message = failure_message
 
-    def set_custom_precond_function(
-        self, fn: Callable[[Action, InformationState], bool]
-    ) -> None:
+    def set_custom_precond_function(self, fn: Callable[[Action, InformationState], bool]) -> None:
         """Set custom precondition checker.
 
         Args:
@@ -90,9 +88,7 @@ class MockDevice(DeviceInterface):
         self._custom_precond_fn = None
         self._custom_postcond_fn = None
 
-    def execute_action(
-        self, action: Action, state: InformationState
-    ) -> ActionResult:
+    def execute_action(self, action: Action, state: InformationState) -> ActionResult:
         """Execute action (mock implementation).
 
         Records the action and returns configured result.

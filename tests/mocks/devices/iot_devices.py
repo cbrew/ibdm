@@ -3,9 +3,9 @@
 Simulates smart home devices, sensors, and automation systems.
 """
 
-from typing import Any
 import random
 from datetime import datetime
+from typing import Any
 
 from ibdm.core.actions import Action
 from ibdm.core.information_state import InformationState

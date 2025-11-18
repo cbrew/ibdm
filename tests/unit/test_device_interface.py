@@ -3,7 +3,6 @@
 Tests the abstract DeviceInterface, ActionResult, and ActionStatus.
 """
 
-
 from ibdm.core.actions import Action, ActionType
 from ibdm.core.information_state import InformationState
 from ibdm.interfaces.device import (

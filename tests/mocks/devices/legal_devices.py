@@ -3,9 +3,9 @@
 Simulates legal document generation, e-signature, and compliance checking services.
 """
 
-from typing import Any
 import random
 from datetime import datetime, timedelta
+from typing import Any
 
 from ibdm.core.actions import Action
 from ibdm.core.information_state import InformationState

@@ -297,6 +297,10 @@ def _has_communicative_plan(state: InformationState) -> bool:
 
     IBiS1 Rule: SelectFromPlan (Section 2.9.1)
     Pre: head(private.plan) is a communicative action
+
+    Updated to support plan overrides: A plan can execute if all its
+    findout subplans are either completed OR overridden (question is
+    in private.overridden_questions).
     """
     # Don't trigger if there's already something on the agenda
     if state.private.agenda:
@@ -315,7 +319,20 @@ def _has_communicative_plan(state: InformationState) -> bool:
         return False
 
     communicative_types = ["findout", "raise", "inform", "greet", "ask", "answer"]
-    return head_plan.plan_type in communicative_types
+    if head_plan.plan_type not in communicative_types:
+        return False
+
+    # Check if all findout subplans are complete or overridden
+    # A plan can only execute if all its information requirements are satisfied
+    for subplan in head_plan.subplans:
+        if subplan.plan_type == "findout" and subplan.is_active():
+            # This findout is still active - check if it's been overridden
+            question = subplan.content
+            if question not in state.private.overridden_questions:
+                # Not complete and not overridden - can't execute plan yet
+                return False
+
+    return True
 
 
 def _can_answer_qud(state: InformationState) -> bool:
