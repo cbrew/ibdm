@@ -1,0 +1,3 @@
+baseline_json=/Users/brewc/PycharmProjects/ibdm/reports/ibdm-120.1_baseline_2025-11-18_141108_b73bbb0.json
+baseline_txt=/Users/brewc/PycharmProjects/ibdm/reports/ibdm-120.1_baseline_2025-11-18_141108_b73bbb0.txt
+prediction_file=/Users/brewc/PycharmProjects/ibdm/reports/predictions/ibdm-120.1_prediction_2025-11-18_141120_b73bbb0.txt
