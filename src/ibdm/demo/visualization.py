@@ -168,7 +168,24 @@ class DialogueHistory:
 
 
 class DialogueVisualizer:
-    """Visualizer for dialogue history and state transitions."""
+    """Visualizer for dialogue history and state transitions.
+
+    This class provides methods to format and export dialogue history and state
+    transitions into various human-readable formats. It is designed to be a
+    standalone utility for analyzing and presenting dialogue data from IBDM sessions.
+
+    The visualizer supports multiple output formats, including:
+    - Detailed, multi-line formatting for each turn
+    - Compact, single-line formatting for a quick overview
+    - State timeline visualization for tracking specific metrics
+    - Export to Markdown and CSV for external analysis
+
+    Example:
+        history = DialogueHistory(...)
+        visualizer = DialogueVisualizer()
+        print(visualizer.format_history(history))
+        markdown_export = visualizer.export_to_markdown(history)
+    """
 
     def __init__(self, width: int = 70) -> None:
         """Initialize visualizer.
@@ -184,15 +201,19 @@ class DialogueVisualizer:
         show_metadata: bool = True,
         show_state: bool = False,
     ) -> str:
-        """Format a single turn for display.
+        """Formats a single dialogue turn into a detailed, multi-line string.
+
+        This method provides a comprehensive view of a single turn, including
+        the speaker, utterance, and optional metadata and state information.
 
         Args:
-            turn: Turn record
-            show_metadata: Whether to show move type, confidence, etc.
-            show_state: Whether to show state snapshot
+            turn: The TurnRecord object to format.
+            show_metadata: If True, includes dialogue move type, confidence, and
+                           grounding strategy.
+            show_state: If True, includes a snapshot of the dialogue state.
 
         Returns:
-            Formatted string
+            A formatted string representing the turn.
         """
         lines: list[str] = []
 
@@ -233,15 +254,19 @@ class DialogueVisualizer:
         show_metadata: bool = True,
         show_state: bool = False,
     ) -> str:
-        """Format complete dialogue history.
+        """Formats the complete dialogue history into a detailed string.
+
+        This method provides a comprehensive, multi-line representation of the
+        entire dialogue session, including a header, all turns, and a summary
+        footer.
 
         Args:
-            history: Dialogue history
-            show_metadata: Whether to show move type, confidence, etc.
-            show_state: Whether to show state snapshots
+            history: The DialogueHistory object to format.
+            show_metadata: If True, shows metadata for each turn.
+            show_state: If True, shows the state snapshot for each turn.
 
         Returns:
-            Formatted string
+            A formatted string of the entire dialogue history.
         """
         lines: list[str] = []
 
@@ -270,13 +295,16 @@ class DialogueVisualizer:
         return "\n".join(lines)
 
     def format_compact_history(self, history: DialogueHistory) -> str:
-        """Format history in compact format (one line per turn).
+        """Formats the dialogue history into a compact, single-line-per-turn view.
+
+        This method is useful for getting a quick overview of the dialogue flow
+        without the detailed metadata or state information.
 
         Args:
-            history: Dialogue history
+            history: The DialogueHistory object to format.
 
         Returns:
-            Formatted string
+            A compact, formatted string of the dialogue history.
         """
         lines: list[str] = []
         lines.append(f"\n{'=' * self.width}")
@@ -295,14 +323,17 @@ class DialogueVisualizer:
         return "\n".join(lines)
 
     def format_state_timeline(self, history: DialogueHistory, state_key: str) -> str:
-        """Format timeline of a specific state variable.
+        """Generates a timeline showing the value of a specific state variable over turns.
+
+        This method is useful for tracking how a particular aspect of the dialogue
+        state, such as QUD depth or the number of commitments, changes over time.
 
         Args:
-            history: Dialogue history
-            state_key: State variable to track (e.g., "qud_depth", "commitments_count")
+            history: The DialogueHistory object containing the state snapshots.
+            state_key: The key of the state variable to track (e.g., "qud_depth").
 
         Returns:
-            Formatted timeline
+            A formatted string showing the state variable's timeline.
         """
         lines: list[str] = []
         lines.append(f"\n{'=' * self.width}")
@@ -319,13 +350,16 @@ class DialogueVisualizer:
         return "\n".join(lines)
 
     def export_to_markdown(self, history: DialogueHistory) -> str:
-        """Export history to Markdown format.
+        """Exports the dialogue history to a Markdown-formatted string.
+
+        This method generates a structured Markdown document, making it easy to
+        share or document the dialogue session.
 
         Args:
-            history: Dialogue history
+            history: The DialogueHistory object to export.
 
         Returns:
-            Markdown formatted string
+            A string containing the dialogue history in Markdown format.
         """
         lines: list[str] = []
 
@@ -368,13 +402,17 @@ class DialogueVisualizer:
         return "\n".join(lines)
 
     def export_to_csv(self, history: DialogueHistory) -> str:
-        """Export history to CSV format.
+        """Exports the dialogue history to a CSV-formatted string.
+
+        This method converts the dialogue history into a CSV format, suitable for
+        data analysis in spreadsheets or other tools. Each turn is represented
+        as a single row.
 
         Args:
-            history: Dialogue history
+            history: The DialogueHistory object to export.
 
         Returns:
-            CSV formatted string
+            A string containing the dialogue history in CSV format.
         """
         lines: list[str] = []
 

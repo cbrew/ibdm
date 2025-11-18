@@ -4,7 +4,6 @@ Tests that users can skip optional questions (required=False) when they
 don't have the information, and that plans can execute with overridden questions.
 """
 
-
 from ibdm.core import (
     DialogueMove,
     InformationState,

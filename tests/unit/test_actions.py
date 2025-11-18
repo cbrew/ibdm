@@ -3,7 +3,6 @@
 Based on Larsson (2002) Chapter 5: Action-Oriented and Negotiative Dialogue.
 """
 
-
 from ibdm.core.actions import Action, ActionType, Proposition, dominates
 
 
