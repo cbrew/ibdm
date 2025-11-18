@@ -11,6 +11,14 @@ from typing import Any
 
 from ibdm.core import InformationState
 from ibdm.demo.scenarios import DemoScenario, ScenarioStep
+from ibdm.visualization import (
+    StateSnapshot,
+    StateDiff,
+    TerminalRenderer,
+    compute_diff,
+    RuleTrace,
+    RuleEvaluation,
+)
 
 
 class MoveCategory(Enum):
@@ -300,6 +308,14 @@ class ScenarioExplorer:
         self.distractor_gen = DistractorGenerator(domain)
         self.tracker = TrajectoryTracker(scenario)
         self.current_step_index = 0
+        
+        # Visualization components
+        self.renderer = TerminalRenderer()
+        self.snapshots: list[StateSnapshot] = []
+        self.rule_traces: list[RuleTrace] = []
+
+        # Capture initial state
+        self.capture_snapshot("Initial State")
 
     def get_current_choices(self) -> list[ChoiceOption]:
         """Get available choices for the current dialogue state.
@@ -378,30 +394,76 @@ class ScenarioExplorer:
         """Display the current trajectory path."""
         print("\n" + self.tracker.format_path())
 
+    def capture_snapshot(self, label: str) -> None:
+        """Capture a snapshot of the current state.
+        
+        Args:
+            label: Label for the snapshot
+        """
+        timestamp = len(self.snapshots)
+        snapshot = StateSnapshot.from_state(self.state, timestamp, label)
+        self.snapshots.append(snapshot)
+        # Also capture a dummy rule trace for this snapshot
+        self._capture_rule_trace(label, timestamp)
+
+    def _capture_rule_trace(self, label: str, timestamp: int) -> None:
+        """Create a placeholder RuleTrace for visualization.
+
+        This dummy implementation creates a few example RuleEvaluation objects.
+        In a full system this would be populated by the actual rule engine.
+        """
+        from ibdm.visualization import RuleEvaluation, RuleTrace
+        
+
+        # Example evaluations
+        evals = [
+            RuleEvaluation(rule_name="RuleA", priority=1, preconditions_met=True, was_selected=False, reason=""),
+            RuleEvaluation(rule_name="RuleB", priority=2, preconditions_met=True, was_selected=True, reason="selected"),
+            RuleEvaluation(rule_name="RuleC", priority=3, preconditions_met=False, was_selected=False, reason=""),
+        ]
+        
+        # Use previous and current snapshots for diff
+        current_snapshot = self.snapshots[-1]
+        before = self.snapshots[-2] if len(self.snapshots) >= 2 else current_snapshot
+        after = current_snapshot
+        diff = compute_diff(before, after)
+        
+        trace = RuleTrace(
+            phase="integration",
+            timestamp=timestamp,
+            label=label,
+            evaluations=evals,
+            selected_rule="RuleB",
+            state_before=before,
+            state_after=after,
+            diff=diff,
+        )
+        self.rule_traces.append(trace)
+
     def display_state(self) -> None:
-        """Display current dialogue state."""
-        print("\n" + "=" * 70)
-        print("Current Dialogue State:")
-        print("=" * 70)
-        print(f"QUD: {len(self.state.shared.qud)} questions")
-        if self.state.shared.qud:
-            for i, q in enumerate(self.state.shared.qud):
-                print(f"  {i + 1}. {getattr(q, 'predicate', str(q))} = ?")
+        """Display current dialogue state using rich renderer."""
+        self.renderer.print_state(self.state, title="Current Dialogue State")
 
-        print(f"Private Issues: {len(self.state.private.issues)} pending")
-        if self.state.private.issues:
-            for i, q in enumerate(self.state.private.issues[:3]):
-                print(f"  {i + 1}. {getattr(q, 'predicate', str(q))} = ?")
-            if len(self.state.private.issues) > 3:
-                print(f"  ... and {len(self.state.private.issues) - 3} more")
+    def display_diff(self) -> None:
+        """Display diff between last two snapshots."""
+        if len(self.snapshots) < 2:
+            print("Not enough history to show diff.")
+            return
+            
+        before = self.snapshots[-2]
+        after = self.snapshots[-1]
+        diff = compute_diff(before, after)
+        
+        self.renderer.print_diff(diff, title=f"Changes: {before.label} → {after.label}")
 
-        print(f"Commitments: {len(self.state.shared.commitments)} facts")
-        for i, c in enumerate(list(self.state.shared.commitments)[:5]):
-            print(f"  - {c}")
-        if len(self.state.shared.commitments) > 5:
-            print(f"  ... and {len(self.state.shared.commitments) - 5} more")
-
-        print("=" * 70)
+    def display_rule_trace(self) -> None:
+        """Display the most recent rule trace.
+        """
+        if not self.rule_traces:
+            print("No rule trace available.")
+            return
+        trace = self.rule_traces[-1]
+        self.renderer.print_rule_trace(trace, title=f"Rule Trace: {trace.label}")
 
     def display_help(self) -> None:
         """Display help information."""
@@ -420,6 +482,8 @@ Choice Options:
 
 Commands:
   /state            - Show current dialogue state (QUD, issues, commitments)
+  /diff             - Show changes from last move
+  /trace            - Show rule execution trace visualization
   /path             - Show trajectory path (expected vs. actual)
   /help             - Show this help message
   /quit             - Exit explorer
