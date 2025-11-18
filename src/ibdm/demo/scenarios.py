@@ -763,66 +763,131 @@ def scenario_grounding_optimistic() -> DemoScenario:
             ),
             ScenarioStep(
                 speaker="system",
+                utterance="Should this be a mutual or one-way NDA?",
+                description="System continues gathering information",
+                expected_state={"qud": "1 question"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="Mutual",
+                description="User provides NDA type (high confidence)",
+                expected_state={"commitments": "+1", "grounding": "optimistic"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="What is the duration of confidentiality obligations?",
+                description="System asks for duration",
+                expected_state={"qud": "1 question"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="5 years",
+                description="User provides duration (high confidence)",
+                expected_state={"commitments": "+1"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="Which state law should govern this agreement?",
+                description="System asks final question",
+                expected_state={"qud": "1 question"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="California",
+                description="User provides governing law (high confidence) - all info collected",
+                expected_state={"commitments": "+1", "plan": "complete"},
+            ),
+            ScenarioStep(
+                speaker="system",
                 utterance="""
 ╔══════════════════════════════════════════════════════════════╗
-║         OPTIMISTIC GROUNDING ANALYSIS REPORT                 ║
+║         OPTIMISTIC GROUNDING ANALYSIS                        ║
 ╚══════════════════════════════════════════════════════════════╝
 
-Dialogue Completion Summary:
-  Task:            NDA Drafting
-  Grounding Mode:  OPTIMISTIC
-  Status:          ✓ Successfully Grounded
+Grounding Performance (5 critical inputs):
+  1. "I need to draft an NDA" → Confidence: 0.9 → Optimistic: Accept
+  2. "Acme Corp and Smith Inc" → Confidence: 0.85 → Optimistic: Accept
+  3. "January 1, 2025" → Confidence: 0.9 → Optimistic: Accept
+  4. "Mutual" → Confidence: 0.95 → Optimistic: Accept
+  5. "5 years" → Confidence: 0.9 → Optimistic: Accept
+  6. "California" → Confidence: 0.9 → Optimistic: Accept
 
-Information Collected:
-  Parties:         Acme Corp and Smith Inc
-  Effective Date:  January 1, 2025
+Results: 6/6 inputs grounded immediately (100% efficiency)
+Turns saved vs cautious: 6 confirmation turns avoided
+Time saved: ~2 minutes (assuming 20sec/turn)
 
-Grounding Analysis:
+✓ Optimistic grounding enabled fastest possible task completion""",
+                description="System provides grounding analysis summary",
+                expected_state={"grounding_analysis": "complete"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="""Here is your Non-Disclosure Agreement:
 
-Turn-by-Turn Grounding:
-  1. "I need to draft an NDA"
-     Confidence: HIGH (0.9)
-     Strategy:   Optimistic (immediate acceptance)
-     ICM:        [icm:acc*pos] "Okay"
-     Result:     ✓ Grounded without confirmation
+═══════════════════════════════════════════════════════════════════════
+                    MUTUAL NON-DISCLOSURE AGREEMENT
+═══════════════════════════════════════════════════════════════════════
 
-  2. "Acme Corp and Smith Inc"
-     Confidence: HIGH (0.85)
-     Strategy:   Optimistic (immediate acceptance)
-     ICM:        Implicit acceptance
-     Result:     ✓ Grounded, proceed to next question
+This Mutual Non-Disclosure Agreement (the "Agreement") is entered into
+as of January 1, 2025 (the "Effective Date") by and between:
 
-  3. "January 1, 2025"
-     Confidence: HIGH (0.9)
-     Strategy:   Optimistic (immediate acceptance)
-     ICM:        Implicit acceptance
-     Result:     ✓ Grounded, ready for next step
+    Acme Corp ("First Party")
+    and
+    Smith Inc ("Second Party")
 
-Efficiency Metrics:
-  Total Turns:          3 user utterances
-  Confirmation Turns:   0 (optimistic strategy)
-  Clarification Turns:  0 (high confidence throughout)
-  Efficiency Gain:      100% (no overhead for grounding)
+(collectively, the "Parties")
 
-Strategy Benefits:
-  ✓ Fastest dialogue completion
-  ✓ Natural conversational flow
-  ✓ No unnecessary confirmations
-  ✓ User not interrupted by system doubts
+WHEREAS, the Parties wish to explore a business relationship and may
+disclose certain confidential information to each other;
 
-Risk Assessment:
-  ⚠ Assumes high confidence = correct interpretation
-  ⚠ No safety net for misunderstandings
-  ✓ Appropriate when confidence is consistently high
-  ✓ Best for clear, unambiguous utterances
+NOW, THEREFORE, in consideration of the mutual covenants and agreements
+contained herein, the Parties agree as follows:
 
-Recommendation:
-  Optimistic grounding successfully applied. High confidence
-  scores justified immediate acceptance. No errors detected.
-  Dialogue progressed efficiently without grounding overhead.""",
-                description="System generates optimistic grounding analysis",
-                expected_state={"grounding_report": "generated"},
-                is_payoff=True,  # PAYOFF: Grounding analysis report
+1. CONFIDENTIAL INFORMATION
+   Each Party agrees to hold in strict confidence any information marked
+   as confidential or that would reasonably be considered confidential.
+
+2. OBLIGATIONS
+   Each Party shall:
+   (a) Not disclose Confidential Information to third parties
+   (b) Use Confidential Information only for the intended purpose
+   (c) Protect such information with the same care as its own confidential
+       information
+
+3. TERM
+   This Agreement shall remain in effect for a period of 5 years from
+   the Effective Date.
+
+4. GOVERNING LAW
+   This Agreement shall be governed by and construed in accordance with
+   the laws of the State of California, without regard to its conflict
+   of law provisions.
+
+5. ENTIRE AGREEMENT
+   This Agreement constitutes the entire agreement between the Parties
+   concerning the subject matter hereof.
+
+IN WITNESS WHEREOF, the Parties have executed this Agreement as of the
+Effective Date.
+
+_____________________________          _____________________________
+Acme Corp                             Smith Inc
+Authorized Signature                  Authorized Signature
+
+═══════════════════════════════════════════════════════════════════════
+                    [End of Document]
+═══════════════════════════════════════════════════════════════════════
+
+✓ NDA successfully generated using optimistic grounding strategy
+✓ Zero confirmation overhead - maximum efficiency achieved
+✓ Task completed in 6 turns (vs 12+ turns with cautious grounding)""",
+                description="System generates complete NDA document - BUSINESS VALUE DELIVERED",
+                expected_state={
+                    "qud": "0",
+                    "private.issues": "0",
+                    "document_generated": "true",
+                },
+                is_payoff=True,  # PAYOFF: Complete NDA doc + efficiency demo
             ),
         ],
     )
@@ -872,73 +937,147 @@ def scenario_grounding_cautious() -> DemoScenario:
             ),
             ScenarioStep(
                 speaker="system",
+                utterance="Should this be a mutual or one-way NDA?",
+                description="System continues gathering information",
+                expected_state={"qud": "1 question"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="Mutual",
+                description="User provides NDA type",
+                expected_state={"commitments": "+1"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="What is the effective date?",
+                description="System asks for effective date",
+                expected_state={"qud": "1 question"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="January 1, 2025",
+                description="User provides date",
+                expected_state={"commitments": "+1"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="What is the duration of confidentiality obligations?",
+                description="System asks for duration",
+                expected_state={"qud": "1 question"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="3 years",
+                description="User provides duration",
+                expected_state={"commitments": "+1"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="Which state law should govern this agreement?",
+                description="System asks final question",
+                expected_state={"qud": "1 question"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="Delaware",
+                description="User provides governing law - all info collected",
+                expected_state={"commitments": "+1", "plan": "complete"},
+            ),
+            ScenarioStep(
+                speaker="system",
                 utterance="""
 ╔══════════════════════════════════════════════════════════════╗
-║         CAUTIOUS GROUNDING ANALYSIS REPORT                   ║
+║         CAUTIOUS GROUNDING ANALYSIS                          ║
 ╚══════════════════════════════════════════════════════════════╝
 
-Dialogue Completion Summary:
-  Task:            NDA Drafting
-  Grounding Mode:  CAUTIOUS
-  Status:          ✓ Successfully Grounded via Confirmation
+Grounding Performance (7 inputs):
+  1. "Need NDA draft" → Confidence: 0.65 (MEDIUM)
+     ⚠ Ambiguous → Cautious: Request confirmation
+     System: "Do you want to draft an NDA?"
+     User: "Yes" → ✓ Misunderstanding prevented
 
-Information Collected:
-  Task Intent:     Draft NDA (confirmed)
-  Parties:         Acme Corp and Smith Inc
+  2. "Acme Corp and Smith Inc" → Confidence: 0.85 → Optimistic: Accept
+  3. "Mutual" → Confidence: 0.9 → Optimistic: Accept
+  4. "January 1, 2025" → Confidence: 0.9 → Optimistic: Accept
+  5. "3 years" → Confidence: 0.85 → Optimistic: Accept
+  6. "Delaware" → Confidence: 0.9 → Optimistic: Accept
 
-Grounding Analysis:
+Results: 1 confirmation needed, 5 immediately grounded
+Safety overhead: 1 extra turn (vs optimistic)
+Trade-off: Prevented potential task mismatch
 
-Turn-by-Turn Grounding:
-  1. "Need NDA draft"
-     Confidence: MEDIUM (0.65)
-     Strategy:   Cautious (understanding check required)
-     ICM:        [icm:und*int] "Do you want to draft an NDA?"
-     Result:     ⚠ Required confirmation before grounding
+✓ Cautious grounding balanced speed and accuracy effectively""",
+                description="System provides grounding analysis summary",
+                expected_state={"grounding_analysis": "complete"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="""Here is your Non-Disclosure Agreement:
 
-  2. "Yes" (confirmation)
-     Confidence: HIGH (0.95)
-     Strategy:   Optimistic (confirmation accepted)
-     ICM:        Implicit acceptance
-     Result:     ✓ Intent now grounded, proceed with task
+═══════════════════════════════════════════════════════════════════════
+                    MUTUAL NON-DISCLOSURE AGREEMENT
+═══════════════════════════════════════════════════════════════════════
 
-  3. "Acme Corp and Smith Inc"
-     Confidence: HIGH (0.85)
-     Strategy:   Optimistic (clear answer)
-     ICM:        Implicit acceptance
-     Result:     ✓ Grounded, ready for next step
+This Mutual Non-Disclosure Agreement (the "Agreement") is entered into
+as of January 1, 2025 (the "Effective Date") by and between:
 
-Efficiency Metrics:
-  Total Turns:          3 user utterances
-  Confirmation Turns:   1 (understanding check)
-  Clarification Turns:  0 (no misunderstandings)
-  Efficiency:           Good (1 extra turn for safety)
+    Acme Corp ("First Party")
+    and
+    Smith Inc ("Second Party")
 
-Strategy Benefits:
-  ✓ Balanced approach (speed vs. accuracy)
-  ✓ Caught ambiguous initial utterance
-  ✓ Prevented potential misunderstanding
-  ✓ Low overhead (single confirmation)
+(collectively, the "Parties")
 
-Risk Mitigation:
-  ⚠ Initial utterance ambiguous: "Need NDA draft"
-  ✓ System requested understanding confirmation
-  ✓ User clarified intent with "Yes"
-  ✓ Misunderstanding avoided through cautious strategy
+WHEREAS, the Parties wish to explore a business relationship and may
+disclose certain confidential information to each other;
 
-Grounding Ladder:
-  Perception:    ✓ System perceived utterance
-  Understanding: ✓ System confirmed understanding (ICM check)
-  Acceptance:    ✓ User confirmed system's interpretation
-  → Full grounding achieved
+NOW, THEREFORE, in consideration of the mutual covenants and agreements
+contained herein, the Parties agree as follows:
 
-Recommendation:
-  Cautious grounding appropriately applied. Medium confidence
-  utterance required understanding check. One confirmation turn
-  prevented potential misunderstanding. Good balance between
-  efficiency and accuracy.""",
-                description="System generates cautious grounding analysis",
-                expected_state={"grounding_report": "generated"},
-                is_payoff=True,  # PAYOFF: Grounding analysis report
+1. CONFIDENTIAL INFORMATION
+   Each Party agrees to hold in strict confidence any information marked
+   as confidential or that would reasonably be considered confidential.
+
+2. OBLIGATIONS
+   Each Party shall:
+   (a) Not disclose Confidential Information to third parties
+   (b) Use Confidential Information only for the intended purpose
+   (c) Protect such information with the same care as its own confidential
+       information
+
+3. TERM
+   This Agreement shall remain in effect for a period of 3 years from
+   the Effective Date.
+
+4. GOVERNING LAW
+   This Agreement shall be governed by and construed in accordance with
+   the laws of the State of Delaware, without regard to its conflict
+   of law provisions.
+
+5. ENTIRE AGREEMENT
+   This Agreement constitutes the entire agreement between the Parties
+   concerning the subject matter hereof.
+
+IN WITNESS WHEREOF, the Parties have executed this Agreement as of the
+Effective Date.
+
+_____________________________          _____________________________
+Acme Corp                             Smith Inc
+Authorized Signature                  Authorized Signature
+
+═══════════════════════════════════════════════════════════════════════
+                    [End of Document]
+═══════════════════════════════════════════════════════════════════════
+
+✓ NDA successfully generated using cautious grounding strategy
+✓ Task correctly identified through confirmation (prevented mismatch)
+✓ Balanced efficiency: 1 safety check avoided potential rework""",
+                description="System generates complete NDA document - BUSINESS VALUE DELIVERED",
+                expected_state={
+                    "qud": "0",
+                    "private.issues": "0",
+                    "document_generated": "true",
+                },
+                is_payoff=True,  # PAYOFF: Complete NDA doc + safety demo
             ),
         ],
     )
@@ -988,81 +1127,148 @@ def scenario_grounding_pessimistic() -> DemoScenario:
             ),
             ScenarioStep(
                 speaker="system",
+                utterance="Should this be a mutual or one-way NDA?",
+                description="System continues gathering information",
+                expected_state={"qud": "1 question"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="Mutual",
+                description="User provides NDA type",
+                expected_state={"commitments": "+1"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="What is the effective date?",
+                description="System asks for effective date",
+                expected_state={"qud": "1 question"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="January 1, 2025",
+                description="User provides date",
+                expected_state={"commitments": "+1"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="What is the duration of confidentiality obligations?",
+                description="System asks for duration",
+                expected_state={"qud": "1 question"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="5 years",
+                description="User provides duration",
+                expected_state={"commitments": "+1"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="Which state law should govern this agreement?",
+                description="System asks final question",
+                expected_state={"qud": "1 question"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="New York",
+                description="User provides governing law - all info collected",
+                expected_state={"commitments": "+1", "plan": "complete"},
+            ),
+            ScenarioStep(
+                speaker="system",
                 utterance="""
 ╔══════════════════════════════════════════════════════════════╗
-║        PESSIMISTIC GROUNDING ANALYSIS REPORT                 ║
+║        PESSIMISTIC GROUNDING ANALYSIS                        ║
 ╚══════════════════════════════════════════════════════════════╝
 
-Dialogue Completion Summary:
-  Task:            NDA Drafting
-  Grounding Mode:  PESSIMISTIC
-  Status:          ✓ Successfully Grounded via Repetition
+Grounding Performance (7 inputs):
+  1. "NDA" → Confidence: 0.4 (LOW)
+     ✗ Too ambiguous → Pessimistic: Request repetition
+     System: "Sorry, I didn't catch that. Could you repeat?"
+     User: "I need to draft a Non-Disclosure Agreement"
+     ✓ Clear input obtained, catastrophic misunderstanding prevented
 
-Information Collected:
-  Task Intent:     Draft NDA (clarified after repetition)
-  Parties:         Acme Corp and Smith Inc
+  2. "Acme Corp and Smith Inc" → Confidence: 0.85 → Optimistic: Accept
+  3. "Mutual" → Confidence: 0.9 → Optimistic: Accept
+  4. "January 1, 2025" → Confidence: 0.9 → Optimistic: Accept
+  5. "5 years" → Confidence: 0.85 → Optimistic: Accept
+  6. "New York" → Confidence: 0.9 → Optimistic: Accept
 
-Grounding Analysis:
+Results: 1 repetition needed, 5 immediately grounded
+Safety overhead: 1 extra turn (vs optimistic)
+Trade-off: Prevented potential major task mismatch
 
-Turn-by-Turn Grounding:
-  1. "NDA"
-     Confidence: LOW (0.4)
-     Strategy:   Pessimistic (perception failure)
-     ICM:        [icm:per*neg] "Sorry, I didn't catch that. Could you repeat?"
-     Result:     ✗ Failed perception, repetition required
+✓ Pessimistic grounding prevented acting on unreliable input""",
+                description="System provides grounding analysis summary",
+                expected_state={"grounding_analysis": "complete"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="""Here is your Non-Disclosure Agreement:
 
-  2. "I need to draft a Non-Disclosure Agreement" (repetition)
-     Confidence: HIGH (0.9)
-     Strategy:   Optimistic (clear after repetition)
-     ICM:        Implicit acceptance
-     Result:     ✓ Perception successful, understanding achieved
+═══════════════════════════════════════════════════════════════════════
+                    MUTUAL NON-DISCLOSURE AGREEMENT
+═══════════════════════════════════════════════════════════════════════
 
-  3. "Acme Corp and Smith Inc"
-     Confidence: HIGH (0.85)
-     Strategy:   Optimistic (clear answer)
-     ICM:        Implicit acceptance
-     Result:     ✓ Grounded, ready for next step
+This Mutual Non-Disclosure Agreement (the "Agreement") is entered into
+as of January 1, 2025 (the "Effective Date") by and between:
 
-Efficiency Metrics:
-  Total Turns:          3 user utterances
-  Repetition Requests:  1 (perception failure recovery)
-  Clarification Turns:  0 (after perception, understanding was clear)
-  Efficiency:           Moderate (1 extra turn for perception)
+    Acme Corp ("First Party")
+    and
+    Smith Inc ("Second Party")
 
-Strategy Benefits:
-  ✓ Prevented acting on misunderstood input
-  ✓ Safely handled very low confidence utterance
-  ✓ Requested clarification before proceeding
-  ✓ Avoided potential catastrophic misunderstanding
+(collectively, the "Parties")
 
-Risk Mitigation:
-  ⚠ Initial utterance too brief: "NDA" (LOW confidence 0.4)
-  ✗ Perception deemed unreliable
-  ✓ System requested repetition for safety
-  ✓ User provided expanded utterance
-  ✓ Grounding achieved after repetition
+WHEREAS, the Parties wish to explore a business relationship and may
+disclose certain confidential information to each other;
 
-Grounding Ladder Recovery:
-  Perception (Attempt 1):  ✗ Failed (confidence too low)
-  → Repetition Request:     [icm:per*neg]
-  Perception (Attempt 2):  ✓ Successful (clear utterance)
-  Understanding:           ✓ Achieved (full sentence context)
-  Acceptance:              ✓ System proceeded with task
-  → Full grounding achieved after recovery
+NOW, THEREFORE, in consideration of the mutual covenants and agreements
+contained herein, the Parties agree as follows:
 
-Comparison with Other Strategies:
-  Optimistic: Would have guessed "NDA" meaning → High risk
-  Cautious:   Would have confirmed "Did you mean NDA?" → Moderate risk
-  Pessimistic: Requested repetition → Safest approach ✓
+1. CONFIDENTIAL INFORMATION
+   Each Party agrees to hold in strict confidence any information marked
+   as confidential or that would reasonably be considered confidential.
 
-Recommendation:
-  Pessimistic grounding correctly applied. Very low confidence
-  utterance warranted perception check. Repetition provided
-  clearer input, enabling confident task understanding.
-  Extra turn cost justified by safety improvement.""",
-                description="System generates pessimistic grounding analysis",
-                expected_state={"grounding_report": "generated"},
-                is_payoff=True,  # PAYOFF: Grounding analysis report
+2. OBLIGATIONS
+   Each Party shall:
+   (a) Not disclose Confidential Information to third parties
+   (b) Use Confidential Information only for the intended purpose
+   (c) Protect such information with the same care as its own confidential
+       information
+
+3. TERM
+   This Agreement shall remain in effect for a period of 5 years from
+   the Effective Date.
+
+4. GOVERNING LAW
+   This Agreement shall be governed by and construed in accordance with
+   the laws of the State of New York, without regard to its conflict
+   of law provisions.
+
+5. ENTIRE AGREEMENT
+   This Agreement constitutes the entire agreement between the Parties
+   concerning the subject matter hereof.
+
+IN WITNESS WHEREOF, the Parties have executed this Agreement as of the
+Effective Date.
+
+_____________________________          _____________________________
+Acme Corp                             Smith Inc
+Authorized Signature                  Authorized Signature
+
+═══════════════════════════════════════════════════════════════════════
+                    [End of Document]
+═══════════════════════════════════════════════════════════════════════
+
+✓ NDA successfully generated using pessimistic grounding strategy
+✓ Repetition request ensured task was correctly understood
+✓ Safety-first approach: 1 extra turn prevented potential major error""",
+                description="System generates complete NDA document - BUSINESS VALUE DELIVERED",
+                expected_state={
+                    "qud": "0",
+                    "private.issues": "0",
+                    "document_generated": "true",
+                },
+                is_payoff=True,  # PAYOFF: Complete NDA doc + safety-first demo
             ),
         ],
     )
@@ -1128,97 +1334,143 @@ def scenario_grounding_mixed() -> DemoScenario:
             ),
             ScenarioStep(
                 speaker="system",
+                utterance="Should this be a mutual or one-way NDA?",
+                description="System continues gathering information",
+                expected_state={"qud": "1 question"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="Mutual",
+                description="User provides NDA type",
+                expected_state={"commitments": "+1"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="What is the duration of confidentiality obligations?",
+                description="System asks for duration",
+                expected_state={"qud": "1 question"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="3 years",
+                description="User provides duration",
+                expected_state={"commitments": "+1"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="Which state law should govern this agreement?",
+                description="System asks final question",
+                expected_state={"qud": "1 question"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="California",
+                description="User provides governing law - all info collected",
+                expected_state={"commitments": "+1", "plan": "complete"},
+            ),
+            ScenarioStep(
+                speaker="system",
                 utterance="""
 ╔══════════════════════════════════════════════════════════════╗
-║          MIXED GROUNDING STRATEGIES REPORT                   ║
+║          ADAPTIVE GROUNDING ANALYSIS                         ║
 ╚══════════════════════════════════════════════════════════════╝
 
-Dialogue Completion Summary:
-  Task:            NDA Drafting
-  Grounding Mode:  ADAPTIVE (Mixed Strategies)
-  Status:          ✓ Successfully Grounded with Strategy Adaptation
+Grounding Performance (8 inputs with strategy adaptation):
+  1. "I need to draft an NDA" → Confidence: 0.9 (HIGH)
+     Strategy: OPTIMISTIC → Immediate acceptance
 
-Information Collected:
-  Task Intent:     Draft NDA
-  Parties:         Acme Corp and Smith Inc (confirmed)
-  Effective Date:  January 1, 2025
+  2. "Acme and Smith" → Confidence: 0.6 (MEDIUM)
+     ⚠ Informal/ambiguous → Strategy switch: CAUTIOUS
+     System: "Did you mean 'Acme Corp and Smith Inc'?"
+     User: "Yes, exactly" → ✓ Misunderstanding prevented via adaptation
 
-Grounding Analysis - Adaptive Strategy Selection:
+  3-7. All remaining inputs → Confidence: 0.85-0.95 (HIGH)
+     Strategy: OPTIMISTIC → All immediately accepted
 
-Turn-by-Turn Grounding with Strategy Adaptation:
-  1. "I need to draft an NDA"
-     Confidence: HIGH (0.9)
-     Strategy:   OPTIMISTIC → Immediate acceptance
-     ICM:        Implicit acceptance
-     Result:     ✓ Grounded without confirmation
-     Reason:     High confidence justified optimistic approach
+Strategy Distribution:
+  - OPTIMISTIC: 6/7 inputs (86%)
+  - CAUTIOUS: 1/7 inputs (14%)
+  - PESSIMISTIC: 0/7 inputs (0%)
 
-  2. "Acme and Smith"
-     Confidence: MEDIUM (0.6) - Abbreviated, informal
-     Strategy:   CAUTIOUS → Understanding check required
-     ICM:        [icm:und*int] "Did you mean 'Acme Corp and Smith Inc'?"
-     Result:     ⚠ Required confirmation before grounding
-     Reason:     Medium confidence + informal names → safety check
+Adaptation Events: 2
+  Turn 2: HIGH→CAUTIOUS (confidence drop triggered safety check)
+  Turn 3: CAUTIOUS→HIGH (confidence restored, returned to fast mode)
 
-  3. "Yes, exactly" (confirmation)
-     Confidence: HIGH (0.95)
-     Strategy:   OPTIMISTIC → Accept confirmation
-     ICM:        Implicit acceptance
-     Result:     ✓ Parties grounded after confirmation
-     Reason:     Clear affirmation, confidence restored
+Results: Optimal balance of speed and safety
+✓ Fast grounding when confidence permits
+✓ Safety checks only when needed
+✓ Dynamic adaptation to input quality""",
+                description="System provides adaptive grounding analysis summary",
+                expected_state={"grounding_analysis": "complete"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="""Here is your Non-Disclosure Agreement:
 
-  4. "January 1, 2025"
-     Confidence: HIGH (0.9)
-     Strategy:   OPTIMISTIC → Immediate acceptance
-     ICM:        Implicit acceptance
-     Result:     ✓ Grounded, task progressing
-     Reason:     Clear, unambiguous date format
+═══════════════════════════════════════════════════════════════════════
+                    MUTUAL NON-DISCLOSURE AGREEMENT
+═══════════════════════════════════════════════════════════════════════
 
-Strategy Adaptation Summary:
-  Optimistic used:  3/4 turns (75% - high confidence utterances)
-  Cautious used:    1/4 turns (25% - medium confidence utterance)
-  Pessimistic used: 0/4 turns (0% - no low confidence utterances)
+This Mutual Non-Disclosure Agreement (the "Agreement") is entered into
+as of January 1, 2025 (the "Effective Date") by and between:
 
-Efficiency Metrics:
-  Total Turns:          4 user utterances
-  Confirmation Turns:   1 (understanding check for informal names)
-  Repetition Requests:  0 (no perception failures)
-  Adaptation Events:    2 (optimistic→cautious, cautious→optimistic)
-  Overall Efficiency:   Good (minimal overhead, targeted safety)
+    Acme Corp ("First Party")
+    and
+    Smith Inc ("Second Party")
 
-Adaptive Grounding Benefits:
-  ✓ Matched strategy to confidence level dynamically
-  ✓ Fast when possible (optimistic for clear utterances)
-  ✓ Safe when needed (cautious for ambiguous input)
-  ✓ No unnecessary confirmations on high-confidence turns
-  ✓ Prevented misunderstanding on medium-confidence turn
+(collectively, the "Parties")
 
-Confidence-Based Decision Making:
-  HIGH (>0.8):    → Optimistic (3 instances)
-  MEDIUM (0.5-0.8): → Cautious (1 instance)
-  LOW (<0.5):     → Pessimistic (0 instances)
+WHEREAS, the Parties wish to explore a business relationship and may
+disclose certain confidential information to each other;
 
-Risk vs. Efficiency Trade-off:
-  ✓ Optimized for both speed and accuracy
-  ✓ Safety overhead only where needed (1 extra turn)
-  ✓ 75% of dialogue proceeded without grounding overhead
-  ✓ 25% had targeted safety confirmation
+NOW, THEREFORE, in consideration of the mutual covenants and agreements
+contained herein, the Parties agree as follows:
 
-Grounding Strategy Evolution:
-  Turn 1: OPTIMISTIC (conf=0.9) → Direct
-  Turn 2: CAUTIOUS (conf=0.6)   → Adaptation triggered
-  Turn 3: OPTIMISTIC (conf=0.95) → Back to fast mode
-  Turn 4: OPTIMISTIC (conf=0.9)  → Maintained fast mode
+1. CONFIDENTIAL INFORMATION
+   Each Party agrees to hold in strict confidence any information marked
+   as confidential or that would reasonably be considered confidential.
 
-Recommendation:
-  Mixed/adaptive grounding successfully balanced efficiency
-  and accuracy. System dynamically adjusted strategy based
-  on real-time confidence assessment. This approach provides
-  optimal user experience: fast when possible, safe when needed.
-  Ideal for real-world deployment with variable input quality.""",
-                description="System generates adaptive grounding analysis",
-                expected_state={"grounding_report": "generated"},
-                is_payoff=True,  # PAYOFF: Adaptive grounding strategy report
+2. OBLIGATIONS
+   Each Party shall:
+   (a) Not disclose Confidential Information to third parties
+   (b) Use Confidential Information only for the intended purpose
+   (c) Protect such information with the same care as its own confidential
+       information
+
+3. TERM
+   This Agreement shall remain in effect for a period of 3 years from
+   the Effective Date.
+
+4. GOVERNING LAW
+   This Agreement shall be governed by and construed in accordance with
+   the laws of the State of California, without regard to its conflict
+   of law provisions.
+
+5. ENTIRE AGREEMENT
+   This Agreement constitutes the entire agreement between the Parties
+   concerning the subject matter hereof.
+
+IN WITNESS WHEREOF, the Parties have executed this Agreement as of the
+Effective Date.
+
+_____________________________          _____________________________
+Acme Corp                             Smith Inc
+Authorized Signature                  Authorized Signature
+
+═══════════════════════════════════════════════════════════════════════
+                    [End of Document]
+═══════════════════════════════════════════════════════════════════════
+
+✓ NDA successfully generated using adaptive grounding strategy
+✓ Strategy adapted dynamically based on confidence (1 safety check)
+✓ Optimal balance: Fast completion with targeted safety where needed""",
+                description="System generates complete NDA document - BUSINESS VALUE DELIVERED",
+                expected_state={
+                    "qud": "0",
+                    "private.issues": "0",
+                    "document_generated": "true",
+                },
+                is_payoff=True,  # PAYOFF: Complete NDA doc + adaptive strategy demo
             ),
         ],
     )
