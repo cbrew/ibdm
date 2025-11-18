@@ -17,6 +17,11 @@ class Question(ABC):
 
     Questions are the core of Issue-Based Dialogue Management. They represent
     issues that participants collaboratively address through dialogue.
+
+    Attributes:
+        required: Whether this question must be answered before proceeding.
+                 If False, user can override/skip this question. Default: True
+                 (This field is defined in subclasses to maintain proper field ordering)
     """
 
     @abstractmethod
@@ -60,14 +65,19 @@ class Question(ABC):
                 variable=data.get("variable", "x"),
                 predicate=data.get("predicate", ""),
                 constraints=data.get("constraints", {}),
+                required=data.get("required", True),
             )
         elif question_type == "yn":
             return YNQuestion(
                 proposition=data.get("proposition", ""),
                 parameters=data.get("parameters", {}),
+                required=data.get("required", True),
             )
         elif question_type == "alt":
-            return AltQuestion(alternatives=data.get("alternatives", []))
+            return AltQuestion(
+                alternatives=data.get("alternatives", []),
+                required=data.get("required", True),
+            )
         else:
             raise ValueError(f"Unknown question type: {question_type}")
 
@@ -89,6 +99,7 @@ class WhQuestion(Question):
     variable: str
     predicate: str
     constraints: dict[str, Any] = field(default_factory=lambda: {})
+    required: bool = True  # Moved after other fields to satisfy dataclass ordering
 
     def resolves_with(self, answer: "Answer") -> bool:
         """Check if answer provides a value for the variable."""
@@ -104,6 +115,7 @@ class WhQuestion(Question):
             "variable": self.variable,
             "predicate": self.predicate,
             "constraints": self.constraints.copy(),
+            "required": self.required,
         }
 
     def __str__(self) -> str:
@@ -125,6 +137,7 @@ class YNQuestion(Question):
 
     proposition: str
     parameters: dict[str, Any] = field(default_factory=lambda: {})
+    required: bool = True  # Moved after other fields to satisfy dataclass ordering
 
     def resolves_with(self, answer: "Answer") -> bool:
         """Check if answer provides a yes/no value."""
@@ -144,6 +157,7 @@ class YNQuestion(Question):
             "type": "yn",
             "proposition": self.proposition,
             "parameters": self.parameters.copy(),
+            "required": self.required,
         }
 
     def __str__(self) -> str:
@@ -164,6 +178,7 @@ class AltQuestion(Question):
     """
 
     alternatives: list[str] = field(default_factory=lambda: [])
+    required: bool = True  # Moved after other fields to satisfy dataclass ordering
 
     def resolves_with(self, answer: "Answer") -> bool:
         """Check if answer selects one of the alternatives."""
@@ -178,6 +193,7 @@ class AltQuestion(Question):
         return {
             "type": "alt",
             "alternatives": self.alternatives.copy(),
+            "required": self.required,
         }
 
     def __str__(self) -> str:

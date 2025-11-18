@@ -45,6 +45,9 @@ class PrivateIS:
     issues: list[Question] = field(default_factory=lambda: [])
     """Accommodated questions not yet raised to QUD (IBiS3 - Larsson Section 4.6)"""
 
+    overridden_questions: list[Question] = field(default_factory=lambda: [])
+    """Questions user chose to skip (user explicitly requested to proceed without answering)"""
+
     actions: list[Action] = field(default_factory=lambda: [])
     """Pending device actions to be executed (IBiS4 - Larsson Figure 5.1)"""
 
@@ -63,6 +66,9 @@ class PrivateIS:
                 else None
             ),
             "issues": [getattr(q, "to_dict", lambda: str(q))() for q in self.issues],
+            "overridden_questions": [
+                getattr(q, "to_dict", lambda: str(q))() for q in self.overridden_questions
+            ],
             "actions": [a.to_dict() for a in self.actions],  # IBiS4
             "iun": [p.to_dict() for p in self.iun],  # IBiS4 (set -> list for JSON)
         }
@@ -105,6 +111,15 @@ class PrivateIS:
             else:
                 issues.append(q)
 
+        # Reconstruct overridden_questions
+        overridden_data: list[Any] = data.get("overridden_questions", [])
+        overridden_questions: list[Question] = []
+        for q in overridden_data:
+            if isinstance(q, dict):
+                overridden_questions.append(Question.from_dict(cast(dict[str, Any], q)))
+            else:
+                overridden_questions.append(q)
+
         # Reconstruct actions (IBiS4)
         actions_data: list[Any] = data.get("actions", [])
         actions: list[Action] = []
@@ -129,6 +144,7 @@ class PrivateIS:
             beliefs=data.get("beliefs", {}).copy(),
             last_utterance=last_utterance,
             issues=issues,
+            overridden_questions=overridden_questions,
             actions=actions,
             iun=iun,
         )
@@ -140,6 +156,7 @@ class PrivateIS:
             f"agenda={len(self.agenda)}, "
             f"beliefs={len(self.beliefs)}, "
             f"issues={len(self.issues)}, "
+            f"overridden={len(self.overridden_questions)}, "
             f"actions={len(self.actions)}, "
             f"iun={len(self.iun)})"
         )
