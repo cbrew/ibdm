@@ -1483,7 +1483,8 @@ def scenario_action_confirmation() -> DemoScenario:
     """Scenario demonstrating action execution with confirmation.
 
     Shows how the system requests confirmation before executing
-    critical actions (booking, payment, etc.).
+    critical actions (booking, payment, etc.). Extended to show
+    complete travel package with multiple action confirmations.
     """
     return DemoScenario(
         name="Action Confirmation",
@@ -1493,58 +1494,145 @@ def scenario_action_confirmation() -> DemoScenario:
         steps=[
             ScenarioStep(
                 speaker="user",
-                utterance="Book a hotel in Paris from January 5 to January 10, 2025",
-                description="User requests action - system forms booking plan",
-                expected_state={"actions": "1 queued", "plan": "active"},
+                utterance="Book a complete trip to Paris from January 5 to January 10, 2025",
+                description="User requests comprehensive travel booking",
+                expected_state={"actions": "3 queued", "plan": "active"},
             ),
             ScenarioStep(
                 speaker="system",
-                utterance="Should I book Hotel de Paris for January 5-10, 2025?",
-                description="System requests confirmation before executing action",
+                utterance="Should I book flight AF 1234 departing JFK at 6:30 PM on January 5?",
+                description="System requests confirmation for first action (flight)",
                 expected_state={"qud": "1 question (confirmation)"},
             ),
             ScenarioStep(
                 speaker="user",
                 utterance="Yes",
-                description="User confirms action",
-                expected_state={"qud": "0"},
+                description="User confirms flight",
+                expected_state={"qud": "0", "commitments": "+1"},
             ),
             ScenarioStep(
                 speaker="system",
-                utterance="Booking confirmed. Hotel de Paris reserved for January 5-10, 2025.",
-                description="System executes action and reports success",
+                utterance="Flight confirmed. Should I book Hotel de Paris for January 5-10?",
+                description="System confirms flight, requests hotel confirmation",
+                expected_state={"qud": "1 question (confirmation)", "actions": "2 queued"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="Yes",
+                description="User confirms hotel",
+                expected_state={"qud": "0", "commitments": "+1"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="Hotel reserved. Should I book a rental car (compact)?",
+                description="System confirms hotel, requests car rental confirmation",
+                expected_state={"qud": "1 question (confirmation)", "actions": "1 queued"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="Yes, book the car",
+                description="User confirms car rental - all actions confirmed",
+                expected_state={"qud": "0", "commitments": "+1", "plan": "complete"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="Perfect! All bookings confirmed. Generating your complete itinerary...",
+                description="System executes all actions successfully",
                 expected_state={
                     "actions": "0 remaining",
-                    "commitments": "+1 (hotel_booked)",
+                    "commitments": "3 (flight, hotel, car)",
                     "action_result": "success",
                 },
             ),
             ScenarioStep(
                 speaker="system",
                 utterance="""
-╔══════════════════════════════════════════════════════════════╗
-║            BOOKING CONFIRMATION                              ║
-╚══════════════════════════════════════════════════════════════╝
+═══════════════════════════════════════════════════════════════════════
+                    COMPLETE TRAVEL ITINERARY
+═══════════════════════════════════════════════════════════════════════
+Booking Reference: PARIS-2025-00142
+Status:            ✓ ALL CONFIRMED
+Traveler:          Customer
+Destination:       Paris, France
+Travel Dates:      January 5-10, 2025 (5 nights)
 
-Confirmation #: HDP-2025-00142
-Status:         ✓ CONFIRMED
+───────────────────────────────────────────────────────────────────────
+OUTBOUND FLIGHT
+───────────────────────────────────────────────────────────────────────
+Confirmation:      AF-1234-5JAN25
+Airline:           Air France
+Flight:            AF 1234
+Departure:         JFK Terminal 1, New York → 6:30 PM, Jan 5
+Arrival:           CDG Terminal 2E, Paris → 8:15 AM, Jan 6 (+1 day)
+Duration:          7h 45min
+Seat:              23A (Window, Economy)
+Baggage:           1 checked bag included
+Status:            ✓ CONFIRMED
 
-Hotel:          Hotel de Paris
-Location:       Paris, France
-Check-in:       January 5, 2025 (3:00 PM)
-Check-out:      January 10, 2025 (11:00 AM)
-Duration:       5 nights
+───────────────────────────────────────────────────────────────────────
+ACCOMMODATION
+───────────────────────────────────────────────────────────────────────
+Confirmation:      HDP-2025-00142
+Hotel:             Hotel de Paris ⭐⭐⭐⭐
+Location:          8 Rue de la Paix, 75002 Paris
+Check-in:          January 6, 2025 at 3:00 PM
+Check-out:         January 10, 2025 at 11:00 AM
+Duration:          4 nights
+Room:              Superior Double Room with City View
+Rate:              $220/night
+Amenities:         • Free WiFi • Breakfast included • Spa access
+Total:             $880
+Status:            ✓ CONFIRMED
 
-Room Type:      Standard Double
-Rate:           $180/night
-Total:          $900
+───────────────────────────────────────────────────────────────────────
+GROUND TRANSPORTATION
+───────────────────────────────────────────────────────────────────────
+Confirmation:      HERTZ-FR-789456
+Provider:          Hertz France
+Vehicle:           Compact Car (Renault Clio or similar)
+Pickup:            CDG Airport, January 6 at 9:00 AM
+Return:            CDG Airport, January 10 at 5:00 PM
+Duration:          4 days
+Rate:              $45/day
+Insurance:         Basic coverage included
+Total:             $180
+Status:            ✓ CONFIRMED
 
-✓ Reservation confirmed
-✓ Confirmation email sent
-✓ Mobile check-in available""",
-                description="System generates booking confirmation",
+───────────────────────────────────────────────────────────────────────
+RETURN FLIGHT
+───────────────────────────────────────────────────────────────────────
+Confirmation:      AF-1235-10JAN25
+Airline:           Air France
+Flight:            AF 1235
+Departure:         CDG Terminal 2E, Paris → 7:45 PM, Jan 10
+Arrival:           JFK Terminal 1, New York → 10:30 PM, Jan 10
+Duration:          8h 45min
+Seat:              24B (Middle, Economy)
+Baggage:           1 checked bag included
+Status:            ✓ CONFIRMED
+
+═══════════════════════════════════════════════════════════════════════
+COST SUMMARY
+═══════════════════════════════════════════════════════════════════════
+Flights (roundtrip):    $650
+Hotel (4 nights):       $880
+Car rental (4 days):    $180
+                        ─────
+TOTAL PACKAGE:          $1,710
+
+Payment Status:         ✓ Processed
+Confirmation Email:     ✓ Sent to customer@email.com
+Mobile Boarding Pass:   ✓ Available 24hrs before departure
+
+═══════════════════════════════════════════════════════════════════════
+
+✓ Complete Paris travel package confirmed
+✓ All 3 components booked with user confirmation at each step
+✓ Action confirmation workflow demonstrated successfully
+✓ Ready for travel!""",
+                description="Complete travel itinerary with all confirmations",
                 expected_state={"confirmation_generated": "true"},
-                is_payoff=True,  # PAYOFF: Professional booking confirmation
+                is_payoff=True,  # PAYOFF: Complete professional travel itinerary
             ),
         ],
     )
@@ -1555,6 +1643,7 @@ def scenario_negotiation_alternatives() -> DemoScenario:
 
     Shows how the system presents alternatives and handles
     acceptance/rejection using Issues Under Negotiation (IUN).
+    Extended to complete booking after successful negotiation.
     """
     return DemoScenario(
         name="Negotiation with Alternatives",
@@ -1564,8 +1653,8 @@ def scenario_negotiation_alternatives() -> DemoScenario:
         steps=[
             ScenarioStep(
                 speaker="user",
-                utterance="Find me a hotel in Paris",
-                description="User requests hotel search",
+                utterance="Find me a hotel in Paris for January 10-15",
+                description="User requests hotel search with dates",
                 expected_state={"plan": "active"},
             ),
             ScenarioStep(
@@ -1590,8 +1679,8 @@ def scenario_negotiation_alternatives() -> DemoScenario:
             ),
             ScenarioStep(
                 speaker="user",
-                utterance="Yes, that works!",
-                description="User accepts alternative",
+                utterance="Yes, that works! Book it",
+                description="User accepts alternative and requests booking",
                 expected_state={
                     "iun": "0",
                     "commitments": "+1 (hotel selected)",
@@ -1600,38 +1689,105 @@ def scenario_negotiation_alternatives() -> DemoScenario:
             ),
             ScenarioStep(
                 speaker="system",
-                utterance="Great! I'll proceed with Hotel Budget.",
-                description="System confirms negotiation resolution",
-                expected_state={"plan": "progressing"},
+                utterance="Perfect! Should I confirm Hotel Budget for January 10-15, 2025?",
+                description="System requests final booking confirmation",
+                expected_state={"qud": "1 question (confirmation)"},
+            ),
+            ScenarioStep(
+                speaker="user",
+                utterance="Yes, confirm it",
+                description="User confirms final booking",
+                expected_state={"qud": "0", "actions": "1 executing"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="Booking confirmed! Generating your reservation details...",
+                description="System executes booking action successfully",
+                expected_state={"action_result": "success", "plan": "complete"},
             ),
             ScenarioStep(
                 speaker="system",
                 utterance="""
-╔══════════════════════════════════════════════════════════════╗
-║           HOTEL SELECTION SUMMARY                            ║
-╚══════════════════════════════════════════════════════════════╝
+═══════════════════════════════════════════════════════════════════════
+                    BOOKING CONFIRMATION
+═══════════════════════════════════════════════════════════════════════
+Confirmation #:    HB-2025-98765
+Status:            ✓ CONFIRMED VIA NEGOTIATION
+Booking Method:    Alternative Selection (2 options presented, 1 accepted)
 
-Selected Hotel:  Hotel Budget
-Location:        Paris, France
-Rate:            $120/night
-Rating:          ⭐⭐⭐⭐ (4.2/5)
+───────────────────────────────────────────────────────────────────────
+HOTEL DETAILS
+───────────────────────────────────────────────────────────────────────
+Hotel:             Hotel Budget ⭐⭐⭐⭐ (4.2/5 - 1,247 reviews)
+Location:          45 Rue de Rivoli, 75001 Paris, France
+                   • 5 min walk to Louvre Museum
+                   • Near Metro: Châtelet (Lines 1, 4, 7, 11, 14)
 
-Amenities:
-  ✓ Free WiFi
-  ✓ Breakfast included
-  ✓ 24-hour reception
+Check-in:          January 10, 2025 at 2:00 PM
+Check-out:         January 15, 2025 at 11:00 AM
+Duration:          5 nights
 
-Negotiation Summary:
-  • Alternatives presented: 2 options
-  • Hotel Expensive ($200/night) - Rejected (too expensive)
-  • Hotel Budget ($120/night) - Accepted
-  • Savings: $80/night vs. expensive option
+Room Type:         Standard Double Room
+Bed:               1 Queen Bed
+Max Occupancy:     2 guests
+View:              City view
 
-✓ Selection finalized via negotiation
-✓ Ready to proceed with booking""",
-                description="System generates selection summary",
-                expected_state={"selection_summary": "generated"},
-                is_payoff=True,  # PAYOFF: Negotiation result summary
+───────────────────────────────────────────────────────────────────────
+AMENITIES & SERVICES
+───────────────────────────────────────────────────────────────────────
+✓ Free high-speed WiFi throughout hotel
+✓ Continental breakfast included (7:00 AM - 10:00 AM)
+✓ 24-hour front desk and concierge
+✓ Luggage storage available
+✓ Daily housekeeping
+✓ Safe in room
+✓ Hair dryer and toiletries
+
+───────────────────────────────────────────────────────────────────────
+NEGOTIATION SUMMARY
+───────────────────────────────────────────────────────────────────────
+Initial Options Presented:
+  1. Hotel Expensive - $200/night
+     User Response: ✗ Rejected (too expensive)
+
+  2. Hotel Budget - $120/night
+     User Response: ✓ Accepted
+
+Negotiation Outcome:
+  • User saved: $80/night ($400 total for 5 nights)
+  • Alternative successfully negotiated
+  • Both parties satisfied with final selection
+
+───────────────────────────────────────────────────────────────────────
+COST BREAKDOWN
+───────────────────────────────────────────────────────────────────────
+Room Rate:            $120/night × 5 nights = $600.00
+City Tax:                    $3.50/night × 5 =  $17.50
+Service Fee:                                    $12.50
+                                                ───────
+TOTAL:                                         $630.00
+
+Payment Method:       Credit card ending in 4567
+Payment Status:       ✓ Authorized (charged at check-in)
+
+───────────────────────────────────────────────────────────────────────
+CONFIRMATION DETAILS
+───────────────────────────────────────────────────────────────────────
+✓ Confirmation email sent to: customer@email.com
+✓ Reservation guaranteed (credit card on file)
+✓ Free cancellation until January 3, 2025
+✓ Mobile check-in available via hotel app
+
+═══════════════════════════════════════════════════════════════════════
+
+✓ Booking completed successfully via negotiation workflow
+✓ Alternative selection process demonstrated (IUN)
+✓ User preferences respected (rejected expensive, accepted budget)
+✓ $400 saved through negotiation
+✓ Ready for Paris trip!""",
+                description="Complete booking confirmation after successful negotiation",
+                expected_state={"confirmation_generated": "true"},
+                is_payoff=True,  # PAYOFF: Complete booking after negotiation
             ),
         ],
     )
@@ -1641,7 +1797,8 @@ def scenario_action_rollback() -> DemoScenario:
     """Scenario demonstrating action rollback on failure.
 
     Shows how the system handles action failures and rolls back
-    optimistic commitments when execution fails.
+    optimistic commitments when execution fails. Extended to show
+    successful recovery with alternative payment method.
     """
     return DemoScenario(
         name="Action Rollback",
@@ -1686,42 +1843,117 @@ def scenario_action_rollback() -> DemoScenario:
                 expected_state={"qud": "1 question (recovery)"},
             ),
             ScenarioStep(
+                speaker="user",
+                utterance="Yes, try my other credit card",
+                description="User accepts recovery option with alternative payment",
+                expected_state={"qud": "0", "payment_method": "alternative"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="Attempting booking with alternative payment method...",
+                description="System retries with new payment method",
+                expected_state={"action_status": "retrying"},
+            ),
+            ScenarioStep(
+                speaker="system",
+                utterance="Success! Payment accepted. Hotel de Paris is now confirmed.",
+                description="System successfully completes booking with alternative payment",
+                expected_state={
+                    "action_result": "success",
+                    "commitments": "+1 (hotel_booked)",
+                    "recovery": "successful",
+                },
+            ),
+            ScenarioStep(
                 speaker="system",
                 utterance="""
-╔══════════════════════════════════════════════════════════════╗
-║         ERROR RECOVERY REPORT                                ║
-╚══════════════════════════════════════════════════════════════╝
+═══════════════════════════════════════════════════════════════════════
+                    BOOKING CONFIRMATION - RECOVERED
+═══════════════════════════════════════════════════════════════════════
+Confirmation #:    HDP-2025-REC-142
+Status:            ✓ CONFIRMED (after recovery)
+Recovery Method:   Alternative payment successful
 
-Transaction ID: HDP-2025-FAIL-142
-Status:         ✗ FAILED → ✓ RECOVERED
+───────────────────────────────────────────────────────────────────────
+BOOKING DETAILS
+───────────────────────────────────────────────────────────────────────
+Hotel:             Hotel de Paris ⭐⭐⭐⭐⭐
+Location:          5 Place Vendôme, 75001 Paris, France
+Check-in:          January 5, 2025 at 3:00 PM
+Check-out:         January 10, 2025 at 11:00 AM
+Duration:          5 nights
 
-Original Request:
-  Hotel:        Hotel de Paris
-  Dates:        January 5-10, 2025
-  Status:       Attempted (optimistic)
+Room Type:         Deluxe Double Room
+Amenities:         • King bed • City view • Marble bathroom
+                   • Complimentary minibar • Nespresso machine
+                   • Free WiFi • Daily turndown service
 
-Error Details:
-  Type:         Payment declined
-  Code:         PAY-001
-  Detected:     During execution
-  Impact:       Booking not completed
+───────────────────────────────────────────────────────────────────────
+COST BREAKDOWN
+───────────────────────────────────────────────────────────────────────
+Room Rate:            $350/night × 5 nights = $1,750.00
+City Tax:                    $5.00/night × 5 =    $25.00
+Resort Fee:                                        $50.00
+                                                   ──────
+TOTAL:                                          $1,825.00
 
-Recovery Actions Taken:
-  ✓ Optimistic commitment rolled back
-  ✓ No charges applied
-  ✓ System state restored to pre-booking
-  ✓ Alternative payment options offered
+Payment Status:       ✓ CHARGED (alternative card ending 9876)
 
-System Integrity:
-  ✓ Clean rollback performed
-  ✓ No inconsistent state
-  ✓ User informed of failure
-  ✓ Recovery path provided
+───────────────────────────────────────────────────────────────────────
+RECOVERY TIMELINE
+───────────────────────────────────────────────────────────────────────
+22:15:30  Initial booking attempt started
+22:15:45  Payment processing with card ending 1234
+22:15:52  ✗ Payment DECLINED (insufficient funds)
+22:15:53  ✓ Automatic rollback initiated
+22:15:54  ✓ Optimistic commitment removed
+22:15:55  ✓ State restored to pre-booking
+22:15:56  Alternative payment option offered to user
+22:16:10  User provided alternative card ending 9876
+22:16:15  Retry attempt started
+22:16:22  ✓ Payment APPROVED
+22:16:25  ✓ Booking CONFIRMED
 
-Ready for retry with alternative payment method.""",
-                description="System generates error recovery report",
-                expected_state={"recovery_report": "generated"},
-                is_payoff=True,  # PAYOFF: Error handling and recovery report
+Total Recovery Time: 55 seconds
+User Impact: Minimal (single retry, no manual intervention needed)
+
+───────────────────────────────────────────────────────────────────────
+ERROR RECOVERY ANALYSIS
+───────────────────────────────────────────────────────────────────────
+Failure Type:          Payment declined (card 1234)
+Detection:             Immediate (during transaction)
+Rollback:              ✓ Automatic and complete
+State Consistency:     ✓ Maintained throughout
+User Notification:     ✓ Transparent error communication
+Recovery Offered:      ✓ Alternative payment suggested
+Retry Success:         ✓ Booking completed with card 9876
+
+Recovery Effectiveness:
+  ✓ No data loss or corruption
+  ✓ No duplicate charges
+  ✓ Clean state transitions (booking → rollback → rebooked)
+  ✓ User experience gracefully handled
+  ✓ Final outcome: Successful booking despite initial failure
+
+═══════════════════════════════════════════════════════════════════════
+CONFIRMATION DETAILS
+═══════════════════════════════════════════════════════════════════════
+✓ Confirmation email sent to: customer@email.com
+✓ Booking reference: HDP-2025-REC-142
+✓ Credit card charged: Card ending 9876
+✓ Cancellation policy: Free until 24 hours before check-in
+
+═══════════════════════════════════════════════════════════════════════
+
+✓ Booking successfully recovered from payment failure
+✓ Rollback mechanism demonstrated (optimistic commitment removed cleanly)
+✓ Alternative payment method accepted
+✓ Complete end-to-end error recovery workflow shown
+✓ System integrity maintained throughout failure and recovery
+✓ Hotel reservation confirmed - ready for Paris trip!""",
+                description="Complete booking confirmation after successful error recovery",
+                expected_state={"confirmation_generated": "true", "plan": "complete"},
+                is_payoff=True,  # PAYOFF: Complete recovery + final booking
             ),
         ],
     )
