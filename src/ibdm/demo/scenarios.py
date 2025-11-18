@@ -192,7 +192,36 @@ Authorized Signature                  Authorized Signature
 ═══════════════════════════════════════════════════════════════════════
 
 ✓ NDA successfully generated using your specifications
-✓ Ready for review and execution""",
+✓ Ready for review and execution
+
+═══════════════════════════════════════════════════════════════════════
+                    EFFICIENCY METRICS DASHBOARD
+═══════════════════════════════════════════════════════════════════════
+
+Performance Summary:
+  Total Turns:              13 turns
+  Time Elapsed:             ~4.3 minutes (estimated at 20sec/turn)
+  Success Rate:             100% (task completed successfully)
+
+Efficiency vs Manual Baseline:
+  Manual Process:           ~2 hours (lawyer drafting NDA)
+  IBDM System:              ~4.3 minutes
+  Time Saved:               ~116 minutes (96% reduction)
+  Cost Savings:             $464 (assuming $240/hour lawyer cost)
+
+Dialogue Strategy Impact:
+  Strategy Used:            Incremental Questioning (IBiS-3)
+  Question Accommodation:   5 questions raised systematically
+  Information Gathering:    Complete via structured dialogue
+  Error Rate:               0% (systematic approach prevents gaps)
+
+ROI Calculation:
+  Business Value Delivered: Professional NDA document
+  Estimated Value:          $500 (standard NDA drafting fee)
+  System Cost:              ~$0.30 (API calls + compute)
+  Net ROI:                  $499.70 (166,567% return)
+
+═══════════════════════════════════════════════════════════════════════""",
                 description=(
                     "System generates complete NDA document using all collected information"
                 ),
@@ -2349,6 +2378,35 @@ Business Value:
   Time to Draft:      ~5 minutes (vs ~2 hours manually)
   Cost Savings:       ~$500 (lawyer time)
   Accuracy:           100% (all terms captured correctly)
+
+═══════════════════════════════════════════════════════════════════════
+                    EFFICIENCY METRICS DASHBOARD
+═══════════════════════════════════════════════════════════════════════
+
+Performance Summary:
+  Total Turns:              18 turns
+  Time Elapsed:             ~6 minutes (estimated at 20sec/turn)
+  Success Rate:             100% (contract completed successfully)
+
+Efficiency vs Manual Baseline:
+  Manual Process:           ~2 hours (lawyer drafting contract)
+  IBDM System:              ~6 minutes
+  Time Saved:               ~114 minutes (95% reduction)
+  Cost Savings:             $456 (assuming $240/hour lawyer cost)
+
+Dialogue Strategy Impact:
+  Multi-Feature Integration: IBiS-2 + IBiS-3 + IBiS-4
+  Grounding Adaptations:    3 strategies (pessimistic/cautious/optimistic)
+  Clarifications:           2 (prevented misunderstandings)
+  Negotiations:             1 (payment terms resolved)
+  Error Rate:               0% (complete accuracy)
+
+ROI Calculation:
+  Business Value Delivered: $180K software development contract
+  Estimated Value:          $1,000 (contract drafting fee)
+  System Cost:              ~$0.40 (API calls + compute)
+  Net ROI:                  $999.60 (249,900% return)
+  Strategic Value:          Enabled $180K business opportunity
 
 ═══════════════════════════════════════════════════════════════════════
 
