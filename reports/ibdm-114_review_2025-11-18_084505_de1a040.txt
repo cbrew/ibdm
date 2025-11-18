@@ -1,0 +1,30 @@
+================================================================================
+LARSSON ALIGNMENT REVIEW
+================================================================================
+Task ID: ibdm-114
+Completed: 2025-11-18_084505
+Git Hash: de1a040
+
+SCORE SUMMARY:
+  Baseline: 58.7/100
+  Final:    58.7/100
+  Delta:    0.0
+
+PREDICTION:
+PREDICTION:
+
+
+
+DETAILED COMPARISON:
+See baseline: ibdm-114_baseline_2025-11-18_084135_a9495d5.json
+See final: ibdm-114_final_2025-11-18_084501_de1a040.json
+
+Component Changes:
+--------------------------------------------------------------------------------
+  → Architectural Compliance        35.0 →  35.0 (+0.0)
+  → Information State Structure     97.5 →  97.5 (+0.0)
+  → Semantic Operations Coverage    50.0 →  50.0 (+0.0)
+  → Rules Coverage                  41.6 →  41.6 (+0.0)
+  → Domain Independence             72.3 →  72.3 (+0.0)
+
+================================================================================\n

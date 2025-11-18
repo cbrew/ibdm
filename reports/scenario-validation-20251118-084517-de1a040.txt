@@ -1,0 +1,104 @@
+================================================================================
+SCENARIO VALIDATION REPORT
+================================================================================
+Timestamp: 2025-11-18 08:45:16
+Git Hash:  de1a040
+Mode:      Expected-path-only (no distractors)
+
+SUMMARY
+--------------------------------------------------------------------------------
+Total Scenarios:      13
+Reaching Payoff:      13/13 (100%)
+
+Demo Quality Distribution:
+  Excellent: 12
+  Good:      1
+  Fair:      0
+  Poor:      0
+
+IBiS-3 SCENARIOS (5 total)
+--------------------------------------------------------------------------------
+✓ Incremental Questioning
+   Quality: Excellent
+   Score:   965.4
+   Paths:   12/21 reach payoff
+
+✓ Volunteer Information
+   Quality: Excellent
+   Score:   720.0
+   Paths:   7/8 reach payoff
+
+✓ Clarification Questions
+   Quality: Excellent
+   Score:   786.2
+   Paths:   20/23 reach payoff
+
+✓ Dependent Questions
+   Quality: Excellent
+   Score:   736.2
+   Paths:   10/12 reach payoff
+
+✓ Belief Revision (Reaccommodation)
+   Quality: Excellent
+   Score:   600.0
+   Paths:   2/6 reach payoff
+
+IBiS-2 SCENARIOS (4 total)
+--------------------------------------------------------------------------------
+✓ Optimistic Grounding
+   Quality: Excellent
+   Score:   965.7
+   Paths:   2/7 reach payoff
+
+✓ Cautious Grounding
+   Quality: Excellent
+   Score:   931.0
+   Paths:   2/8 reach payoff
+
+✓ Pessimistic Grounding
+   Quality: Excellent
+   Score:   981.0
+   Paths:   2/8 reach payoff
+
+✓ Mixed Grounding Strategies
+   Quality: Excellent
+   Score:   881.0
+   Paths:   2/8 reach payoff
+
+IBiS-4 SCENARIOS (4 total)
+--------------------------------------------------------------------------------
+✓ Action Confirmation
+   Quality: Excellent
+   Score:   583.3
+   Paths:   4/9 reach payoff
+
+✓ Negotiation with Alternatives
+   Quality: Excellent
+   Score:   583.3
+   Paths:   24/33 reach payoff
+
+✓ Action Rollback
+   Quality: Excellent
+   Score:   550.0
+   Paths:   1/3 reach payoff
+
+✓ Complex Contract Negotiation
+   Quality: Good
+   Score:   661.8
+   Paths:   2/10 reach payoff
+
+RECOMMENDATIONS
+--------------------------------------------------------------------------------
+Top 5 Demo Scenarios (Recommended for Showcase):
+  1. Pessimistic Grounding (IBiS-2)
+     Quality: Excellent, Score: 981.0
+  2. Optimistic Grounding (IBiS-2)
+     Quality: Excellent, Score: 965.7
+  3. Incremental Questioning (IBiS-3)
+     Quality: Excellent, Score: 965.4
+  4. Cautious Grounding (IBiS-2)
+     Quality: Excellent, Score: 931.0
+  5. Mixed Grounding Strategies (IBiS-2)
+     Quality: Excellent, Score: 881.0
+
+================================================================================
