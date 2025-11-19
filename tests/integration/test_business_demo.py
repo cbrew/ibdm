@@ -377,3 +377,170 @@ def test_documentation_exists():
 
     # Should be substantial
     assert len(content) > 5000, "Guide should be comprehensive (>5000 chars)"
+
+
+class TestStateReconstruction:
+    """Test that BusinessDemo properly reconstructs InformationState from scenario JSON."""
+
+    @pytest.fixture
+    def business_demo(self):
+        """Create a BusinessDemo instance for testing."""
+        # Import BusinessDemo from the script
+        sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
+        sys.path.insert(0, str(PROJECT_ROOT / "src"))
+
+        # Import the script as a module
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location("run_business_demo", LAUNCHER_SCRIPT)
+        if spec and spec.loader:
+            run_business_demo = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(run_business_demo)
+            business_demo_class = run_business_demo.BusinessDemo
+        else:
+            pytest.skip("Could not load business demo script")
+
+        scenario_file = SCENARIOS_DIR / "nda_basic.json"
+        demo = business_demo_class(scenario_file, verbose=False, auto_advance=True)
+        return demo
+
+    def test_parse_wh_question_from_string(self, business_demo):
+        """Test parsing WhQuestion from state_changes string."""
+        question = business_demo._parse_question_from_string("?x.legal_entities(x)")
+
+        assert question is not None, "Should parse WhQuestion"
+        assert question.variable == "x", "Should extract variable"
+        assert question.predicate == "legal_entities", "Should extract predicate"
+
+    def test_parse_yn_question_from_string(self, business_demo):
+        """Test parsing YNQuestion from simple string."""
+        question = business_demo._parse_question_from_string("?nda_type")
+
+        assert question is not None, "Should parse YNQuestion"
+        assert question.proposition == "nda_type", "Should extract proposition"
+
+    def test_create_plan_from_description(self, business_demo):
+        """Test creating Plan object from description."""
+        plan = business_demo._create_plan_from_description("Draft NDA with 5 questions")
+
+        assert plan is not None, "Should create plan"
+        assert plan.plan_type == "findout", "Should have findout type"
+        assert "Draft NDA" in plan.content, "Should preserve description"
+        assert plan.status == "active", "Should start as active"
+
+    def test_apply_qud_pushed_state_change(self, business_demo):
+        """Test applying qud_pushed state change to InformationState."""
+        state = business_demo.state
+        initial_qud_length = len(state.shared.qud)
+
+        state_changes = {"qud_pushed": "?x.legal_entities(x)"}
+        business_demo._apply_state_changes(state, state_changes)
+
+        assert len(state.shared.qud) == initial_qud_length + 1, "Should push to QUD"
+        assert state.shared.qud[-1].variable == "x", "Should push correct question"
+        assert state.shared.qud[-1].predicate == "legal_entities", "Should have correct predicate"
+
+    def test_apply_qud_popped_state_change(self, business_demo):
+        """Test applying qud_popped state change to InformationState."""
+        state = business_demo.state
+
+        # First push a question
+        state_changes_push = {"qud_pushed": "?x.test_predicate(x)"}
+        business_demo._apply_state_changes(state, state_changes_push)
+        qud_length_after_push = len(state.shared.qud)
+
+        # Then pop it
+        state_changes_pop = {"qud_popped": True}
+        business_demo._apply_state_changes(state, state_changes_pop)
+
+        assert len(state.shared.qud) == qud_length_after_push - 1, "Should pop from QUD"
+
+    def test_apply_commitment_added_state_change(self, business_demo):
+        """Test applying commitment_added state change to InformationState."""
+        state = business_demo.state
+        initial_commitments = len(state.shared.commitments)
+
+        state_changes = {"commitment_added": "legal_entities(Acme Corp, TechStart Inc)"}
+        business_demo._apply_state_changes(state, state_changes)
+
+        assert len(state.shared.commitments) == initial_commitments + 1, "Should add commitment"
+        assert "legal_entities(Acme Corp, TechStart Inc)" in state.shared.commitments
+
+    def test_apply_issues_added_state_change(self, business_demo):
+        """Test applying issues_added state change to InformationState."""
+        state = business_demo.state
+        initial_issues = len(state.private.issues)
+
+        state_changes = {
+            "issues_added": ["?x.parties(x)", "?x.effective_date(x)", "?x.governing_law(x)"]
+        }
+        business_demo._apply_state_changes(state, state_changes)
+
+        assert len(state.private.issues) == initial_issues + 3, "Should add 3 issues"
+        assert all(hasattr(q, "predicate") for q in state.private.issues[-3:]), (
+            "Should be Question objects"
+        )
+
+    def test_apply_plan_created_state_change(self, business_demo):
+        """Test applying plan_created state change to InformationState."""
+        state = business_demo.state
+        initial_plans = len(state.private.plan)
+
+        state_changes = {"plan_created": "Draft NDA with 5 required questions"}
+        business_demo._apply_state_changes(state, state_changes)
+
+        assert len(state.private.plan) == initial_plans + 1, "Should add plan"
+        assert "Draft NDA" in state.private.plan[-1].content, "Should have correct content"
+
+    def test_apply_plan_status_state_change(self, business_demo):
+        """Test applying plan_status state change to InformationState."""
+        state = business_demo.state
+
+        # First create a plan
+        state_changes_create = {"plan_created": "Test plan"}
+        business_demo._apply_state_changes(state, state_changes_create)
+
+        # Then update its status
+        state_changes_status = {"plan_status": "completed"}
+        business_demo._apply_state_changes(state, state_changes_status)
+
+        assert state.private.plan[-1].status == "completed", "Should update plan status"
+
+    def test_state_reconstruction_through_scenario(self, business_demo):
+        """Test that running scenario properly reconstructs state."""
+        # Run the full scenario (without output)
+        business_demo.verbose = False
+        business_demo.run_scenario()
+
+        state = business_demo.state
+
+        # After NDA scenario, should have commitments
+        assert len(state.shared.commitments) > 0, "Should have commitments from answers"
+
+        # QUD should be managed (pushed and popped throughout)
+        # We can't assert exact length since it varies, but structure should be valid
+        assert isinstance(state.shared.qud, list), "QUD should be a list"
+
+    def test_state_serialization_after_reconstruction(self, business_demo):
+        """Test that reconstructed state can be serialized."""
+        # Apply some state changes
+        state_changes = {
+            "qud_pushed": "?x.test(x)",
+            "commitment_added": "test_commitment",
+            "plan_created": "test plan",
+        }
+        business_demo._apply_state_changes(business_demo.state, state_changes)
+
+        # Serialize state
+        state_dict = business_demo.state.to_dict()
+
+        # Check serialization succeeded
+        assert isinstance(state_dict, dict), "Should serialize to dict"
+        assert "shared" in state_dict, "Should have shared section"
+        assert "private" in state_dict, "Should have private section"
+        assert "control" in state_dict, "Should have control section"
+
+        # Check reconstructed data is present
+        assert len(state_dict["shared"]["qud"]) > 0, "Should have QUD in serialization"
+        assert len(state_dict["shared"]["commitments"]) > 0, "Should have commitments"
+        assert len(state_dict["private"]["plan"]) > 0, "Should have plans"
