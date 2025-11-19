@@ -38,45 +38,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from ibdm.core import InformationState
 from ibdm.core.plans import Plan
 from ibdm.core.questions import Question
+from ibdm.demo.visualization import DialogueHistory, DialogueVisualizer
 from ibdm.domains.nda_domain import get_nda_domain
-
-
-# Simple classes for demo reporting (no external dependencies)
-class DialogueHistory:
-    """Lightweight dialogue history for demo reporting."""
-
-    def __init__(self, session_id: str, start_time: str, metadata: dict[str, Any]):
-        self.session_id = session_id
-        self.start_time = start_time
-        self.end_time: str | None = None
-        self.metadata = metadata
-        self.turns: list[dict[str, Any]] = []
-
-    def add_turn(
-        self,
-        turn_number: int,
-        speaker: str,
-        utterance: str,
-        move_type: str,
-        state_snapshot: dict[str, Any] | None = None,
-    ) -> None:
-        """Add a turn to the history."""
-        self.turns.append(
-            {
-                "turn": turn_number,
-                "speaker": speaker,
-                "utterance": utterance,
-                "move_type": move_type,
-                "state": state_snapshot,
-            }
-        )
-
-
-class DialogueVisualizer:
-    """Lightweight visualizer placeholder (not used in this demo)."""
-
-    def __init__(self, width: int = 80):
-        self.width = width
 
 
 class BusinessDemo:
