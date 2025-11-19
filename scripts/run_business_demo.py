@@ -34,44 +34,12 @@ from typing import Any
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-# Simplified imports for demo - avoid heavy dependencies
-try:
-    from ibdm.core import InformationState
-    from ibdm.core.plans import Plan
-    from ibdm.core.questions import Question
-    from ibdm.domains.nda_domain import get_nda_domain
-except ImportError as e:
-    print(f"Error importing IBDM modules: {e}")
-    print("This script requires IBDM to be installed.")
-    sys.exit(1)
-
-# Mock DialogueHistory and DialogueVisualizer if not available
-try:
-    from ibdm.demo.visualization import DialogueHistory, DialogueVisualizer
-except ImportError:
-    # Lightweight fallbacks
-    class DialogueHistory:
-        def __init__(self, session_id, start_time, metadata):
-            self.session_id = session_id
-            self.start_time = start_time
-            self.end_time = None
-            self.metadata = metadata
-            self.turns = []
-
-        def add_turn(self, turn_number, speaker, utterance, move_type, state_snapshot=None):
-            self.turns.append(
-                {
-                    "turn": turn_number,
-                    "speaker": speaker,
-                    "utterance": utterance,
-                    "move_type": move_type,
-                    "state": state_snapshot,
-                }
-            )
-
-    class DialogueVisualizer:
-        def __init__(self, width=80):
-            self.width = width
+# Required imports - fail fast if not available
+from ibdm.core import InformationState
+from ibdm.core.plans import Plan
+from ibdm.core.questions import Question
+from ibdm.demo.visualization import DialogueHistory, DialogueVisualizer
+from ibdm.domains.nda_domain import get_nda_domain
 
 
 class BusinessDemo:
@@ -124,23 +92,16 @@ class BusinessDemo:
         # Initialize NLG engine conditionally (only if needed)
         self.nlg_engine = None
         if self.nlg_mode != "off":
-            try:
-                from ibdm.nlg.nlg_engine import NLGEngine, NLGEngineConfig
+            from ibdm.nlg.nlg_engine import NLGEngine, NLGEngineConfig
 
-                config = NLGEngineConfig(
-                    default_strategy="plan_aware",
-                    use_plan_awareness=True,
-                    use_domain_descriptions=True,
-                )
-                self.nlg_engine = NLGEngine(config)
-                if self.verbose:
-                    print(f"✓ NLG engine initialized (mode: {nlg_mode})")
-            except ImportError:
-                print(
-                    f"⚠ Warning: NLG mode '{nlg_mode}' requested but NLG engine not available. "
-                    "Falling back to scripted mode."
-                )
-                self.nlg_mode = "off"
+            config = NLGEngineConfig(
+                default_strategy="plan_aware",
+                use_plan_awareness=True,
+                use_domain_descriptions=True,
+            )
+            self.nlg_engine = NLGEngine(config)
+            if self.verbose:
+                print(f"✓ NLG engine initialized (mode: {nlg_mode})")
 
     def print_banner(self) -> None:
         """Print demo banner."""
@@ -194,23 +155,17 @@ class BusinessDemo:
         # Generate NLG utterance for system turns if needed
         nlg_utterance = None
         if speaker == "system" and self.nlg_engine is not None and self.nlg_mode != "off":
-            try:
-                # Create DialogueMove from semantic annotations in turn data
-                # NOTE: This LOADS structured semantic data from JSON (qud_pushed, etc.),
-                # NOT from natural language text. The scenario JSON contains
-                # semantic representations that we convert to DialogueMove objects.
-                # This demonstrates: SEMANTIC REPRESENTATION → NATURAL LANGUAGE (NLG)
-                # Future NLU work would be: NATURAL LANGUAGE → SEMANTIC REPRESENTATION
-                move = self._create_system_dialogue_move(turn_data)
+            # Create DialogueMove from semantic annotations in turn data
+            # NOTE: This LOADS structured semantic data from JSON (qud_pushed, etc.),
+            # NOT from natural language text. The scenario JSON contains
+            # semantic representations that we convert to DialogueMove objects.
+            # This demonstrates: SEMANTIC REPRESENTATION → NATURAL LANGUAGE (NLG)
+            # Future NLU work would be: NATURAL LANGUAGE → SEMANTIC REPRESENTATION
+            move = self._create_system_dialogue_move(turn_data)
 
-                # Generate natural language using NLG engine
-                nlg_result = self.nlg_engine.generate(move, self.state)
-                nlg_utterance = nlg_result.text
-            except Exception as e:
-                # Fall back to scripted on error
-                if self.verbose:
-                    print(f"⚠ NLG generation failed: {e}")
-                nlg_utterance = None
+            # Generate natural language using NLG engine
+            nlg_result = self.nlg_engine.generate(move, self.state)
+            nlg_utterance = nlg_result.utterance_text
 
         # Display utterances based on mode
         if speaker == "user" or self.nlg_mode == "off":
@@ -1308,31 +1263,20 @@ def main() -> int:
 
     # Run scenarios
     for scenario_file in scenario_files:
-        try:
-            demo = BusinessDemo(
-                scenario_file,
-                verbose=not args.quiet,
-                auto_advance=not args.manual,
-                nlg_mode=args.nlg_mode,
-            )
+        demo = BusinessDemo(
+            scenario_file,
+            verbose=not args.quiet,
+            auto_advance=not args.manual,
+            nlg_mode=args.nlg_mode,
+        )
 
-            demo.run_scenario()
+        demo.run_scenario()
 
-            # Generate reports
-            if not args.no_report:
-                business_report, engineer_report = demo.export_report(args.output_dir)
-                print(f"✓ Business report saved: {business_report}")
-                print(f"✓ Engineer report saved: {engineer_report}")
-
-        except KeyboardInterrupt:
-            print("\n\nDemo interrupted by user.")
-            return 130
-        except Exception as e:
-            print(f"\n✗ Error running scenario: {e}")
-            import traceback
-
-            traceback.print_exc()
-            return 1
+        # Generate reports
+        if not args.no_report:
+            business_report, engineer_report = demo.export_report(args.output_dir)
+            print(f"✓ Business report saved: {business_report}")
+            print(f"✓ Engineer report saved: {engineer_report}")
 
     print("\n✓ All demonstrations complete!")
     return 0
