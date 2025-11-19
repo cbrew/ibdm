@@ -412,7 +412,13 @@ class NLGEngine:
         """
         base_prompt = (
             "You are a natural language generation system for a dialogue management system. "
-            "Generate natural, professional responses based on dialogue moves and context."
+            "Generate natural, professional responses based on dialogue moves and context. "
+            "Whenever the move metadata or dialogue history shows that a question was accommodated, "
+            "the user volunteered information, or the system is circling back to a deferred issue, "
+            "include an implicit confirmation that you heard and tracked that nuance before advancing. "
+            "Implicit confirmations are short clauses woven into the response (no mechanical callouts). "
+            "If you must ask for clarification, adopt NASA targeted feedback style: state the specific gap, "
+            "explain why it matters for mission success, and give a precise next action."
         )
 
         # Add dialogue history for context
@@ -445,28 +451,67 @@ class NLGEngine:
         """
         move_type = move.move_type
         content = move.content
+        metadata = move.metadata or {}
+
+        def _question_was_accommodated(question: Any) -> bool:
+            constraints = getattr(question, "constraints", None)
+            if isinstance(constraints, dict) and constraints.get("accommodated"):
+                return True
+            parameters = getattr(question, "parameters", None)
+            if isinstance(parameters, dict) and parameters.get("accommodated"):
+                return True
+            return False
+
+        def _append_guidance(base_prompt: str, guidance: list[str]) -> str:
+            if guidance:
+                return f"{base_prompt} {' '.join(guidance)}"
+            return base_prompt
 
         if move_type == "ask":
             # Generate a question
+            guidance: list[str] = []
+            acknowledged = metadata.get("acknowledged_slots")
+            if acknowledged:
+                slots = ", ".join(str(slot) for slot in acknowledged)
+                guidance.append(
+                    f"Start by subtly confirming you already captured {slots} so the user knows their volunteered details were recorded."
+                )
+            if metadata.get("volunteer_issues_resolved"):
+                guidance.append(
+                    "Signal that you're only addressing the remaining open point, building on the earlier volunteered information."
+                )
+
             if isinstance(content, WhQuestion):
-                return (
+                if _question_was_accommodated(content):
+                    guidance.append(
+                        "Because this question was accommodated from context, weave in an implicit confirmation that you're following up on what they already mentioned."
+                    )
+                prompt = (
                     f"Generate a natural wh-question asking about '{content.predicate}'. "
                     f"The question variable is '{content.variable}'. "
                     f"Make it sound natural and professional."
                 )
+                return _append_guidance(prompt, guidance)
             elif isinstance(content, YNQuestion):
-                return (
+                if _question_was_accommodated(content):
+                    guidance.append(
+                        "Since this yes/no check relies on earlier context, include a quick confirmation that you're validating their prior statement."
+                    )
+                prompt = (
                     f"Generate a natural yes/no question about: {content.proposition}. "
                     f"Make it sound natural and professional."
                 )
+                return _append_guidance(prompt, guidance)
             elif isinstance(content, AltQuestion):
                 alts = ", ".join(content.alternatives)
-                return (
+                prompt = (
                     f"Generate a natural alternative question with these choices: {alts}. "
                     f"Make it sound natural and professional."
                 )
+                return _append_guidance(prompt, guidance)
             else:
-                return f"Generate a natural question to ask: {content}"
+                prompt = f"Generate a natural question to ask: {content}"
+                return _append_guidance(prompt, guidance)
 
         elif move_type == "answer":
             if isinstance(content, Answer):
@@ -482,6 +527,44 @@ class NLGEngine:
 
         elif move_type == "assert":
             return f"Generate a natural assertion statement: {content}"
+
+        elif move_type == "clarify":
+            target = "" if not isinstance(content, dict) else content.get("clarification_target", "the last detail")
+            previous = "" if not isinstance(content, dict) else content.get("previous_utterance", "")
+            return (
+                f"Generate a clarification question about {target or 'the last detail'}. "
+                f"Reference the user's previous wording ('{previous}') so they know what you're clarifying. "
+                "Use NASA targeted feedback style: (1) pinpoint the exact gap, (2) explain why it matters for completing the plan, "
+                "(3) give a concrete instruction for what they should supply next."
+            )
+
+        elif move_type == "inform + follow_up":
+            follow_up = "" if not isinstance(content, dict) else content.get("follow_up_issue", "")
+            return (
+                "Summarize the commitments that were gathered and transition into addressing the deferred issue. "
+                f"Implicitly confirm you're circling back to the '{follow_up}' concern before describing the next step."
+            )
+
+        elif move_type == "answer + redirect":
+            redirect_question = (
+                "" if not isinstance(content, dict) else content.get("redirect_to_question", "the pending question")
+            )
+            return (
+                "Provide the brief meta-level answer, then smoothly steer the user back to the main question. "
+                f"Make it explicit that you're returning to {redirect_question} while keeping the tone collaborative."
+            )
+
+        elif move_type == "polite_redirect":
+            acknowledged_request = (
+                "" if not isinstance(content, dict) else content.get("acknowledged_request", "the side request")
+            )
+            redirect_question = (
+                "" if not isinstance(content, dict) else content.get("redirect_to_question", "the main question")
+            )
+            return (
+                f"Acknowledge the user's side request about {acknowledged_request}, implicitly confirming you captured it, "
+                f"then politely guide them back to {redirect_question}."
+            )
 
         else:
             return f"Generate natural text for a '{move_type}' dialogue move: {content}"

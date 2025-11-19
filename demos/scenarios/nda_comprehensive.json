@@ -177,7 +177,7 @@
       "business_explanation": "Return to original question after providing guidance.",
       "larsson_rule": "Re-raise question after clarification",
       "state_changes": {
-        "qud_top": "?x.jurisdiction(x)"
+        "qud_pushed": "?x.jurisdiction(x)"
       }
     },
     {
