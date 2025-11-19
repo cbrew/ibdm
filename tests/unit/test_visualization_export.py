@@ -84,7 +84,7 @@ class TestHtmlExporter:
         """Test exporting a rule trace to HTML."""
         # Setup trace
         from ibdm.visualization.rule_trace import RuleEvaluation, RuleTrace
-        
+
         trace = RuleTrace(
             phase="integrate",
             timestamp=1,
@@ -92,22 +92,22 @@ class TestHtmlExporter:
             evaluations=[
                 RuleEvaluation("rule1", 10, True, True, "Selected"),
                 RuleEvaluation("rule2", 5, True, False, "Lower priority"),
-                RuleEvaluation("rule3", 1, False, False, "Preconditions not met")
+                RuleEvaluation("rule3", 1, False, False, "Preconditions not met"),
             ],
-            selected_rule="rule1"
+            selected_rule="rule1",
         )
-        
+
         # Export
         exporter = HtmlExporter()
         html = exporter.export_rule_trace(trace)
-        
+
         # Verify content
         assert "rule1" in html
         assert "rule2" in html
         assert "rule3" in html
-        assert "class=\"rule-selected\"" in html
-        assert "class=\"rule-met\"" in html
-        assert "class=\"rule-unmet\"" in html
+        assert 'class="rule-selected"' in html
+        assert 'class="rule-met"' in html
+        assert 'class="rule-unmet"' in html
         assert "Selected" in html
 
 

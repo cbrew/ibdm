@@ -4,9 +4,9 @@ Provides functionality to export state components (like plans) to SVG
 using Graphviz.
 """
 
-from typing import Any
 
 import graphviz
+
 from ibdm.core import Plan
 from ibdm.visualization.state_snapshot import StateSnapshot
 
@@ -91,9 +91,7 @@ class SvgExporter:
 
         dot = graphviz.Digraph(comment="QUD Stack")
         dot.attr(rankdir="BT")  # Bottom to Top for stack
-        dot.attr(
-            "node", shape="note", style="filled", fillcolor="#e6f7ff", fontname="sans-serif"
-        )
+        dot.attr("node", shape="note", style="filled", fillcolor="#e6f7ff", fontname="sans-serif")
 
         previous_id = None
         for i, question in enumerate(snapshot.qud):

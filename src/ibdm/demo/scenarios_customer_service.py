@@ -39,7 +39,6 @@ def scenario_customer_service_escalation() -> DemoScenario:
                 description="User provides order number",
                 expected_state={"commitments": "+1"},
             ),
-
             # 2. Information Gathering (Troubleshooting/Verification)
             ScenarioStep(
                 speaker="system",
@@ -65,7 +64,6 @@ def scenario_customer_service_escalation() -> DemoScenario:
                 description="User confirms evidence",
                 expected_state={"commitments": "+1"},
             ),
-
             # 3. Policy Application (Attempt 1)
             ScenarioStep(
                 speaker="system",
@@ -76,7 +74,6 @@ def scenario_customer_service_escalation() -> DemoScenario:
                 description="System proposes solution based on policy (Replacement > Refund)",
                 expected_state={"iun": "1 option (replacement)"},
             ),
-
             # 4. Rejection & Escalation Trigger
             ScenarioStep(
                 speaker="user",
@@ -84,7 +81,6 @@ def scenario_customer_service_escalation() -> DemoScenario:
                 description="User rejects proposal with frustration",
                 expected_state={"iun": "0", "sentiment": "frustrated"},
             ),
-
             # 5. Escalation Action
             ScenarioStep(
                 speaker="system",

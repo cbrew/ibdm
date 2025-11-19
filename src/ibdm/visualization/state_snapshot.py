@@ -89,26 +89,16 @@ class StateSnapshot:
         return {
             "timestamp": self.timestamp,
             "label": self.label,
-            "qud": [
-                q.to_dict() if hasattr(q, "to_dict") else str(q) for q in self.qud
-            ],
+            "qud": [q.to_dict() if hasattr(q, "to_dict") else str(q) for q in self.qud],
             "commitments": [str(c) for c in self.commitments],
-            "plan": [
-                p.to_dict() if hasattr(p, "to_dict") else str(p) for p in self.plan
-            ],
-            "agenda": [
-                m.to_dict() if hasattr(m, "to_dict") else str(m) for m in self.agenda
-            ],
-            "issues": [
-                q.to_dict() if hasattr(q, "to_dict") else str(q) for q in self.issues
-            ],
+            "plan": [p.to_dict() if hasattr(p, "to_dict") else str(p) for p in self.plan],
+            "agenda": [m.to_dict() if hasattr(m, "to_dict") else str(m) for m in self.agenda],
+            "issues": [q.to_dict() if hasattr(q, "to_dict") else str(q) for q in self.issues],
             "beliefs": self.beliefs.copy(),
             "overridden_questions": [
                 q.to_dict() if hasattr(q, "to_dict") else str(q) for q in self.overridden_questions
             ],
-            "actions": [
-                a.to_dict() if hasattr(a, "to_dict") else str(a) for a in self.actions
-            ],
+            "actions": [a.to_dict() if hasattr(a, "to_dict") else str(a) for a in self.actions],
             "last_move": (
                 self.last_move.to_dict()
                 if self.last_move and hasattr(self.last_move, "to_dict")

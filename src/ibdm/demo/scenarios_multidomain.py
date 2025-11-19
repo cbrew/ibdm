@@ -49,7 +49,6 @@ def scenario_multi_domain() -> DemoScenario:
                 description="User provides date",
                 expected_state={"commitments": "+1"},
             ),
-
             # 2. Switch to Legal Task (Interrupt)
             ScenarioStep(
                 speaker="user",
@@ -58,7 +57,7 @@ def scenario_multi_domain() -> DemoScenario:
                 expected_state={
                     "plan": "draft_nda (pushed on top)",
                     "domain": "legal",
-                    "prev_plan": "book_flight (paused)"
+                    "prev_plan": "book_flight (paused)",
                 },
             ),
             ScenarioStep(
@@ -97,7 +96,6 @@ def scenario_multi_domain() -> DemoScenario:
                 description="User volunteers remaining NDA info",
                 expected_state={"plan": "complete (NDA)", "commitments": "+3"},
             ),
-
             # 3. Complete Legal Task
             ScenarioStep(
                 speaker="system",
@@ -108,10 +106,9 @@ Now back to your flight booking to Paris. I still need to confirm the return dat
                 expected_state={
                     "plan": "book_flight (resumed)",
                     "domain": "travel",
-                    "qud": "1 question (return_date)"
+                    "qud": "1 question (return_date)",
                 },
             ),
-
             # 4. Resume Travel Task
             ScenarioStep(
                 speaker="user",

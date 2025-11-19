@@ -12,12 +12,11 @@ from typing import Any
 from ibdm.core import InformationState
 from ibdm.demo.scenarios import DemoScenario, ScenarioStep
 from ibdm.visualization import (
+    RuleEvaluation,
+    RuleTrace,
     StateSnapshot,
-    StateDiff,
     TerminalRenderer,
     compute_diff,
-    RuleTrace,
-    RuleEvaluation,
 )
 
 
@@ -308,7 +307,7 @@ class ScenarioExplorer:
         self.distractor_gen = DistractorGenerator(domain)
         self.tracker = TrajectoryTracker(scenario)
         self.current_step_index = 0
-        
+
         # Visualization components
         self.renderer = TerminalRenderer()
         self.snapshots: list[StateSnapshot] = []
@@ -396,7 +395,7 @@ class ScenarioExplorer:
 
     def capture_snapshot(self, label: str) -> None:
         """Capture a snapshot of the current state.
-        
+
         Args:
             label: Label for the snapshot
         """
@@ -412,22 +411,35 @@ class ScenarioExplorer:
         This dummy implementation creates a few example RuleEvaluation objects.
         In a full system this would be populated by the actual rule engine.
         """
-        from ibdm.visualization import RuleEvaluation, RuleTrace
-        
+        from ibdm.visualization import RuleTrace
 
         # Example evaluations
         evals = [
-            RuleEvaluation(rule_name="RuleA", priority=1, preconditions_met=True, was_selected=False, reason=""),
-            RuleEvaluation(rule_name="RuleB", priority=2, preconditions_met=True, was_selected=True, reason="selected"),
-            RuleEvaluation(rule_name="RuleC", priority=3, preconditions_met=False, was_selected=False, reason=""),
+            RuleEvaluation(
+                rule_name="RuleA", priority=1, preconditions_met=True, was_selected=False, reason=""
+            ),
+            RuleEvaluation(
+                rule_name="RuleB",
+                priority=2,
+                preconditions_met=True,
+                was_selected=True,
+                reason="selected",
+            ),
+            RuleEvaluation(
+                rule_name="RuleC",
+                priority=3,
+                preconditions_met=False,
+                was_selected=False,
+                reason="",
+            ),
         ]
-        
+
         # Use previous and current snapshots for diff
         current_snapshot = self.snapshots[-1]
         before = self.snapshots[-2] if len(self.snapshots) >= 2 else current_snapshot
         after = current_snapshot
         diff = compute_diff(before, after)
-        
+
         trace = RuleTrace(
             phase="integration",
             timestamp=timestamp,
@@ -459,7 +471,7 @@ class ScenarioExplorer:
 
             # Optionally generate HTML report
             self._generate_html_report(snapshot)
-            
+
             # Publish to monitor
             self._publish_state(snapshot)
 
@@ -493,15 +505,15 @@ class ScenarioExplorer:
         if len(self.snapshots) < 2:
             print("Not enough history to show diff.")
             return
-            
+
         try:
             from ibdm.visualization.diff_engine import compute_diff
             from ibdm.visualization.terminal import TerminalVisualizer
-            
+
             before = self.snapshots[-2]
             after = self.snapshots[-1]
             diff = compute_diff(before, after)
-            
+
             print("\n")
             visualizer = TerminalVisualizer()
             visualizer.render_diff(diff)
@@ -520,20 +532,21 @@ class ScenarioExplorer:
         """Generate HTML report for current state."""
         try:
             from ibdm.visualization.html_export import HtmlExporter
+
             exporter = HtmlExporter()
-            
+
             # Export snapshot
             html = exporter.export_snapshot(snapshot)
             with open(f"state_turn_{snapshot.timestamp}.html", "w") as f:
                 f.write(html)
-                
+
             # If we have rule traces, try to export the latest one too
             if self.rule_traces:
                 trace = self.rule_traces[-1]
                 trace_html = exporter.export_rule_trace(trace)
                 with open(f"trace_turn_{snapshot.timestamp}.html", "w") as f:
                     f.write(trace_html)
-                    
+
             print(f"[Visualizer] Generated HTML reports for Turn {snapshot.timestamp}")
         except Exception as e:
             print(f"[Visualizer] Failed to generate HTML report: {e}")
@@ -542,6 +555,7 @@ class ScenarioExplorer:
         """Publish state to monitor."""
         try:
             from ibdm.visualization.monitor import StatePublisher
+
             publisher = StatePublisher()
             publisher.publish(snapshot)
         except Exception as e:

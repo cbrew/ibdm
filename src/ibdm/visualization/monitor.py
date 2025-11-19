@@ -19,7 +19,7 @@ class StatePublisher:
 
     def __init__(self, filepath: str = ".ibdm_monitor_state.json"):
         """Initialize publisher.
-        
+
         Args:
             filepath: Path to the state file
         """
@@ -27,7 +27,7 @@ class StatePublisher:
 
     def publish(self, snapshot: StateSnapshot) -> None:
         """Publish a state snapshot.
-        
+
         Args:
             snapshot: State snapshot to publish
         """
@@ -48,7 +48,7 @@ class StateMonitor:
 
     def __init__(self, filepath: str = ".ibdm_monitor_state.json", poll_interval: float = 0.1):
         """Initialize monitor.
-        
+
         Args:
             filepath: Path to the state file
             poll_interval: Polling interval in seconds
