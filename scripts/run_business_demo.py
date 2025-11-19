@@ -25,6 +25,7 @@ Usage:
 
 import argparse
 import json
+import os
 import sys
 import time
 from datetime import datetime
@@ -88,6 +89,9 @@ class BusinessDemo:
 
         # Mock state for tracking (simplified)
         self.state = InformationState(agent_id="system")
+
+        # Track NLG comparisons by turn number (for reporting)
+        self.nlg_comparisons: dict[int, dict[str, Any]] = {}
 
         # Initialize NLG engine conditionally (only if needed)
         self.nlg_engine = None
@@ -198,6 +202,42 @@ class BusinessDemo:
             if nlg_utterance:
                 print("\n🤖 NLG GENERATED:")
                 print(f'   "{nlg_utterance}"')
+
+                # Semantic similarity comparison
+                comparison = self._compare_semantic_similarity(utterance, nlg_utterance)
+                similarity = comparison["similarity"]
+                confidence = comparison["confidence"]
+                explanation = comparison["explanation"]
+
+                # Store comparison for report generation
+                self.nlg_comparisons[turn_num] = {
+                    "scripted": utterance,
+                    "generated": nlg_utterance,
+                    "similarity": similarity,
+                    "confidence": confidence,
+                    "explanation": explanation,
+                }
+
+                # Display comparison result with color coding
+                if similarity == "equivalent":
+                    icon = "✅"
+                    color = "\033[92m"  # Green
+                elif similarity == "similar":
+                    icon = "✓"
+                    color = "\033[93m"  # Yellow
+                elif similarity == "different":
+                    icon = "⚠️"
+                    color = "\033[91m"  # Red
+                else:  # error
+                    icon = "❌"
+                    color = "\033[91m"  # Red
+
+                reset = "\033[0m"
+                print(
+                    f"\n{color}{icon} SIMILARITY: {similarity.upper()} "
+                    f"(confidence: {confidence}){reset}"
+                )
+                print(f"   {explanation}")
             else:
                 print("\n🤖 NLG GENERATED: (generation failed, using scripted)")
 
@@ -227,8 +267,12 @@ class BusinessDemo:
 
         # Record in dialogue history (use NLG utterance if in replace mode)
         displayed_utterance = utterance
+        nlg_comparison: dict[str, Any] | None = None
         if speaker == "system" and self.nlg_mode == "replace" and nlg_utterance:
             displayed_utterance = nlg_utterance
+        # Store comparison results for compare mode (use stored comparison from earlier)
+        if turn_num in self.nlg_comparisons:
+            nlg_comparison = self.nlg_comparisons[turn_num]
 
         self.dialogue_history.add_turn(
             turn_number=turn_num,
@@ -236,6 +280,7 @@ class BusinessDemo:
             utterance=displayed_utterance,
             move_type=move_type,
             state_snapshot=turn_data.get("state_changes", {}),
+            nlg_comparison=nlg_comparison,
         )
 
     def run_scenario(self) -> dict[str, Any]:
@@ -428,6 +473,42 @@ class BusinessDemo:
             margin: 10px 0;
             line-height: 1.6;
         }
+        .nlg-comparison {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f0f8ff;
+            border-left: 4px solid #2196F3;
+            font-size: 0.9em;
+        }
+        .nlg-comparison .utterance-box {
+            margin: 8px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+        }
+        .nlg-comparison .similarity-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        .nlg-comparison .similarity-equivalent {
+            background: #4CAF50;
+            color: white;
+        }
+        .nlg-comparison .similarity-similar {
+            background: #FFC107;
+            color: #333;
+        }
+        .nlg-comparison .similarity-different {
+            background: #F44336;
+            color: white;
+        }
+        .nlg-comparison .similarity-error {
+            background: #9E9E9E;
+            color: white;
+        }
         .footer {
             text-align: center;
             padding: 20px;
@@ -487,6 +568,30 @@ class BusinessDemo:
             <div class="explanation">
                 💡 <strong>What's happening:</strong> {turn["business_explanation"]}<br>
                 📚 <strong>Larsson:</strong> {turn.get("larsson_rule", "N/A")}
+            </div>"""
+                )
+
+            # Add NLG comparison if available (compare mode)
+            if turn_num in self.nlg_comparisons:
+                comp = self.nlg_comparisons[turn_num]
+                similarity_class = f"similarity-{comp['similarity']}"
+                html_parts.append(
+                    f"""
+            <div class="nlg-comparison">
+                <strong>🤖 NLG Comparison:</strong>
+                <div class="utterance-box">
+                    <strong>Scripted:</strong> {comp["scripted"]}
+                </div>
+                <div class="utterance-box">
+                    <strong>Generated:</strong> {comp["generated"]}
+                </div>
+                <div style="margin-top: 10px;">
+                    <span class="similarity-badge {similarity_class}">
+                        {comp["similarity"].upper()}
+                    </span>
+                    <strong>Confidence:</strong> {comp["confidence"]}<br>
+                    <em>{comp["explanation"]}</em>
+                </div>
             </div>"""
                 )
 
@@ -881,6 +986,19 @@ class BusinessDemo:
             </div>"""
                 )
 
+            # NLG comparison (if available in compare mode)
+            if turn_num in self.nlg_comparisons:
+                comp = self.nlg_comparisons[turn_num]
+                html_parts.append(
+                    """
+            <div class="state-box" style="border-color: #4ec9b0;">
+                <h4>🤖 NLG Semantic Comparison</h4>
+                <div class="json-view">
+                    <pre>"""
+                )
+                html_parts.append(json.dumps(comp, indent=2))
+                html_parts.append("</pre>\n                </div>\n            </div>")
+
             # State changes (delta)
             if state_changes:
                 html_parts.append(
@@ -1195,6 +1313,102 @@ class BusinessDemo:
             }
 
         return DialogueMove(move_type=move_type, content=content, speaker=speaker)
+
+    def _compare_semantic_similarity(self, scripted: str, nlg_generated: str) -> dict[str, Any]:
+        """Compare semantic similarity between scripted and NLG-generated utterances.
+
+        Uses Claude Haiku via LiteLLM to assess whether two utterances convey
+        the same meaning, even if worded differently.
+
+        Args:
+            scripted: Gold standard scripted utterance
+            nlg_generated: NLG-generated utterance to compare
+
+        Returns:
+            Dictionary with:
+            - similarity: "equivalent", "similar", "different", or "error"
+            - confidence: "high", "medium", "low"
+            - explanation: Brief explanation of the assessment
+            - error: Error message if comparison failed (only if similarity == "error")
+        """
+        try:
+            import litellm
+
+            # Construct comparison prompt
+            prompt = f"""Compare these two dialogue system utterances and assess if they convey
+the same meaning:
+
+SCRIPTED (Gold Standard):
+"{scripted}"
+
+NLG GENERATED:
+"{nlg_generated}"
+
+Assess semantic similarity and respond in JSON format:
+{{
+  "similarity": "equivalent|similar|different",
+  "confidence": "high|medium|low",
+  "explanation": "Brief explanation (1-2 sentences)"
+}}
+
+Guidelines:
+- "equivalent": Same meaning, may differ in wording or politeness
+- "similar": Core meaning preserved, minor information differences
+- "different": Substantially different meaning or missing key information"""
+
+            # Call LLM (use Haiku for fast, cost-effective classification)
+            response = litellm.completion(
+                model="claude-haiku-4-5-20251001",
+                messages=[{"role": "user", "content": prompt}],
+                api_key=os.getenv("IBDM_API_KEY"),
+                temperature=0.0,  # Deterministic for evaluation
+                max_tokens=200,
+            )
+
+            # Extract and parse response
+            response_text = response.choices[0].message.content
+            if not response_text:
+                raise ValueError("Empty response from LLM")
+
+            # Try to parse as JSON
+            try:
+                result = json.loads(response_text)
+                # Validate expected fields
+                if not all(k in result for k in ["similarity", "confidence", "explanation"]):
+                    raise ValueError("Missing required fields in LLM response")
+                return result
+            except json.JSONDecodeError:
+                # Fallback: extract values from text response
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.warning(
+                    f"LLM response not valid JSON, using text extraction: {response_text}"
+                )
+                # Simple heuristic extraction
+                similarity = "similar"  # Conservative default
+                if "equivalent" in response_text.lower():
+                    similarity = "equivalent"
+                elif "different" in response_text.lower():
+                    similarity = "different"
+                return {
+                    "similarity": similarity,
+                    "confidence": "medium",
+                    "explanation": response_text[:100],
+                }
+
+        except Exception as e:
+            # Log error but don't crash demo
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.error(f"Semantic similarity comparison failed: {e}")
+            return {
+                "similarity": "error",
+                "confidence": "low",
+                "explanation": f"Comparison failed: {str(e)[:50]}",
+                "error": str(e),
+            }
 
     def _apply_state_changes(self, state: InformationState, state_changes: dict[str, Any]) -> None:
         """Apply state_changes from JSON to InformationState.

@@ -25,6 +25,7 @@ class TurnRecord:
         confidence: Confidence score (if applicable)
         grounding_strategy: Grounding strategy used (if applicable)
         state_snapshot: Internal state snapshot
+        nlg_comparison: NLG comparison data (if applicable, compare mode only)
     """
 
     turn_number: int
@@ -35,6 +36,7 @@ class TurnRecord:
     confidence: float | None = None
     grounding_strategy: str | None = None
     state_snapshot: dict[str, Any] | None = None
+    nlg_comparison: dict[str, Any] | None = None
 
 
 @dataclass
@@ -71,6 +73,7 @@ class DialogueHistory:
         confidence: float | None = None,
         grounding_strategy: str | None = None,
         state_snapshot: dict[str, Any] | None = None,
+        nlg_comparison: dict[str, Any] | None = None,
     ) -> None:
         """Add a turn to the history.
 
@@ -82,6 +85,7 @@ class DialogueHistory:
             confidence: Confidence score
             grounding_strategy: Grounding strategy used
             state_snapshot: Internal state snapshot
+            nlg_comparison: NLG comparison data (compare mode only)
         """
         if self.turns is None:
             self.turns = []
@@ -95,6 +99,7 @@ class DialogueHistory:
             confidence=confidence,
             grounding_strategy=grounding_strategy,
             state_snapshot=state_snapshot,
+            nlg_comparison=nlg_comparison,
         )
         self.turns.append(turn)
 
