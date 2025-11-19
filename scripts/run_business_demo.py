@@ -1107,16 +1107,14 @@ class BusinessDemo:
         state_changes = turn_data.get("state_changes", {})
 
         # Construct content based on move_type
+        # Extract SEMANTIC content, NOT scripted utterance text
         content: Any = None
 
         if move_type == "ask":
-            # For ask moves, extract the Question from state_changes
-            # This Question will be passed to NLG to generate the question text
+            # Ask move: Extract Question from qud_pushed
             question_str = state_changes.get("qud_pushed", "")
             content = self._parse_question_from_string(question_str)
             if content is None:
-                # WARNING: Parsing failed! Log and use generic question as fallback
-                # Policy #0: Fail fast, but log clearly for debugging
                 import logging
 
                 logger = logging.getLogger(__name__)
@@ -1125,13 +1123,76 @@ class BusinessDemo:
                     f"Using generic WhQuestion fallback. "
                     f"Turn {turn_data.get('turn')}, utterance: {turn_data.get('utterance')!r}"
                 )
-                # Create a generic WhQuestion instead of falling back to string
                 from ibdm.core.questions import WhQuestion
 
                 content = WhQuestion(variable="x", predicate="information")
+
+        elif move_type == "inform":
+            # Inform move: Extract commitments from state to summarize
+            # Pass list of commitments for NLG to generate summary
+            content = {
+                "commitments": list(self.state.shared.commitments),
+                "dialogue_status": state_changes.get("dialogue_status", "in_progress"),
+            }
+
+        elif move_type == "confirm":
+            # Confirm move: Extract proposition being confirmed
+            content = {
+                "proposition": state_changes.get("awaiting_confirmation", ""),
+                "confidence_level": "medium",  # From IBiS2 grounding
+            }
+
+        elif move_type == "clarify":
+            # Clarify move: Extract what needs clarification
+            content = {
+                "clarification_target": state_changes.get("awaiting_clarification", ""),
+                "previous_utterance": turn_data.get("context", ""),
+            }
+
+        elif move_type == "answer":
+            # Answer move: Extract clarification question being answered
+            qud_popped = state_changes.get("qud_popped", "")
+            content = {
+                "answering_question": qud_popped,
+                "domain": "nda",  # For domain-specific answer generation
+            }
+
+        elif move_type == "polite_redirect":
+            # Polite redirect: Acknowledge side request, re-raise main question
+            content = {
+                "acknowledged_request": state_changes.get("acknowledged_side_request", ""),
+                "redirect_to_question": state_changes.get("re_raised_question", ""),
+            }
+
+        elif move_type == "inform + follow_up":
+            # Composite: Inform about completion + address deferred issue
+            content = {
+                "commitments": list(self.state.shared.commitments),
+                "follow_up_issue": state_changes.get("deferred_issue_addressed", ""),
+                "dialogue_status": "complete",
+            }
+
+        elif move_type == "answer + redirect":
+            # Composite: Answer meta-question + redirect to pending question
+            content = {
+                "meta_answer": state_changes.get("meta_question_answered", False),
+                "redirect_to_question": state_changes.get("re_raised_question", ""),
+            }
+
         else:
-            # For other system moves (greet, assert, etc.), use utterance as content
-            content = turn_data.get("utterance", "")
+            # Unknown move type: Log warning and use structured content
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                f"Unknown move_type: {move_type!r} at turn {turn_data.get('turn')}. "
+                f"Using generic content structure."
+            )
+            # Use structured content instead of raw utterance
+            content = {
+                "move_type": move_type,
+                "state_changes": state_changes,
+            }
 
         return DialogueMove(move_type=move_type, content=content, speaker=speaker)
 
