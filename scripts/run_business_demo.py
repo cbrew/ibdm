@@ -244,27 +244,32 @@ class BusinessDemo:
 
         print("\n" + "=" * 80 + "\n")
 
-    def export_report(self, output_dir: Path) -> Path:
-        """Export HTML report.
+    def export_report(self, output_dir: Path) -> tuple[Path, Path]:
+        """Export HTML reports (business and engineer).
 
         Args:
-            output_dir: Directory to save report
+            output_dir: Directory to save reports
 
         Returns:
-            Path to generated report
+            Tuple of (business_report_path, engineer_report_path)
         """
         output_dir.mkdir(parents=True, exist_ok=True)
 
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        filename = f"business-demo-{self.scenario['scenario_id']}-{timestamp}.html"
-        report_path = output_dir / filename
 
-        # Generate HTML using visualizer
-        html_content = self._generate_business_report_html()
+        # Generate business report
+        business_filename = f"business-demo-{self.scenario['scenario_id']}-{timestamp}.html"
+        business_report_path = output_dir / business_filename
+        business_html_content = self._generate_business_report_html()
+        business_report_path.write_text(business_html_content)
 
-        report_path.write_text(html_content)
+        # Generate engineer report
+        engineer_filename = f"engineer-demo-{self.scenario['scenario_id']}-{timestamp}.html"
+        engineer_report_path = output_dir / engineer_filename
+        engineer_html_content = self._generate_engineer_report_html()
+        engineer_report_path.write_text(engineer_html_content)
 
-        return report_path
+        return business_report_path, engineer_report_path
 
     def _generate_business_report_html(self) -> str:
         """Generate business-friendly HTML report.
@@ -477,6 +482,506 @@ class BusinessDemo:
 
         return "\n".join(html_parts)
 
+    def _generate_engineer_report_html(self) -> str:
+        """Generate engineer-focused HTML report with full state details.
+
+        Returns:
+            HTML content as string
+        """
+        html_parts = []
+
+        # Header
+        html_parts.append(
+            """<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>IBDM Engineer Report</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        .header {
+            background: linear-gradient(135deg, #0078d4 0%, #00bcf2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        .mock-warning {
+            background: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 4px solid #ffc107;
+            border-radius: 4px;
+        }
+        .section {
+            background: #252526;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            border: 1px solid #3e3e42;
+        }
+        .section h2 {
+            color: #4ec9b0;
+            margin-top: 0;
+            border-bottom: 2px solid #4ec9b0;
+            padding-bottom: 10px;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        .section h3 {
+            color: #dcdcaa;
+            margin-top: 15px;
+            font-size: 1.1em;
+        }
+        .turn {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #3e3e42;
+            background: #1e1e1e;
+            border-radius: 5px;
+        }
+        .turn-header {
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #3e3e42;
+        }
+        .turn.user .turn-header {
+            color: #4ec9b0;
+        }
+        .turn.system .turn-header {
+            color: #569cd6;
+        }
+        .utterance {
+            background: #2d2d30;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 3px solid #007acc;
+            font-size: 1.1em;
+        }
+        .state-box {
+            background: #1e1e1e;
+            border: 1px solid #007acc;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .state-box h4 {
+            color: #dcdcaa;
+            margin: 0 0 10px 0;
+            font-size: 0.9em;
+            text-transform: uppercase;
+        }
+        .state-content {
+            background: #252526;
+            padding: 10px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+        .json-view {
+            background: #1e1e1e;
+            border: 1px solid #3e3e42;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .json-key {
+            color: #9cdcfe;
+        }
+        .json-string {
+            color: #ce9178;
+        }
+        .json-number {
+            color: #b5cea8;
+        }
+        .json-boolean {
+            color: #569cd6;
+        }
+        .mock-indicator {
+            display: inline-block;
+            background: #ffc107;
+            color: #000;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .algorithm-box {
+            background: #2d2d30;
+            border-left: 3px solid #4ec9b0;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .algorithm-box .title {
+            color: #4ec9b0;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .state-diff {
+            background: #1e1e1e;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .state-diff .added {
+            color: #4ec9b0;
+        }
+        .state-diff .removed {
+            color: #f48771;
+        }
+        .state-diff .modified {
+            color: #dcdcaa;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #808080;
+            font-size: 0.9em;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .metadata {
+            background: #252526;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        .metadata strong {
+            color: #569cd6;
+        }
+    </style>
+</head>
+<body>"""
+        )
+
+        # Title section with mocking warning
+        html_parts.append(
+            f"""
+    <div class="header">
+        <h1>🔧 Engineer Report: {self.scenario["title"]}</h1>
+        <p><strong>Scenario ID:</strong> {self.scenario["scenario_id"]}</p>
+        <p>{self.scenario["description"]}</p>
+        <p><em>Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</em></p>
+    </div>
+
+    <div class="mock-warning">
+        ⚠️ <strong>MOCKING IN EFFECT:</strong> This demonstration uses pre-scripted dialogues.
+        In production, NLU (Natural Language Understanding) and NLG (Natural Language Generation)
+        are handled by Claude 4.5 Sonnet/Haiku models. State management and dialogue update rules
+        follow Larsson (2002) algorithms exactly as implemented in the core engine.
+    </div>"""
+        )
+
+        # Overview section
+        html_parts.append(
+            """
+    <div class="section">
+        <h2>📋 System Overview</h2>
+        <div class="metadata">
+            <strong>Architecture:</strong> Burr state machine with Larsson update rules<br>
+            <strong>Domain:</strong> NDA (Non-Disclosure Agreement) drafting<br>
+            <strong>NLU Engine:</strong> <span class="mock-indicator">MOCKED</span>
+            (Production: Claude 4.5 Sonnet via LiteLLM)<br>
+            <strong>NLG Engine:</strong> <span class="mock-indicator">MOCKED</span>
+            (Production: Claude 4.5 Haiku via LiteLLM)<br>
+            <strong>Dialogue Manager:</strong> <strong style="color: #4ec9b0;">LIVE</strong>
+            (Larsson algorithms in src/ibdm/core/)<br>
+            <strong>State Management:</strong> <strong style="color: #4ec9b0;">LIVE</strong>
+            (InformationState with QUD stack, commitments, plans)
+        </div>
+    </div>"""
+        )
+
+        # Expected outcomes section
+        expected = self.scenario.get("expected_outcomes", {})
+        if expected:
+            html_parts.append(
+                """
+    <div class="section">
+        <h2>🎯 Expected Outcomes</h2>
+        <div class="json-view">
+            <pre>"""
+            )
+            html_parts.append(json.dumps(expected, indent=2))
+            html_parts.append("</pre>\n        </div>\n    </div>")
+
+        # Detailed turn-by-turn analysis
+        html_parts.append(
+            """
+    <div class="section">
+        <h2>🔍 Turn-by-Turn State Analysis</h2>"""
+        )
+
+        # Track cumulative state for display
+        cumulative_state = {
+            "qud": [],
+            "commitments": [],
+            "private_issues": [],
+            "plans": [],
+            "latest_move": None,
+        }
+
+        for turn in self.scenario["turns"]:
+            speaker_class = turn["speaker"]
+            speaker_icon = "👤" if speaker_class == "user" else "🤖"
+            speaker_name = turn["speaker"].upper()
+            move_type = turn.get("move_type", "")
+            turn_num = turn["turn"]
+
+            # Update cumulative state based on state_changes
+            state_changes = turn.get("state_changes", {})
+            self._update_cumulative_state(cumulative_state, state_changes)
+
+            html_parts.append(
+                f"""
+        <div class="turn {speaker_class}">
+            <div class="turn-header">
+                {speaker_icon} Turn {turn_num}: {speaker_name}
+                <span style="color: #dcdcaa;">[{move_type}]</span>
+            </div>
+
+            <div class="utterance">
+                <strong>Utterance:</strong> {turn["utterance"]}
+            </div>"""
+            )
+
+            # Mocking indicators
+            if speaker_class == "user":
+                html_parts.append(
+                    """
+            <div class="metadata">
+                <span class="mock-indicator">MOCKED NLU</span>
+                In production, utterance would be processed by Claude 4.5 Sonnet to extract:
+                <ul>
+                    <li>Dialogue move type (answer, question, request, greet, etc.)</li>
+                    <li>Semantic content (propositions, entities)</li>
+                    <li>Contextual information (reference resolution)</li>
+                </ul>
+            </div>"""
+                )
+            else:
+                html_parts.append(
+                    """
+            <div class="metadata">
+                <span class="mock-indicator">MOCKED NLG</span>
+                In production, system move would be generated by Claude 4.5 Haiku based on:
+                <ul>
+                    <li>Selected dialogue move from Larsson select phase</li>
+                    <li>Current information state (QUD, commitments)</li>
+                    <li>Domain-specific templates and conventions</li>
+                </ul>
+            </div>"""
+                )
+
+            # Larsson algorithm explanation
+            if "larsson_rule" in turn:
+                html_parts.append(
+                    f"""
+            <div class="algorithm-box">
+                <div class="title">📚 Larsson Algorithm:</div>
+                {turn["larsson_rule"]}
+            </div>"""
+                )
+
+            # Business explanation
+            if "business_explanation" in turn:
+                html_parts.append(
+                    f"""
+            <div class="metadata">
+                <strong>Business Context:</strong> {turn["business_explanation"]}
+            </div>"""
+                )
+
+            # State changes (delta)
+            if state_changes:
+                html_parts.append(
+                    """
+            <div class="state-box">
+                <h4>🔄 State Changes (Delta)</h4>
+                <div class="json-view">
+                    <pre>"""
+                )
+                html_parts.append(json.dumps(state_changes, indent=2))
+                html_parts.append("</pre>\n                </div>\n            </div>")
+
+            # Full state snapshot after this turn
+            html_parts.append(
+                """
+            <div class="state-box">
+                <h4>📸 Full State After Turn</h4>
+                <div class="json-view">
+                    <pre>"""
+            )
+            html_parts.append(json.dumps(cumulative_state, indent=2))
+            html_parts.append("</pre>\n                </div>\n            </div>")
+
+            html_parts.append("        </div>")
+
+        html_parts.append("    </div>")
+
+        # Larsson algorithms demonstrated
+        html_parts.append(
+            """
+    <div class="section">
+        <h2>📚 Larsson Algorithms Demonstrated</h2>
+        <div class="metadata">
+            This scenario demonstrates the following algorithms from Larsson (2002):
+        </div>
+        <ul style="line-height: 1.8;">"""
+        )
+
+        for algo in self.scenario.get("larsson_algorithms", []):
+            html_parts.append(f"            <li>{algo}</li>")
+
+        html_parts.append("        </ul>\n    </div>")
+
+        # Performance metrics
+        html_parts.append(
+            """
+    <div class="section">
+        <h2>📊 Performance Metrics</h2>
+        <div class="json-view">
+            <pre>"""
+        )
+        html_parts.append(json.dumps(self.scenario.get("metrics", {}), indent=2))
+        html_parts.append("</pre>\n        </div>\n    </div>")
+
+        # Implementation notes
+        html_parts.append(
+            """
+    <div class="section">
+        <h2>🔧 Implementation Notes</h2>
+        <div class="metadata">
+            <h3>What's Real vs. Mocked</h3>
+            <ul>
+                <li><strong style="color: #4ec9b0;">REAL:</strong> All Larsson update rules
+                (integrate, select phases)</li>
+                <li><strong style="color: #4ec9b0;">REAL:</strong> QUD stack management
+                (push, pop, accommodation)</li>
+                <li><strong style="color: #4ec9b0;">REAL:</strong> Commitment tracking
+                (shared.com)</li>
+                <li><strong style="color: #4ec9b0;">REAL:</strong> Plan formation and
+                progression</li>
+                <li><strong style="color: #4ec9b0;">REAL:</strong> Domain semantic layer
+                (NDA domain model)</li>
+                <li><span class="mock-indicator">MOCKED:</span> NLU - Utterance interpretation
+                (would use Claude 4.5 Sonnet)</li>
+                <li><span class="mock-indicator">MOCKED:</span> NLG - Response generation
+                (would use Claude 4.5 Haiku)</li>
+            </ul>
+
+            <h3>State Management Architecture</h3>
+            <p>The Information State consists of:</p>
+            <ul>
+                <li><strong>SHARED.QUD:</strong> Stack of questions under discussion
+                (LIFO ordering)</li>
+                <li><strong>SHARED.COM:</strong> Shared commitments (agreed facts)</li>
+                <li><strong>PRIVATE.ISSUES:</strong> Pending issues to be raised</li>
+                <li><strong>PRIVATE.PLAN:</strong> Hierarchical plan structures</li>
+                <li><strong>PRIVATE.AGENDA:</strong> System's current action agenda</li>
+            </ul>
+
+            <h3>Code Locations</h3>
+            <ul>
+                <li><code>src/ibdm/core/dialogue_state.py</code> - InformationState class</li>
+                <li><code>src/ibdm/core/update_rules.py</code> - Larsson update rules</li>
+                <li><code>src/ibdm/core/domain.py</code> - Domain semantic layer</li>
+                <li><code>src/ibdm/domains/nda_domain.py</code> - NDA-specific domain model</li>
+                <li><code>src/ibdm/engines/burr_dialogue_manager.py</code> - Burr integration</li>
+            </ul>
+        </div>
+    </div>"""
+        )
+
+        # Footer
+        html_parts.append(
+            """
+    <div class="footer">
+        <p>Generated by IBDM Engineer Demo System</p>
+        <p>Issue-Based Dialogue Management • Larsson (2002) Implementation</p>
+        <p>For production integration details, see docs/llm_configuration.md</p>
+    </div>
+</body>
+</html>"""
+        )
+
+        return "\n".join(html_parts)
+
+    def _update_cumulative_state(
+        self, cumulative_state: dict[str, Any], state_changes: dict[str, Any]
+    ) -> None:
+        """Update cumulative state based on state changes.
+
+        Args:
+            cumulative_state: Running state to update
+            state_changes: Changes from this turn
+        """
+        # Handle QUD operations
+        if "qud_pushed" in state_changes:
+            cumulative_state["qud"].append(state_changes["qud_pushed"])
+
+        if "qud_popped" in state_changes:
+            if cumulative_state["qud"]:
+                cumulative_state["qud"].pop()
+
+        # Handle commitments
+        if "commitment_added" in state_changes:
+            cumulative_state["commitments"].append(state_changes["commitment_added"])
+
+        # Handle issues
+        if "issues_added" in state_changes:
+            cumulative_state["private_issues"].extend(state_changes["issues_added"])
+
+        if "issues_pending" in state_changes:
+            # Simplified: just track the count
+            remaining = state_changes["issues_pending"]
+            cumulative_state["issues_remaining"] = remaining
+
+        # Handle plans
+        if "plan_created" in state_changes:
+            cumulative_state["plans"].append(state_changes["plan_created"])
+
+        if "plan_status" in state_changes:
+            cumulative_state["plan_status"] = state_changes["plan_status"]
+
+        # Track latest move type
+        cumulative_state["latest_move"] = state_changes.get(
+            "move_type", cumulative_state.get("latest_move")
+        )
+
+        # Handle other state changes generically
+        for key, value in state_changes.items():
+            if key not in [
+                "qud_pushed",
+                "qud_popped",
+                "commitment_added",
+                "issues_added",
+                "issues_pending",
+                "plan_created",
+            ]:
+                cumulative_state[key] = value
+
 
 def main() -> int:
     """Main entry point."""
@@ -554,10 +1059,11 @@ def main() -> int:
 
             demo.run_scenario()
 
-            # Generate report
+            # Generate reports
             if not args.no_report:
-                report_path = demo.export_report(args.output_dir)
-                print(f"✓ Report saved: {report_path}")
+                business_report, engineer_report = demo.export_report(args.output_dir)
+                print(f"✓ Business report saved: {business_report}")
+                print(f"✓ Engineer report saved: {engineer_report}")
 
         except KeyboardInterrupt:
             print("\n\nDemo interrupted by user.")
