@@ -95,13 +95,13 @@ class BusinessDemo:
             from ibdm.nlg.nlg_engine import NLGEngine, NLGEngineConfig
 
             config = NLGEngineConfig(
-                default_strategy="plan_aware",
+                default_strategy="llm",  # Use LLM strategy to verify it's working
                 use_plan_awareness=True,
                 use_domain_descriptions=True,
             )
             self.nlg_engine = NLGEngine(config)
             if self.verbose:
-                print(f"✓ NLG engine initialized (mode: {nlg_mode})")
+                print(f"✓ NLG engine initialized (mode: {nlg_mode}, strategy: llm)")
 
     def print_banner(self) -> None:
         """Print demo banner."""
@@ -171,9 +171,7 @@ class BusinessDemo:
                 # Log if NLG output matches scripted (indicates fallback bug)
                 if nlg_utterance == utterance and self.verbose:
                     print("\n⚠️  WARNING: NLG output matches scripted text exactly!")
-                    print(
-                        "   This suggests NLG is falling back to scripted instead of generating."
-                    )
+                    print("   This suggests NLG is falling back to scripted instead of generating.")
                     print(f"   Move content type: {type(move.content).__name__}")
             except Exception as e:
                 # Log NLG failures instead of crashing

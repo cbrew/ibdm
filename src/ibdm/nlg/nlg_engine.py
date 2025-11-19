@@ -7,6 +7,7 @@ utterances from dialogue moves, returning structured NLG results.
 from __future__ import annotations
 
 import logging
+import os
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -22,6 +23,7 @@ from ibdm.core import (
 )
 from ibdm.core.domain import DomainModel
 from ibdm.nlg.nlg_result import NLGResult
+from ibdm.nlu.llm_adapter import LLMAdapter, LLMConfig, ModelType
 
 logger = logging.getLogger(__name__)
 
@@ -34,11 +36,15 @@ class NLGEngineConfig:
         default_strategy: Default generation strategy ("template" | "plan_aware" | "llm")
         use_plan_awareness: Whether to use plan context for generation
         use_domain_descriptions: Whether to use domain model descriptions
+        llm_model: Which LLM model to use for LLM strategy (defaults to Haiku per Policy #9)
+        temperature: LLM temperature for generation
     """
 
     default_strategy: str = "plan_aware"
     use_plan_awareness: bool = True
     use_domain_descriptions: bool = True
+    llm_model: ModelType = ModelType.HAIKU
+    temperature: float = 0.7
 
 
 class NLGEngine:
@@ -70,7 +76,19 @@ class NLGEngine:
             config: NLG configuration (uses defaults if None)
         """
         self.config = config or NLGEngineConfig()
-        logger.info("Initialized NLG engine")
+
+        # Initialize LLM adapter if using LLM strategy
+        self.llm_adapter: LLMAdapter | None = None
+        if self.config.default_strategy == "llm" and os.getenv("IBDM_API_KEY"):
+            llm_config = LLMConfig(
+                model=self.config.llm_model,
+                temperature=self.config.temperature,
+                max_tokens=500,  # NLG responses should be concise
+            )
+            self.llm_adapter = LLMAdapter(llm_config)
+            logger.info(f"Initialized NLG engine with LLM strategy ({self.config.llm_model.value})")
+        else:
+            logger.info(f"Initialized NLG engine with {self.config.default_strategy} strategy")
 
     def generate(self, move: DialogueMove, state: InformationState) -> NLGResult:
         """Generate natural language utterance from dialogue move.
@@ -90,8 +108,16 @@ class NLGEngine:
         # Determine generation strategy
         strategy = self._select_strategy(move, state)
 
+        # Add prominent tracing
+        logger.info(f"🎯 NLG GENERATION START: strategy={strategy}, move_type={move.move_type}")
+        print(f"\n🔍 [NLG TRACE] Strategy: {strategy} | Move Type: {move.move_type}")
+
         # Generate based on strategy
-        if strategy == "plan_aware" and self.config.use_plan_awareness:
+        tokens_used = 0
+        if strategy == "llm" and self.llm_adapter:
+            utterance_text, generation_rule, tokens_used = self._generate_llm(move, state)
+            print(f"✅ [NLG TRACE] LLM call completed! Tokens used: {tokens_used}")
+        elif strategy == "plan_aware" and self.config.use_plan_awareness:
             utterance_text, generation_rule = self._generate_plan_aware(move, state)
         elif strategy == "template":
             utterance_text, generation_rule = self._generate_template(move, state)
@@ -99,13 +125,16 @@ class NLGEngine:
             # Fallback to template
             utterance_text, generation_rule = self._generate_template(move, state)
 
+        latency = time.time() - start_time
+        logger.info(f"✅ NLG GENERATION COMPLETE: latency={latency:.3f}s, tokens={tokens_used}")
+
         # Build result
         return NLGResult(
             utterance_text=utterance_text,
             strategy=strategy,
             generation_rule=generation_rule,
-            tokens_used=0,  # No LLM tokens for template/plan_aware
-            latency=time.time() - start_time,
+            tokens_used=tokens_used,
+            latency=latency,
         )
 
     def _select_strategy(self, move: DialogueMove, state: InformationState) -> str:
@@ -118,6 +147,10 @@ class NLGEngine:
         Returns:
             Strategy name ("template" | "plan_aware" | "llm")
         """
+        # If default strategy is LLM and adapter is available, use it
+        if self.config.default_strategy == "llm" and self.llm_adapter:
+            return "llm"
+
         # Check if there's an active plan
         if self.config.use_plan_awareness and self._has_active_plan(state):
             # Use plan-aware for questions when we have a plan
@@ -195,6 +228,140 @@ class NLGEngine:
 
         else:
             return (str(move.content), "generate_default")
+
+    def _generate_llm(self, move: DialogueMove, state: InformationState) -> tuple[str, str, int]:
+        """Generate using LLM strategy with prominent tracing.
+
+        Args:
+            move: Dialogue move
+            state: Information state
+
+        Returns:
+            Tuple of (generated text, generation rule name, tokens_used)
+        """
+        if not self.llm_adapter:
+            logger.warning("LLM adapter not initialized, falling back to template")
+            text, rule = self._generate_template(move, state)
+            return (text, rule, 0)
+
+        # Build prompt based on move type and context
+        system_prompt = self._build_nlg_system_prompt(move, state)
+        user_prompt = self._build_nlg_user_prompt(move, state)
+
+        # Trace the prompts being sent
+        logger.info(
+            f"📤 LLM NLG PROMPT:\nSystem: {system_prompt[:200]}...\nUser: {user_prompt[:200]}..."
+        )
+        print(f"\n📤 [LLM CALL] Sending NLG request to {self.llm_adapter.config.model.value}")
+        print(f"   Move: {move.move_type} | Content type: {type(move.content).__name__}")
+
+        try:
+            # Make LLM call
+            response = self.llm_adapter.call(
+                prompt=user_prompt,
+                system_prompt=system_prompt,
+                temperature=self.config.temperature,
+            )
+
+            # Trace the response
+            logger.info(
+                f"📥 LLM NLG RESPONSE: {response.content[:200]}... (tokens: {response.tokens_used})"
+            )
+            print(f"📥 [LLM RESPONSE] Received: {response.content[:100]}...")
+            print(
+                f"   Tokens: {response.tokens_used} "
+                f"(prompt: {response.prompt_tokens}, completion: {response.completion_tokens})"
+            )
+
+            return (response.content, "generate_llm", response.tokens_used)
+
+        except Exception as e:
+            logger.error(f"❌ LLM NLG call failed: {e}")
+            print(f"❌ [LLM ERROR] Generation failed: {e}")
+            # Fallback to template
+            text, rule = self._generate_template(move, state)
+            return (text, f"{rule}_fallback", 0)
+
+    def _build_nlg_system_prompt(self, move: DialogueMove, state: InformationState) -> str:
+        """Build system prompt for NLG LLM call.
+
+        Args:
+            move: Dialogue move
+            state: Information state
+
+        Returns:
+            System prompt string
+        """
+        base_prompt = (
+            "You are a natural language generation system for a dialogue management system. "
+            "Generate natural, professional responses based on dialogue moves and context."
+        )
+
+        # Add context from state
+        if state.shared.qud:
+            qud_str = ", ".join(str(q) for q in state.shared.qud[-3:])  # Last 3 questions
+            base_prompt += f"\n\nCurrent questions under discussion: {qud_str}"
+
+        if state.private.plan:
+            active_plans = [p for p in state.private.plan if p.is_active()]
+            if active_plans:
+                plan_str = ", ".join(p.plan_type for p in active_plans)
+                base_prompt += f"\n\nActive plans: {plan_str}"
+
+        return base_prompt
+
+    def _build_nlg_user_prompt(self, move: DialogueMove, state: InformationState) -> str:
+        """Build user prompt for NLG LLM call.
+
+        Args:
+            move: Dialogue move
+            state: Information state
+
+        Returns:
+            User prompt string
+        """
+        move_type = move.move_type
+        content = move.content
+
+        if move_type == "ask":
+            # Generate a question
+            if isinstance(content, WhQuestion):
+                return (
+                    f"Generate a natural wh-question asking about '{content.predicate}'. "
+                    f"The question variable is '{content.variable}'. "
+                    f"Make it sound natural and professional."
+                )
+            elif isinstance(content, YNQuestion):
+                return (
+                    f"Generate a natural yes/no question about: {content.proposition}. "
+                    f"Make it sound natural and professional."
+                )
+            elif isinstance(content, AltQuestion):
+                alts = ", ".join(content.alternatives)
+                return (
+                    f"Generate a natural alternative question with these choices: {alts}. "
+                    f"Make it sound natural and professional."
+                )
+            else:
+                return f"Generate a natural question to ask: {content}"
+
+        elif move_type == "answer":
+            if isinstance(content, Answer):
+                return f"Generate a natural answer with this content: {content.content}"
+            else:
+                return f"Generate a natural answer: {content}"
+
+        elif move_type == "greet":
+            return "Generate a natural greeting for a dialogue system assistant."
+
+        elif move_type == "quit":
+            return "Generate a natural farewell message."
+
+        elif move_type == "assert":
+            return f"Generate a natural assertion statement: {content}"
+
+        else:
+            return f"Generate natural text for a '{move_type}' dialogue move: {content}"
 
     def _generate_plan_aware(self, move: DialogueMove, state: InformationState) -> tuple[str, str]:
         """Generate using plan-aware strategy.
