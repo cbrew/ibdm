@@ -5,27 +5,12 @@ It implements the IBDM control loop (interpret -> integrate -> select -> generat
 as a Burr application with state tracking and visualization.
 """
 
-from ibdm.burr_integration.actions import (
-    generate,
-    initialize,
-    integrate,
-    interpret,
-    nlg,
-    nlu,
-    select,
-)
+# Actions are not exported - they are used internally by state_machine
+# Importing them here creates a circular dependency with engine module
 from ibdm.burr_integration.nlu_context import NLUContext
 from ibdm.burr_integration.state_machine import DialogueStateMachine, create_dialogue_application
 
 __all__ = [
-    # Actions
-    "initialize",
-    "nlu",
-    "interpret",
-    "integrate",
-    "select",
-    "nlg",
-    "generate",
     # State machine
     "create_dialogue_application",
     "DialogueStateMachine",
