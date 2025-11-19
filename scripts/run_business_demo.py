@@ -4,15 +4,15 @@
 One-command demo script that runs pre-configured dialogue scenarios
 with professional output and auto-generated HTML reports.
 
-ARCHITECTURAL NOTE - Semantic Parsing vs NLU:
-    This demo parses DialogueMoves from STRUCTURED SEMANTIC DATA in scenario JSON
-    (e.g., state_changes.qud_pushed: "?x.legal_entities(x)"), NOT from natural
-    language text. This is semantic parsing for NLG demonstration purposes.
+ARCHITECTURAL NOTE - Loading Semantic Representations vs NLU:
+    This demo LOADS semantic representations from scenario JSON
+    (e.g., state_changes.qud_pushed: "?x.legal_entities(x)") and converts
+    them to DialogueMove objects. This is NOT parsing natural language text.
 
     What the demo shows:  MEANING → TEXT (NLG)
     Future work:          TEXT → MEANING (NLU)
 
-    Parsing DialogueMoves from natural language utterances would be NLU work,
+    Inferring DialogueMoves from natural language utterances would be NLU work,
     which is explicitly out of scope for this demo.
 
 Usage:
@@ -196,7 +196,7 @@ class BusinessDemo:
         if speaker == "system" and self.nlg_engine is not None and self.nlg_mode != "off":
             try:
                 # Create DialogueMove from semantic annotations in turn data
-                # NOTE: This parses from structured semantic data (qud_pushed, etc.),
+                # NOTE: This LOADS structured semantic data from JSON (qud_pushed, etc.),
                 # NOT from natural language text. The scenario JSON contains
                 # semantic representations that we convert to DialogueMove objects.
                 # This demonstrates: SEMANTIC REPRESENTATION → NATURAL LANGUAGE (NLG)
@@ -1025,17 +1025,17 @@ class BusinessDemo:
         return "\n".join(html_parts)
 
     def _parse_question_from_string(self, question_str: str) -> Question | None:
-        """Parse a question from semantic representation string.
+        """Load a Question from semantic representation string.
 
-        This parses from SEMANTIC NOTATION (e.g., "?x.legal_entities(x)"),
+        This loads from SEMANTIC NOTATION loaded from JSON (e.g., "?x.legal_entities(x)"),
         NOT from natural language text (e.g., "What are the parties?").
-        This is semantic parsing for the NLG demo, not NLU.
+        This is loading semantic representations for the NLG demo, not NLU.
 
         Args:
             question_str: Semantic notation like "?x.legal_entities(x)" or "?nda_type"
 
         Returns:
-            Question object or None if parsing fails
+            Question object or None if loading fails
         """
         import re
 
@@ -1074,17 +1074,17 @@ class BusinessDemo:
         """Create DialogueMove for SYSTEM turns (for NLG generation).
 
         IMPORTANT ARCHITECTURAL NOTE:
-        This method parses DialogueMoves from STRUCTURED SEMANTIC DATA
-        (e.g., state_changes.qud_pushed: "?x.legal_entities(x)"), NOT from
-        natural language text. This is semantic parsing, not NLU.
+        This method LOADS semantic representations from JSON
+        (e.g., state_changes.qud_pushed: "?x.legal_entities(x)") and converts
+        them to DialogueMove objects. This is NOT parsing natural language text.
 
-        What we ARE doing (semantic parsing for NLG demo):
-        - Parse semantic representations → DialogueMove
+        What we ARE doing (loading semantic representations for NLG demo):
+        - Load semantic representations from JSON → DialogueMove
         - Example: "?x.legal_entities(x)" → WhQuestion(variable="x", predicate="legal_entities")
         - Pass DialogueMove to NLG → Generate natural language
 
         What we are NOT doing (NLU - future work):
-        - Parse natural language → DialogueMove
+        - Infer DialogueMove from natural language text
         - Example: "What are the parties?" → WhQuestion (this would be NLU)
 
         The demo shows: MEANING → TEXT (NLG)
@@ -1100,8 +1100,8 @@ class BusinessDemo:
             DialogueMove with properly typed content
 
         Note:
-            This parses from semantic annotations, not utterance text.
-            Parsing from utterance text would be NLU (not implemented).
+            This loads from semantic annotations in JSON, not utterance text.
+            Inferring from utterance text would be NLU (not implemented).
         """
         from ibdm.core.moves import DialogueMove
 
