@@ -83,13 +83,13 @@ def _create_dialogue_move_from_turn(self, turn_data: dict[str, Any]) -> Dialogue
 
 ### 2. State Reconstruction from state_changes
 
-**Problem:** NLG engine needs full InformationState for context, but JSON only has state_changes deltas.
+**Problem:** NLG engine needs full InformationState for context, but JSON only has state_changes deltas. Currently the demo creates a real `InformationState` object (line 99) but never uses it - instead using a plain dictionary for display.
 
-**Solution:** Maintain a running InformationState and apply changes incrementally.
+**Solution:** Use the existing `self.state` InformationState and apply changes incrementally.
 
 **Implementation:**
-1. Initialize proper `InformationState` at demo start (replace mock at line 99)
-2. Upgrade `_update_cumulative_state()` to work with actual InformationState objects
+1. Use existing `self.state` InformationState (already initialized at line 99)
+2. Upgrade `_update_cumulative_state()` to work with actual InformationState objects instead of plain dictionary
 3. Apply state_changes to real state structures:
    - `qud_pushed` → `state.shared.qud.append(question)`
    - `commitment_added` → `state.shared.com.add(proposition)`
@@ -218,8 +218,9 @@ class BusinessDemo:
 - Document key decisions and architecture
 
 ### Phase 2: State Management
-- Replace mock state with real InformationState
-- Implement `_apply_state_changes()` method
+- Use existing `self.state` instead of plain dictionary
+- Refactor `_update_cumulative_state()` to update real InformationState
+- Implement proper state change application (QUD, commitments, plans)
 - Test state reconstruction matches expected state
 
 ### Phase 3: Move Construction
