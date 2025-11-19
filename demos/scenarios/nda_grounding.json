@@ -1,0 +1,255 @@
+{
+  "scenario_id": "nda_grounding",
+  "title": "NDA Grounding - ICM and Confidence Demo",
+  "description": "Demonstrates Interactive Communication Management (ICM) with confidence-based grounding strategies. Shows how IBDM handles uncertainty in understanding user utterances through explicit and implicit confirmation strategies.",
+  "business_narrative": "Perfect understanding isn't always possible - speech recognition errors, ambiguous phrasing, or unusual terminology can create uncertainty. This scenario demonstrates IBDM's grounding mechanisms: how the system signals its confidence level and uses appropriate strategies (implicit acceptance, explicit confirmation, or clarification) based on that confidence. This prevents costly errors while maintaining dialogue flow.",
+  "larsson_algorithms": [
+    "IBiS2 Grounding (Larsson Chapter 3) - Confidence-based grounding strategies",
+    "ICM Moves - per:pos (perception positive), sem:pos (semantic positive), und:pos (understanding positive)",
+    "Grounding Strategies - Accept, Confirm, Clarify based on confidence thresholds",
+    "Feedback Loops - System seeks and provides feedback about mutual understanding"
+  ],
+  "expected_outcomes": {
+    "turns": 14,
+    "icm_moves": 4,
+    "confidence_variance": "high",
+    "grounding_strategies_used": ["accept", "confirm", "clarify"],
+    "larsson_fidelity": "95%"
+  },
+  "confidence_thresholds": {
+    "high": ">0.8 - Accept implicitly",
+    "medium": "0.5-0.8 - Confirm explicitly",
+    "low": "<0.5 - Request clarification"
+  },
+  "turns": [
+    {
+      "turn": 1,
+      "speaker": "user",
+      "utterance": "I need to draft an NDA",
+      "move_type": "request",
+      "confidence": 0.95,
+      "business_explanation": "Clear, unambiguous request. High confidence.",
+      "grounding_strategy": "accept",
+      "larsson_rule": "Task Accommodation + ICM:accept",
+      "state_changes": {
+        "plan_created": "nda_drafting",
+        "grounding_status": "accepted"
+      }
+    },
+    {
+      "turn": 2,
+      "speaker": "system",
+      "utterance": "I'll help you draft an NDA. What are the parties to the agreement?",
+      "move_type": "ask",
+      "icm_move": "und:pos",
+      "business_explanation": "System signals understanding ('I'll help') before asking first question. This is implicit acceptance - no explicit confirmation needed due to high confidence.",
+      "larsson_rule": "Rule 5.1 + ICM:und:pos (understanding positive)",
+      "state_changes": {
+        "qud_pushed": "?x.legal_entities(x)"
+      }
+    },
+    {
+      "turn": 3,
+      "speaker": "user",
+      "utterance": "Acme Corporation and TechStart",
+      "move_type": "answer",
+      "confidence": 0.92,
+      "business_explanation": "Clear entity names. High confidence.",
+      "grounding_strategy": "accept",
+      "state_changes": {
+        "commitment_added": "legal_entities(Acme Corporation, TechStart)",
+        "grounding_status": "accepted"
+      }
+    },
+    {
+      "turn": 4,
+      "speaker": "system",
+      "utterance": "Is this a mutual NDA or one-way?",
+      "move_type": "ask",
+      "icm_move": "implicit_accept",
+      "business_explanation": "System proceeds without explicit confirmation, signaling acceptance of the parties.",
+      "larsson_rule": "Rule 5.1",
+      "state_changes": {
+        "qud_pushed": "?nda_type"
+      }
+    },
+    {
+      "turn": 5,
+      "speaker": "user",
+      "utterance": "mutual",
+      "move_type": "answer",
+      "confidence": 0.65,
+      "business_explanation": "Single word answer. Medium confidence - could be ambiguous or misheard.",
+      "grounding_strategy": "confirm",
+      "larsson_rule": "Rule 4.1 + ICM:confirm_strategy",
+      "state_changes": {
+        "provisional_commitment": "nda_type(mutual)",
+        "grounding_status": "needs_confirmation"
+      }
+    },
+    {
+      "turn": 6,
+      "speaker": "system",
+      "utterance": "Just to confirm: you want a mutual NDA where both parties share confidential information?",
+      "move_type": "confirm",
+      "icm_move": "icm:und:int:sem (semantic understanding interrogative)",
+      "business_explanation": "Medium confidence triggers EXPLICIT CONFIRMATION. System paraphrases understanding to verify. This prevents misunderstandings.",
+      "larsson_rule": "IBiS2 - Explicit confirmation at medium confidence",
+      "state_changes": {
+        "awaiting_confirmation": "nda_type(mutual)"
+      }
+    },
+    {
+      "turn": 7,
+      "speaker": "user",
+      "utterance": "Yes, that's right",
+      "move_type": "confirm",
+      "confidence": 0.9,
+      "business_explanation": "User confirms. Confidence now upgraded to high.",
+      "larsson_rule": "ICM:pos (positive feedback) upgrades confidence",
+      "state_changes": {
+        "commitment_confirmed": "nda_type(mutual)",
+        "grounding_status": "grounded",
+        "confidence_upgraded": "0.65 -> 0.9"
+      }
+    },
+    {
+      "turn": 8,
+      "speaker": "system",
+      "utterance": "What is the effective date?",
+      "move_type": "ask",
+      "business_explanation": "Proceed to next question after grounding achieved.",
+      "larsson_rule": "Rule 5.1",
+      "state_changes": {
+        "qud_pushed": "?x.date(x)"
+      }
+    },
+    {
+      "turn": 9,
+      "speaker": "user",
+      "utterance": "uh... January something 2025",
+      "move_type": "answer",
+      "confidence": 0.35,
+      "business_explanation": "Vague, incomplete answer with hesitation marker. LOW confidence.",
+      "grounding_strategy": "clarify",
+      "larsson_rule": "Rule 4.1 + ICM:clarify_strategy",
+      "state_changes": {
+        "uncertain_info": "date(???)",
+        "grounding_status": "needs_clarification"
+      }
+    },
+    {
+      "turn": 10,
+      "speaker": "system",
+      "utterance": "I didn't quite catch the specific date. Could you provide the complete date? For example: January 15, 2025",
+      "move_type": "clarify",
+      "icm_move": "icm:per:neg (perception negative - didn't understand)",
+      "business_explanation": "LOW confidence triggers CLARIFICATION REQUEST. System explicitly signals it didn't understand and asks for repetition with an example.",
+      "larsson_rule": "IBiS2 - Clarification at low confidence + ICM:per:neg",
+      "state_changes": {
+        "awaiting_clarification": "date"
+      }
+    },
+    {
+      "turn": 11,
+      "speaker": "user",
+      "utterance": "January 15, 2025",
+      "move_type": "answer",
+      "confidence": 0.95,
+      "business_explanation": "Clear, complete date. High confidence after clarification.",
+      "grounding_strategy": "accept",
+      "state_changes": {
+        "commitment_added": "date(2025-01-15)",
+        "grounding_status": "grounded",
+        "clarification_successful": true
+      }
+    },
+    {
+      "turn": 12,
+      "speaker": "system",
+      "utterance": "Thank you. What is the duration of confidentiality obligations?",
+      "move_type": "ask",
+      "icm_move": "und:pos (understanding positive)",
+      "business_explanation": "System thanks user (ICM feedback) before next question.",
+      "larsson_rule": "Rule 5.1 + ICM:und:pos",
+      "state_changes": {
+        "qud_pushed": "?x.time_period(x)"
+      }
+    },
+    {
+      "turn": 13,
+      "speaker": "user",
+      "utterance": "three years",
+      "move_type": "answer",
+      "confidence": 0.88,
+      "business_explanation": "Clear duration. High confidence.",
+      "grounding_strategy": "accept",
+      "state_changes": {
+        "commitment_added": "time_period(3 years)",
+        "grounding_status": "accepted"
+      }
+    },
+    {
+      "turn": 14,
+      "speaker": "system",
+      "utterance": "What is the governing law jurisdiction?",
+      "move_type": "ask",
+      "business_explanation": "Proceed to final question.",
+      "larsson_rule": "Rule 5.1",
+      "state_changes": {
+        "qud_pushed": "?x.jurisdiction(x)"
+      }
+    },
+    {
+      "turn": 15,
+      "speaker": "user",
+      "utterance": "California",
+      "move_type": "answer",
+      "confidence": 0.91,
+      "business_explanation": "Clear jurisdiction. High confidence.",
+      "grounding_strategy": "accept",
+      "state_changes": {
+        "commitment_added": "jurisdiction(California)",
+        "plan_status": "completed"
+      }
+    },
+    {
+      "turn": 16,
+      "speaker": "system",
+      "utterance": "Perfect. I have all the information: mutual NDA between Acme Corporation and TechStart, effective January 15, 2025, 3-year duration, governed by California law. All information confirmed and grounded.",
+      "move_type": "inform",
+      "icm_move": "und:pos (final understanding confirmation)",
+      "business_explanation": "System provides final summary with explicit statement that all information is grounded. This demonstrates transparency about confidence.",
+      "larsson_rule": "Inform + ICM:und:pos",
+      "state_changes": {
+        "dialogue_status": "complete",
+        "all_commitments_grounded": true
+      }
+    }
+  ],
+  "grounding_statistics": {
+    "high_confidence_moves": 7,
+    "medium_confidence_moves": 1,
+    "low_confidence_moves": 1,
+    "explicit_confirmations": 1,
+    "clarification_requests": 1,
+    "implicit_acceptances": 5,
+    "grounding_success_rate": "100%"
+  },
+  "metrics": {
+    "dialogue_efficiency": "85% - 16 turns vs 12 baseline (4 extra for grounding)",
+    "information_completeness": "100% - All fields gathered and confirmed",
+    "user_experience": "Excellent - System transparent about uncertainty, prevents errors",
+    "system_transparency": "Very High - Explicit signals about understanding level",
+    "error_prevention": "100% - Caught and corrected one ambiguous answer",
+    "grounding_overhead": "25% - 3 extra turns for confirmation/clarification"
+  },
+  "business_value": "This scenario demonstrates IBDM's production readiness. Unlike chatbots that silently guess or fail when uncertain, IBDM explicitly manages grounding through ICM moves. This prevents costly errors (imagine misunderstanding a legal deadline!) while maintaining natural dialogue flow. The confidence-based strategy selection (accept/confirm/clarify) optimizes the tradeoff between efficiency and accuracy.",
+  "confidence_strategy_mapping": {
+    "0.95": "Accept - 'I'll help you draft an NDA'",
+    "0.92": "Accept - Proceed without confirmation",
+    "0.65": "Confirm - 'Just to confirm: mutual NDA?'",
+    "0.35": "Clarify - 'I didn't quite catch the date'",
+    "0.95": "Accept - After clarification received"
+  }
+}

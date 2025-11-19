@@ -1,0 +1,169 @@
+{
+  "scenario_id": "nda_basic",
+  "title": "NDA Basic - Happy Path Demo",
+  "description": "Demonstrates incremental question-answer dialogue with perfect information gathering. Shows basic IBDM operation with QUD management and plan progression.",
+  "business_narrative": "This scenario shows how IBDM efficiently gathers all required information for an NDA through a structured dialogue. Each question is asked sequentially, the user provides clear answers, and the system maintains perfect context throughout. This demonstrates the core value proposition: systematic, transparent information gathering that never loses track of what's needed.",
+  "larsson_algorithms": [
+    "Task Accommodation (Section 2.5.1) - System infers NDA drafting plan from initial request",
+    "Question Accommodation (Rule 4.1) - Each answer accommodates the top question on QUD",
+    "QUD Stack Management (Section 2.4.2) - Questions pushed/popped in proper order",
+    "Plan Progression (Section 2.5.3) - Subplans completed sequentially"
+  ],
+  "expected_outcomes": {
+    "turns": 6,
+    "qud_depth_max": 1,
+    "commitments_final": 5,
+    "plan_completion": "100%",
+    "larsson_fidelity": "95%"
+  },
+  "turns": [
+    {
+      "turn": 1,
+      "speaker": "user",
+      "utterance": "I need to draft an NDA",
+      "move_type": "request",
+      "business_explanation": "User initiates the task with a simple command. IBDM recognizes this as a document drafting request.",
+      "larsson_rule": "Task Accommodation - System infers a plan for NDA drafting",
+      "state_changes": {
+        "plan_created": "nda_drafting with 5 subplans",
+        "issues_added": ["legal_entities", "nda_type", "date", "time_period", "jurisdiction"]
+      }
+    },
+    {
+      "turn": 2,
+      "speaker": "system",
+      "utterance": "What are the parties to the NDA?",
+      "move_type": "ask",
+      "business_explanation": "System asks the first question from its plan. This shows systematic information gathering.",
+      "larsson_rule": "Rule 5.1 - Raise issue from private.issues to shared.qud",
+      "state_changes": {
+        "qud_pushed": "?x.legal_entities(x)",
+        "issues_pending": 4
+      }
+    },
+    {
+      "turn": 3,
+      "speaker": "user",
+      "utterance": "Acme Corporation and TechStart Inc",
+      "move_type": "answer",
+      "business_explanation": "User provides a clear, direct answer. IBDM extracts the legal entities and updates its commitments.",
+      "larsson_rule": "Rule 4.1 - Answer accommodates top question on QUD",
+      "state_changes": {
+        "qud_popped": "?x.legal_entities(x)",
+        "commitment_added": "legal_entities(Acme Corporation, TechStart Inc)"
+      }
+    },
+    {
+      "turn": 4,
+      "speaker": "system",
+      "utterance": "Is this a mutual NDA or one-way?",
+      "move_type": "ask",
+      "business_explanation": "System continues to next question in the plan, asking about NDA type.",
+      "larsson_rule": "Rule 5.1 - Raise next issue",
+      "state_changes": {
+        "qud_pushed": "?nda_type"
+      }
+    },
+    {
+      "turn": 5,
+      "speaker": "user",
+      "utterance": "Mutual",
+      "move_type": "answer",
+      "business_explanation": "User selects from alternatives. System resolves the alternative question.",
+      "larsson_rule": "Rule 4.1 - Answer accommodates question",
+      "state_changes": {
+        "qud_popped": "?nda_type",
+        "commitment_added": "nda_type(mutual)"
+      }
+    },
+    {
+      "turn": 6,
+      "speaker": "system",
+      "utterance": "What is the effective date?",
+      "move_type": "ask",
+      "business_explanation": "Third question in sequence.",
+      "larsson_rule": "Rule 5.1 - Raise issue",
+      "state_changes": {
+        "qud_pushed": "?x.date(x)"
+      }
+    },
+    {
+      "turn": 7,
+      "speaker": "user",
+      "utterance": "January 1, 2025",
+      "move_type": "answer",
+      "business_explanation": "Clear date provided.",
+      "larsson_rule": "Rule 4.1 - Answer accommodates question",
+      "state_changes": {
+        "qud_popped": "?x.date(x)",
+        "commitment_added": "date(2025-01-01)"
+      }
+    },
+    {
+      "turn": 8,
+      "speaker": "system",
+      "utterance": "What is the duration of confidentiality obligations?",
+      "move_type": "ask",
+      "business_explanation": "Fourth question about duration.",
+      "larsson_rule": "Rule 5.1 - Raise issue",
+      "state_changes": {
+        "qud_pushed": "?x.time_period(x)"
+      }
+    },
+    {
+      "turn": 9,
+      "speaker": "user",
+      "utterance": "3 years",
+      "move_type": "answer",
+      "business_explanation": "Duration specified.",
+      "larsson_rule": "Rule 4.1 - Answer accommodates question",
+      "state_changes": {
+        "qud_popped": "?x.time_period(x)",
+        "commitment_added": "time_period(3 years)"
+      }
+    },
+    {
+      "turn": 10,
+      "speaker": "system",
+      "utterance": "What is the governing law jurisdiction?",
+      "move_type": "ask",
+      "business_explanation": "Final question about jurisdiction.",
+      "larsson_rule": "Rule 5.1 - Raise issue",
+      "state_changes": {
+        "qud_pushed": "?x.jurisdiction(x)"
+      }
+    },
+    {
+      "turn": 11,
+      "speaker": "user",
+      "utterance": "California",
+      "move_type": "answer",
+      "business_explanation": "Final piece of information provided. All requirements now gathered.",
+      "larsson_rule": "Rule 4.1 - Answer accommodates question",
+      "state_changes": {
+        "qud_popped": "?x.jurisdiction(x)",
+        "commitment_added": "jurisdiction(California)",
+        "plan_status": "completed",
+        "ready_for": "document_generation"
+      }
+    },
+    {
+      "turn": 12,
+      "speaker": "system",
+      "utterance": "Thank you. I have all the information needed to draft your NDA. The document will include: Acme Corporation and TechStart Inc as parties, mutual confidentiality, effective January 1, 2025, 3-year duration, governed by California law.",
+      "move_type": "inform",
+      "business_explanation": "System confirms completion and summarizes gathered information, demonstrating transparency.",
+      "larsson_rule": "Inform move - Summarize commitments",
+      "state_changes": {
+        "dialogue_status": "complete",
+        "next_action": "generate_document"
+      }
+    }
+  ],
+  "metrics": {
+    "dialogue_efficiency": "100% - No wasted turns, all questions answered directly",
+    "information_completeness": "100% - All 5 required fields gathered",
+    "user_experience": "Excellent - Clear, logical progression",
+    "system_transparency": "High - User always knows what's being asked and why"
+  }
+}

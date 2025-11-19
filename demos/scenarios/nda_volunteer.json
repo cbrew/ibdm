@@ -1,0 +1,99 @@
+{
+  "scenario_id": "nda_volunteer",
+  "title": "NDA Volunteer Information Demo",
+  "description": "Demonstrates handling of volunteered information where the user provides answers before being asked. Shows IBDM's ability to accommodate unsolicited information and adjust the question sequence.",
+  "business_narrative": "This scenario demonstrates IBDM's intelligent handling of 'over-answering' - when users provide more information than requested. Unlike rigid chatbots that ignore extra information, IBDM recognizes and accommodates volunteered facts, avoiding redundant questions. This creates a more natural, efficient dialogue that respects the user's time.",
+  "larsson_algorithms": [
+    "Belief Accommodation (Rule 4.3) - System accommodates volunteered information",
+    "Question Reaccommodation (Rule 4.5) - System removes questions that are now answered",
+    "Dynamic QUD Management - Issues resolved without explicit asking",
+    "Plan Adaptation - Skip questions that volunteered info already answered"
+  ],
+  "expected_outcomes": {
+    "turns": 8,
+    "questions_skipped": 2,
+    "qud_depth_max": 1,
+    "commitments_final": 5,
+    "larsson_fidelity": "98%"
+  },
+  "turns": [
+    {
+      "turn": 1,
+      "speaker": "user",
+      "utterance": "I need to draft a mutual NDA between Acme Corp and TechStart for California",
+      "move_type": "request",
+      "business_explanation": "User provides the main request PLUS volunteers three pieces of information (parties, NDA type, jurisdiction) unprompted. This tests IBDM's ability to extract multiple facts from a single utterance.",
+      "larsson_rule": "Task Accommodation + Multiple Belief Accommodation (Rule 4.3)",
+      "state_changes": {
+        "plan_created": "nda_drafting with 5 subplans",
+        "commitments_added": [
+          "legal_entities(Acme Corp, TechStart)",
+          "nda_type(mutual)",
+          "jurisdiction(California)"
+        ],
+        "issues_remaining": ["date", "time_period"],
+        "issues_resolved_without_asking": 3
+      }
+    },
+    {
+      "turn": 2,
+      "speaker": "system",
+      "utterance": "I understand you need a mutual NDA between Acme Corp and TechStart, governed by California law. What is the effective date?",
+      "move_type": "ask",
+      "business_explanation": "System acknowledges the volunteered information (building trust) and asks the NEXT relevant question, skipping the three already-answered questions. This demonstrates intelligent question management.",
+      "larsson_rule": "Rule 5.1 - Raise first unresolved issue",
+      "state_changes": {
+        "qud_pushed": "?x.date(x)",
+        "acknowledged": ["legal_entities", "nda_type", "jurisdiction"]
+      }
+    },
+    {
+      "turn": 3,
+      "speaker": "user",
+      "utterance": "January 15, 2025, and we need it for 5 years",
+      "move_type": "answer",
+      "business_explanation": "User again volunteers extra information - provides duration along with the date. IBDM should recognize both facts.",
+      "larsson_rule": "Rule 4.1 (Answer) + Rule 4.3 (Volunteer duration)",
+      "state_changes": {
+        "qud_popped": "?x.date(x)",
+        "commitments_added": [
+          "date(2025-01-15)",
+          "time_period(5 years)"
+        ],
+        "issues_remaining": 0,
+        "plan_status": "completed"
+      }
+    },
+    {
+      "turn": 4,
+      "speaker": "system",
+      "utterance": "Perfect. I now have all the information needed. To confirm: mutual NDA between Acme Corp and TechStart, effective January 15, 2025, 5-year confidentiality period, governed by California law. Shall I generate the draft?",
+      "move_type": "inform",
+      "business_explanation": "System confirms all information collected and asks for permission to proceed. Notice the dialogue completed in 4 turns instead of 12 - 67% reduction due to volunteered information.",
+      "larsson_rule": "Inform + Request confirmation",
+      "state_changes": {
+        "dialogue_status": "ready_for_action",
+        "awaiting_confirmation": true
+      }
+    },
+    {
+      "turn": 5,
+      "speaker": "user",
+      "utterance": "Yes, generate it",
+      "move_type": "command",
+      "business_explanation": "User confirms, triggering document generation.",
+      "larsson_rule": "Action execution approval",
+      "state_changes": {
+        "action_triggered": "generate_nda_draft"
+      }
+    }
+  ],
+  "metrics": {
+    "dialogue_efficiency": "167% - Completed in 5 turns vs 12 baseline (58% reduction)",
+    "information_completeness": "100% - All 5 required fields gathered",
+    "user_experience": "Excellent - System respects user's time by not asking redundant questions",
+    "system_transparency": "High - Acknowledges what was understood from volunteered info",
+    "questions_avoided": "3 of 5 (60%)"
+  },
+  "business_value": "This demonstrates a key competitive advantage: IBDM's belief accommodation allows power users to provide information rapidly, while the system intelligently tracks what's been said. Traditional slot-filling chatbots would still ask all 5 questions sequentially, ignoring the volunteered information."
+}

@@ -1,0 +1,245 @@
+{
+  "scenario_id": "nda_complex",
+  "title": "NDA Complex - Clarifications and Dependencies Demo",
+  "description": "Demonstrates handling of unclear answers, clarification questions, and prerequisite dependencies. Shows IBDM's ability to manage nested questions and maintain dialogue coherence through complex interactions.",
+  "business_narrative": "Real-world conversations aren't perfectly linear. Users give ambiguous answers, change their minds, or need clarification about what's being asked. This scenario shows IBDM's robust handling of dialogue complexity: managing clarification sub-dialogues, resolving ambiguities, and maintaining context even when the conversation takes detours. This is where traditional chatbots break down, but IBDM excels.",
+  "larsson_algorithms": [
+    "Local Question Accommodation (Rule 4.2) - Handle clarification questions",
+    "Dependent Questions - Some questions depend on previous answers",
+    "QUD Nesting - Clarifications push new questions onto QUD",
+    "Context Maintenance - Return to main dialogue after clarification resolved"
+  ],
+  "expected_outcomes": {
+    "turns": 16,
+    "clarifications": 3,
+    "qud_depth_max": 2,
+    "commitments_final": 5,
+    "larsson_fidelity": "92%"
+  },
+  "turns": [
+    {
+      "turn": 1,
+      "speaker": "user",
+      "utterance": "I need an NDA",
+      "move_type": "request",
+      "business_explanation": "Simple request, triggering NDA plan.",
+      "larsson_rule": "Task Accommodation",
+      "state_changes": {
+        "plan_created": "nda_drafting"
+      }
+    },
+    {
+      "turn": 2,
+      "speaker": "system",
+      "utterance": "What are the parties to the NDA?",
+      "move_type": "ask",
+      "larsson_rule": "Rule 5.1 - Raise issue",
+      "state_changes": {
+        "qud_pushed": "?x.legal_entities(x)"
+      }
+    },
+    {
+      "turn": 3,
+      "speaker": "user",
+      "utterance": "What do you mean by parties?",
+      "move_type": "question",
+      "business_explanation": "User doesn't understand the term 'parties' and asks for clarification. This is a LOCAL QUESTION about the current question.",
+      "larsson_rule": "Rule 4.2 - Local Question Accommodation",
+      "state_changes": {
+        "qud_pushed": "?clarify(parties)",
+        "qud_depth": 2
+      }
+    },
+    {
+      "turn": 4,
+      "speaker": "system",
+      "utterance": "The parties are the organizations or individuals entering into the agreement - typically a disclosing party and a receiving party. For example: 'Acme Corp and TechStart Inc'.",
+      "move_type": "answer",
+      "business_explanation": "System provides clarification with an example. This is a nested dialogue - answering the clarification before returning to the main question.",
+      "larsson_rule": "Answer to local question",
+      "state_changes": {
+        "qud_popped": "?clarify(parties)",
+        "qud_depth": 1
+      }
+    },
+    {
+      "turn": 5,
+      "speaker": "system",
+      "utterance": "So, what are the parties to your NDA?",
+      "move_type": "ask",
+      "business_explanation": "System returns to the original question after clarification resolved. This demonstrates proper context management.",
+      "larsson_rule": "Re-raise question after clarification",
+      "state_changes": {
+        "qud_top": "?x.legal_entities(x)"
+      }
+    },
+    {
+      "turn": 6,
+      "speaker": "user",
+      "utterance": "GlobalTech and our company",
+      "move_type": "answer",
+      "business_explanation": "User gives a partially ambiguous answer - 'our company' isn't specific enough.",
+      "larsson_rule": "Rule 4.1 - Partial answer",
+      "state_changes": {
+        "partial_commitment": "legal_entities(GlobalTech, ???)",
+        "needs_clarification": "second_party"
+      }
+    },
+    {
+      "turn": 7,
+      "speaker": "system",
+      "utterance": "I have GlobalTech as one party. What is the full legal name of your company?",
+      "move_type": "ask",
+      "business_explanation": "System detects incomplete information and asks a DEPENDENT clarification question.",
+      "larsson_rule": "Dependent question - clarify incomplete answer",
+      "state_changes": {
+        "qud_pushed": "?clarify(company_name)"
+      }
+    },
+    {
+      "turn": 8,
+      "speaker": "user",
+      "utterance": "InnovateCorp LLC",
+      "move_type": "answer",
+      "business_explanation": "User provides the clarification.",
+      "larsson_rule": "Answer resolves dependent question",
+      "state_changes": {
+        "qud_popped": "?clarify(company_name)",
+        "commitment_completed": "legal_entities(GlobalTech, InnovateCorp LLC)"
+      }
+    },
+    {
+      "turn": 9,
+      "speaker": "system",
+      "utterance": "Is this a mutual NDA or one-way?",
+      "move_type": "ask",
+      "business_explanation": "Proceeding to next question in plan.",
+      "larsson_rule": "Rule 5.1",
+      "state_changes": {
+        "qud_pushed": "?nda_type"
+      }
+    },
+    {
+      "turn": 10,
+      "speaker": "user",
+      "utterance": "What's the difference?",
+      "move_type": "question",
+      "business_explanation": "Another clarification request - user needs explanation of alternatives.",
+      "larsson_rule": "Rule 4.2 - Local question",
+      "state_changes": {
+        "qud_pushed": "?clarify(nda_types)"
+      }
+    },
+    {
+      "turn": 11,
+      "speaker": "system",
+      "utterance": "A mutual NDA means both parties share confidential information with each other. A one-way NDA means only one party discloses information to the other.",
+      "move_type": "answer",
+      "business_explanation": "System explains the distinction.",
+      "larsson_rule": "Answer clarification",
+      "state_changes": {
+        "qud_popped": "?clarify(nda_types)"
+      }
+    },
+    {
+      "turn": 12,
+      "speaker": "user",
+      "utterance": "Mutual",
+      "move_type": "answer",
+      "business_explanation": "User makes informed choice after clarification.",
+      "larsson_rule": "Rule 4.1",
+      "state_changes": {
+        "qud_popped": "?nda_type",
+        "commitment_added": "nda_type(mutual)"
+      }
+    },
+    {
+      "turn": 13,
+      "speaker": "system",
+      "utterance": "What is the effective date?",
+      "move_type": "ask",
+      "business_explanation": "Continue to next question.",
+      "larsson_rule": "Rule 5.1",
+      "state_changes": {
+        "qud_pushed": "?x.date(x)"
+      }
+    },
+    {
+      "turn": 14,
+      "speaker": "user",
+      "utterance": "Next Monday",
+      "move_type": "answer",
+      "business_explanation": "User gives relative date instead of absolute date - requires interpretation.",
+      "larsson_rule": "Rule 4.1 - Answer with temporal resolution needed",
+      "state_changes": {
+        "commitment_added": "date(2025-11-24)",
+        "interpretation": "next_monday = 2025-11-24"
+      }
+    },
+    {
+      "turn": 15,
+      "speaker": "system",
+      "utterance": "What is the duration of confidentiality obligations?",
+      "move_type": "ask",
+      "business_explanation": "Continue to duration question.",
+      "larsson_rule": "Rule 5.1",
+      "state_changes": {
+        "qud_pushed": "?x.time_period(x)"
+      }
+    },
+    {
+      "turn": 16,
+      "speaker": "user",
+      "utterance": "2 years",
+      "move_type": "answer",
+      "business_explanation": "Clear answer.",
+      "larsson_rule": "Rule 4.1",
+      "state_changes": {
+        "commitment_added": "time_period(2 years)"
+      }
+    },
+    {
+      "turn": 17,
+      "speaker": "system",
+      "utterance": "What is the governing law jurisdiction?",
+      "move_type": "ask",
+      "business_explanation": "Final question.",
+      "larsson_rule": "Rule 5.1",
+      "state_changes": {
+        "qud_pushed": "?x.jurisdiction(x)"
+      }
+    },
+    {
+      "turn": 18,
+      "speaker": "user",
+      "utterance": "Delaware",
+      "move_type": "answer",
+      "business_explanation": "Final answer provided.",
+      "larsson_rule": "Rule 4.1",
+      "state_changes": {
+        "commitment_added": "jurisdiction(Delaware)",
+        "plan_status": "completed"
+      }
+    },
+    {
+      "turn": 19,
+      "speaker": "system",
+      "utterance": "Thank you. I have all information: mutual NDA between GlobalTech and InnovateCorp LLC, effective November 24, 2025, 2-year duration, governed by Delaware law.",
+      "move_type": "inform",
+      "business_explanation": "Completion summary, demonstrating maintained context through all clarifications.",
+      "larsson_rule": "Inform - summarize commitments",
+      "state_changes": {
+        "dialogue_status": "complete"
+      }
+    }
+  ],
+  "metrics": {
+    "dialogue_efficiency": "63% - 19 turns vs 12 baseline (due to 3 clarifications)",
+    "information_completeness": "100% - All fields gathered despite ambiguities",
+    "user_experience": "Excellent - System patiently clarifies and maintains context",
+    "system_transparency": "Very High - Never loses track despite nested questions",
+    "clarifications_handled": "3 (parties definition, NDA types, company name)",
+    "max_qud_depth": "2 levels"
+  },
+  "business_value": "This scenario demonstrates IBDM's robustness. Traditional chatbots fail when users ask questions, give incomplete answers, or need clarification. IBDM's QUD stack naturally handles nested dialogues, maintaining perfect context even through complex interactions. This makes it suitable for real-world deployment where users aren't trained to give perfect responses."
+}
