@@ -42,6 +42,17 @@ Each scenario is a JSON file containing:
 - **Audience**: Product managers, quality assurance, risk-averse stakeholders
 - **Larsson Fidelity**: 95%
 
+### 5. **nda_comprehensive.json** - All Advanced Features Demo ⭐ NEW
+- **Purpose**: Demonstrate all three advanced capabilities in a single realistic dialogue
+- **Duration**: 20 turns (includes volunteered info, clarifications, and non-provision recovery)
+- **Key Features**:
+  - User volunteering more information than requested (3 instances)
+  - System asking clarification questions (2 nested dialogues)
+  - Recovery from user's non-provision of requested information (2 recovery instances)
+- **Audience**: Comprehensive demonstration for technical decision-makers, full capability showcase
+- **Larsson Fidelity**: 97%
+- **Special**: Shows all three features working together in real-world dialogue complexity
+
 ## Usage
 
 ### With Business Demo Launcher
@@ -80,7 +91,8 @@ for turn in scenario["turns"]:
 | Impress power users | nda_volunteer | Demonstrates intelligence, not just automation |
 | Prove robustness | nda_complex | Shows handling of real-world messiness |
 | Address quality concerns | nda_grounding | Demonstrates error prevention and transparency |
-| Technical deep-dive | All four | Complete picture of IBDM capabilities |
+| Show all capabilities | **nda_comprehensive** ⭐ | All three advanced features in one realistic dialogue |
+| Technical deep-dive | All five | Complete picture of IBDM capabilities |
 
 ## Metrics Summary
 
@@ -90,6 +102,7 @@ for turn in scenario["turns"]:
 | Volunteer | 5 | 240% | 100% | 98% | 3 questions skipped |
 | Complex | 19 | 63% | 100% | 92% | 3 clarifications, QUD depth=2 |
 | Grounding | 16 | 75% | 100% | 95% | 4 ICM moves, 2 grounding interventions |
+| **Comprehensive** ⭐ | 20 | 85% | 100% | 97% | 3 volunteers + 2 clarifications + 2 non-provisions |
 
 ## Business Value Highlights
 
@@ -97,9 +110,10 @@ for turn in scenario["turns"]:
 
 | Capability | Traditional Chatbot | IBDM |
 |------------|-------------------|------|
-| Volunteered Info | Ignored or causes errors | Accommodated intelligently (volunteer scenario) |
-| Ambiguous Answers | Guesses silently or fails | Asks for clarification (complex scenario) |
-| Nested Questions | Context lost | Perfect context maintenance (complex scenario) |
+| Volunteered Info | Ignored or causes errors | Accommodated intelligently (volunteer, comprehensive scenarios) |
+| Ambiguous Answers | Guesses silently or fails | Asks for clarification (complex, comprehensive scenarios) |
+| Nested Questions | Context lost | Perfect context maintenance (complex, comprehensive scenarios) |
+| Off-Topic Responses | Gets confused or gives up | Polite redirect with persistence (comprehensive scenario) |
 | Confidence Management | No visibility | Explicit grounding strategies (grounding scenario) |
 | Transparency | Black box | Full state visibility (all scenarios) |
 

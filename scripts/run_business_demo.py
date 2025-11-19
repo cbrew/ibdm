@@ -488,7 +488,10 @@ def main() -> int:
     parser.add_argument(
         "--scenario",
         default="nda_basic",
-        help="Scenario to run (nda_basic, nda_volunteer, nda_complex, nda_grounding)",
+        help=(
+            "Scenario to run (nda_basic, nda_volunteer, nda_complex, "
+            "nda_grounding, nda_comprehensive)"
+        ),
     )
     parser.add_argument(
         "--all",
@@ -528,6 +531,7 @@ def main() -> int:
             scenarios_dir / "nda_volunteer.json",
             scenarios_dir / "nda_complex.json",
             scenarios_dir / "nda_grounding.json",
+            scenarios_dir / "nda_comprehensive.json",
         ]
     else:
         scenario_file = scenarios_dir / f"{args.scenario}.json"

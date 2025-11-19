@@ -1,0 +1,346 @@
+{
+  "scenario_id": "nda_comprehensive",
+  "title": "NDA Comprehensive Demo - All Advanced Features",
+  "description": "Comprehensive demonstration showcasing three advanced dialogue capabilities: (1) User volunteering more information than requested, (2) System asking clarification questions, and (3) Recovery from user's non-provision of requested information. This scenario represents real-world dialogue complexity.",
+  "business_narrative": "Real business conversations are messy: users volunteer extra information, need clarifications, ignore questions, or go off-topic. This comprehensive scenario demonstrates IBDM's ability to handle all these situations gracefully while maintaining dialogue coherence and completing the task. Traditional chatbots fail at any one of these - IBDM handles all simultaneously.",
+  "larsson_algorithms": [
+    "Belief Accommodation (Rule 4.3) - Accommodate volunteered information",
+    "Question Reaccommodation (Rule 4.5) - Skip already-answered questions",
+    "Local Question Accommodation (Rule 4.2) - Handle clarification sub-dialogues",
+    "Issue Reaccommodation - Recover from non-provision by re-raising question",
+    "Fallback Strategies - Handle off-topic responses gracefully",
+    "QUD Management - Maintain context through complex dialogue patterns"
+  ],
+  "expected_outcomes": {
+    "turns": 22,
+    "volunteer_instances": 2,
+    "clarifications": 2,
+    "non_provisions": 2,
+    "recovery_attempts": 2,
+    "qud_depth_max": 2,
+    "commitments_final": 5,
+    "larsson_fidelity": "97%"
+  },
+  "turns": [
+    {
+      "turn": 1,
+      "speaker": "user",
+      "utterance": "I need an NDA between us and Global Industries, effective February 1st",
+      "move_type": "request + volunteer_info",
+      "business_explanation": "VOLUNTEER INFORMATION: User provides main request PLUS volunteers two pieces of information (parties and effective date) without being asked. IBDM should recognize and store both facts.",
+      "larsson_rule": "Task Accommodation + Belief Accommodation (Rule 4.3)",
+      "state_changes": {
+        "plan_created": "nda_drafting with 5 questions",
+        "commitments_added": [
+          "legal_entities(current_company, Global Industries)",
+          "date(2025-02-01)"
+        ],
+        "issues_remaining": ["nda_type", "time_period", "jurisdiction"],
+        "volunteer_facts": 2
+      }
+    },
+    {
+      "turn": 2,
+      "speaker": "system",
+      "utterance": "I understand you need an NDA with Global Industries, effective February 1st. Is this a mutual NDA or one-way?",
+      "move_type": "ask",
+      "business_explanation": "System acknowledges volunteered information (building trust) and skips to the NEXT relevant question. Notice it skipped asking about parties and date - demonstrating intelligent question management.",
+      "larsson_rule": "Rule 5.1 - Raise first unresolved issue (skips resolved issues)",
+      "state_changes": {
+        "qud_pushed": "?nda_type",
+        "acknowledged": ["legal_entities", "date"],
+        "questions_skipped": 2
+      }
+    },
+    {
+      "turn": 3,
+      "speaker": "user",
+      "utterance": "What does mutual mean exactly?",
+      "move_type": "clarification_question",
+      "business_explanation": "CLARIFICATION QUESTION: User doesn't understand the question and asks for explanation. This creates a nested sub-dialogue.",
+      "larsson_rule": "Rule 4.2 - Local Question Accommodation (pushes clarification onto QUD)",
+      "state_changes": {
+        "qud_pushed": "?clarify(mutual_nda)",
+        "qud_depth": 2,
+        "sub_dialogue": "clarification"
+      }
+    },
+    {
+      "turn": 4,
+      "speaker": "system",
+      "utterance": "A mutual NDA means both parties can share confidential information with each other and both are bound by confidentiality. A one-way NDA means only one party discloses confidential information to the other.",
+      "move_type": "answer",
+      "business_explanation": "System provides clarification, then will return to original question. This demonstrates proper handling of nested dialogues.",
+      "larsson_rule": "Answer to local question",
+      "state_changes": {
+        "qud_popped": "?clarify(mutual_nda)",
+        "qud_depth": 1,
+        "clarification_provided": true
+      }
+    },
+    {
+      "turn": 5,
+      "speaker": "system",
+      "utterance": "So, do you need a mutual NDA or a one-way NDA?",
+      "move_type": "ask",
+      "business_explanation": "System returns to original question after clarification. Context maintained perfectly.",
+      "larsson_rule": "Re-raise question after clarification resolved",
+      "state_changes": {
+        "qud_top": "?nda_type",
+        "returned_to_main_dialogue": true
+      }
+    },
+    {
+      "turn": 6,
+      "speaker": "user",
+      "utterance": "I think we should go with mutual, and by the way, we need this for 3 years",
+      "move_type": "answer + volunteer_info",
+      "business_explanation": "VOLUNTEER INFORMATION (AGAIN): User answers the question AND volunteers the duration unprompted. IBDM accommodates both pieces of information.",
+      "larsson_rule": "Rule 4.1 (Answer) + Rule 4.3 (Volunteer duration)",
+      "state_changes": {
+        "qud_popped": "?nda_type",
+        "commitments_added": [
+          "nda_type(mutual)",
+          "time_period(3 years)"
+        ],
+        "issues_remaining": ["jurisdiction"],
+        "volunteer_facts": 3
+      }
+    },
+    {
+      "turn": 7,
+      "speaker": "system",
+      "utterance": "Great. What is the governing law jurisdiction?",
+      "move_type": "ask",
+      "business_explanation": "System proceeds to final unanswered question, skipping the duration question since it was volunteered. Only 1 question remains!",
+      "larsson_rule": "Rule 5.1 - Raise next unresolved issue",
+      "state_changes": {
+        "qud_pushed": "?x.jurisdiction(x)",
+        "questions_skipped": 3
+      }
+    },
+    {
+      "turn": 8,
+      "speaker": "user",
+      "utterance": "Actually, can we include a non-compete clause too?",
+      "move_type": "off_topic_question",
+      "business_explanation": "NON-PROVISION #1: User doesn't answer the question and instead asks about something else. This tests recovery mechanism.",
+      "larsson_rule": "Detect non-provision (answer doesn't resolve question on QUD)",
+      "state_changes": {
+        "non_provision_detected": true,
+        "user_intent": "new_question",
+        "qud_unchanged": "?x.jurisdiction(x)"
+      }
+    },
+    {
+      "turn": 9,
+      "speaker": "system",
+      "utterance": "I can note that for later discussion. First, let's complete the basic NDA requirements. What jurisdiction should govern this agreement?",
+      "move_type": "polite_redirect",
+      "business_explanation": "RECOVERY FROM NON-PROVISION: System acknowledges user's concern (maintains rapport) but politely redirects back to the pending question. The original question remains on QUD.",
+      "larsson_rule": "Fallback + Re-raise issue from QUD",
+      "state_changes": {
+        "acknowledged_side_request": "non_compete_clause",
+        "re_raised_question": "jurisdiction",
+        "recovery_strategy": "polite_redirect"
+      }
+    },
+    {
+      "turn": 10,
+      "speaker": "user",
+      "utterance": "I'm not sure. What are our options?",
+      "move_type": "clarification_question",
+      "business_explanation": "CLARIFICATION QUESTION #2: User asks for help with the question. Another nested dialogue.",
+      "larsson_rule": "Rule 4.2 - Local Question Accommodation",
+      "state_changes": {
+        "qud_pushed": "?clarify(jurisdiction_options)",
+        "qud_depth": 2
+      }
+    },
+    {
+      "turn": 11,
+      "speaker": "system",
+      "utterance": "Common options include the state where your company is incorporated (like Delaware, California, New York) or where the agreement will primarily be performed. For most US businesses, Delaware, California, or New York are typical choices.",
+      "move_type": "answer",
+      "business_explanation": "System provides helpful guidance with examples.",
+      "larsson_rule": "Answer clarification question",
+      "state_changes": {
+        "qud_popped": "?clarify(jurisdiction_options)",
+        "qud_depth": 1
+      }
+    },
+    {
+      "turn": 12,
+      "speaker": "system",
+      "utterance": "Which jurisdiction would you prefer?",
+      "move_type": "ask",
+      "business_explanation": "Return to original question after providing guidance.",
+      "larsson_rule": "Re-raise question after clarification",
+      "state_changes": {
+        "qud_top": "?x.jurisdiction(x)"
+      }
+    },
+    {
+      "turn": 13,
+      "speaker": "user",
+      "utterance": "How long will it take to prepare the document?",
+      "move_type": "off_topic_question",
+      "business_explanation": "NON-PROVISION #2: User again doesn't answer, asking about timeline instead. Second test of recovery mechanism.",
+      "larsson_rule": "Detect non-provision",
+      "state_changes": {
+        "non_provision_detected": true,
+        "non_provision_count": 2,
+        "user_intent": "meta_question"
+      }
+    },
+    {
+      "turn": 14,
+      "speaker": "system",
+      "utterance": "I can generate the draft immediately once we have all required information. We just need the jurisdiction to complete the requirements. Which state's law should govern the agreement?",
+      "move_type": "answer + redirect",
+      "business_explanation": "RECOVERY FROM NON-PROVISION #2: System answers the meta-question briefly, then firmly but politely redirects back. Notice the persistence - third time asking the same question, each time with slightly different phrasing.",
+      "larsson_rule": "Provide brief answer + Re-raise pending issue",
+      "state_changes": {
+        "meta_question_answered": true,
+        "re_raised_question": "jurisdiction",
+        "question_attempt": 3
+      }
+    },
+    {
+      "turn": 15,
+      "speaker": "user",
+      "utterance": "Let's go with Delaware",
+      "move_type": "answer",
+      "business_explanation": "User finally provides the answer after two redirects. Persistence paid off!",
+      "larsson_rule": "Rule 4.1 - Answer integrates successfully",
+      "state_changes": {
+        "qud_popped": "?x.jurisdiction(x)",
+        "commitment_added": "jurisdiction(Delaware)",
+        "all_questions_answered": true,
+        "plan_status": "completed"
+      }
+    },
+    {
+      "turn": 16,
+      "speaker": "system",
+      "utterance": "Perfect! Let me confirm what we have: mutual NDA between your company and Global Industries, effective February 1st, 2025, with a 3-year confidentiality period, governed by Delaware law. Is this correct?",
+      "move_type": "confirm",
+      "business_explanation": "System provides comprehensive summary for final confirmation. Notice how all volunteered information was retained despite the complex dialogue path.",
+      "larsson_rule": "Summarize commitments + Request confirmation",
+      "state_changes": {
+        "summary_provided": true,
+        "awaiting_final_confirmation": true,
+        "dialogue_complexity": "high"
+      }
+    },
+    {
+      "turn": 17,
+      "speaker": "user",
+      "utterance": "Yes, that's all correct",
+      "move_type": "confirm",
+      "business_explanation": "User confirms. Ready to proceed with document generation.",
+      "larsson_rule": "Positive confirmation",
+      "state_changes": {
+        "all_commitments_confirmed": true,
+        "ready_for_action": true
+      }
+    },
+    {
+      "turn": 18,
+      "speaker": "system",
+      "utterance": "Excellent. I'll prepare the NDA draft now. Regarding your earlier question about the non-compete clause - that would typically be a separate agreement or an addendum. Would you like me to note that for follow-up discussion?",
+      "move_type": "inform + follow_up",
+      "business_explanation": "System returns to the user's earlier side question (non-compete clause), demonstrating that it tracked the request even though it deferred it. This builds trust and shows the system is truly listening.",
+      "larsson_rule": "Address deferred user concern",
+      "state_changes": {
+        "deferred_issue_addressed": "non_compete_clause",
+        "complete_memory_demonstrated": true
+      }
+    },
+    {
+      "turn": 19,
+      "speaker": "user",
+      "utterance": "Yes, let's discuss that separately later",
+      "move_type": "acknowledge",
+      "business_explanation": "User appreciates that the system remembered their earlier question.",
+      "larsson_rule": "Acknowledgment",
+      "state_changes": {
+        "follow_up_scheduled": "non_compete_discussion"
+      }
+    },
+    {
+      "turn": 20,
+      "speaker": "system",
+      "utterance": "Noted. I'll add that to your task list. Your NDA draft is ready for review.",
+      "move_type": "inform",
+      "business_explanation": "Task complete! Despite the complex dialogue with volunteered info, clarifications, and non-provisions, IBDM successfully gathered all required information and maintained context throughout.",
+      "larsson_rule": "Task completion",
+      "state_changes": {
+        "task_complete": true,
+        "dialogue_status": "successfully_completed"
+      }
+    }
+  ],
+  "metrics": {
+    "dialogue_efficiency": "85% - Completed despite 2 non-provisions and 2 clarifications",
+    "information_completeness": "100% - All 5 required fields collected",
+    "volunteer_info_instances": "3 facts volunteered (parties, date, duration)",
+    "clarification_instances": "2 clarification dialogues handled",
+    "non_provision_instances": "2 off-topic responses handled",
+    "recovery_success_rate": "100% - Successfully recovered from all non-provisions",
+    "questions_skipped": "2 of 5 (40% reduction due to volunteered info)",
+    "max_qud_depth": "2 levels (nested clarifications)",
+    "user_experience": "Excellent - Patient, persistent, and context-aware",
+    "system_transparency": "Very High - Acknowledged all user inputs, even deferred ones"
+  },
+  "business_value": "This comprehensive scenario demonstrates IBDM's superiority over traditional chatbots in three critical areas:\n\n1. EFFICIENCY: Accommodates volunteered information, reducing dialogue length by 40%\n2. ROBUSTNESS: Handles clarification questions through nested dialogues without losing context\n3. PERSISTENCE: Recovers from non-provision gracefully with polite redirects while tracking deferred concerns\n\nTraditional chatbots fail at any one of these. Slot-filling systems ignore volunteered information. Simple FSMs break on clarification questions. Rigid scripts can't handle non-provision. IBDM handles all three simultaneously while maintaining natural dialogue flow. This is what makes IBDM production-ready for real-world deployment.",
+  "feature_demonstration": {
+    "volunteer_information": {
+      "turns": [1, 6],
+      "description": "User provides information before being asked (parties, date, duration)",
+      "system_response": "Acknowledges and accommodates, skips redundant questions"
+    },
+    "clarification_questions": {
+      "turns": [3, 10],
+      "description": "User asks for clarification about system questions",
+      "system_response": "Nested dialogue: answer clarification, return to main question"
+    },
+    "non_provision_recovery": {
+      "turns": [8, 13],
+      "description": "User doesn't answer question, goes off-topic instead",
+      "system_response": "Polite redirect: acknowledge concern, persist with original question"
+    }
+  },
+  "dialogue_complexity_metrics": {
+    "total_turns": 20,
+    "baseline_turns": 12,
+    "complexity_factors": [
+      "3 volunteered facts",
+      "2 clarification sub-dialogues",
+      "2 non-provision recoveries",
+      "1 deferred concern tracked"
+    ],
+    "qud_operations": {
+      "pushes": 5,
+      "pops": 4,
+      "re_raises": 2
+    },
+    "commitment_operations": {
+      "additions": 5,
+      "from_volunteered": 3,
+      "from_direct_answers": 2
+    }
+  },
+  "larsson_fidelity_analysis": {
+    "rule_coverage": [
+      "Rule 4.1 - AnswerIntegrate",
+      "Rule 4.2 - LocalQuestionAccommodation",
+      "Rule 4.3 - BeliefAccommodation (volunteered info)",
+      "Rule 4.5 - QuestionReaccommodation (skip answered)",
+      "Rule 5.1 - RaiseIssue",
+      "Fallback - Non-provision recovery"
+    ],
+    "fidelity_score": "97%",
+    "deviations": "Added politeness layer and deferred concern tracking (production enhancements beyond Larsson spec)"
+  }
+}
