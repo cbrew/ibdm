@@ -976,6 +976,49 @@ class BusinessDemo:
         # Simple plan creation - in production this would be more sophisticated
         return Plan(plan_type="findout", content=plan_description, status="active")
 
+    def _create_system_dialogue_move(self, turn_data: dict[str, Any]) -> Any:
+        """Create DialogueMove for SYSTEM turns (for NLG generation).
+
+        This method creates DialogueMove objects from scenario JSON for SYSTEM
+        turns only. These moves contain semantic representations that can be
+        passed to the NLG engine to generate natural language utterances.
+
+        For NLG purposes, we only need to construct moves for system turns,
+        since user turns are already natural language in the scenario JSON.
+
+        Args:
+            turn_data: Turn data from scenario JSON (must be system turn)
+
+        Returns:
+            DialogueMove with properly typed content
+
+        Note:
+            This is for NLG (generation), not NLU (understanding).
+            User utterances don't need move construction.
+        """
+        from ibdm.core.moves import DialogueMove
+
+        move_type = turn_data.get("move_type", "unknown")
+        speaker = turn_data.get("speaker", "system")
+        state_changes = turn_data.get("state_changes", {})
+
+        # Construct content based on move_type
+        content: Any = None
+
+        if move_type == "ask":
+            # For ask moves, extract the Question from state_changes
+            # This Question will be passed to NLG to generate the question text
+            question_str = state_changes.get("qud_pushed", "")
+            content = self._parse_question_from_string(question_str)
+            if content is None:
+                # Fallback to utterance if we can't parse the question
+                content = turn_data.get("utterance", "")
+        else:
+            # For other system moves (greet, assert, etc.), use utterance as content
+            content = turn_data.get("utterance", "")
+
+        return DialogueMove(move_type=move_type, content=content, speaker=speaker)
+
     def _apply_state_changes(self, state: InformationState, state_changes: dict[str, Any]) -> None:
         """Apply state_changes from JSON to InformationState.
 
