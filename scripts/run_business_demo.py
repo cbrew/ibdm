@@ -25,6 +25,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 # Simplified imports for demo - avoid heavy dependencies
 try:
     from ibdm.core import InformationState
+    from ibdm.core.plans import Plan
+    from ibdm.core.questions import Question
     from ibdm.domains.nda_domain import get_nda_domain
 except ImportError as e:
     print(f"Error importing IBDM modules: {e}")
@@ -127,6 +129,10 @@ class BusinessDemo:
         speaker = turn_data["speaker"]
         utterance = turn_data["utterance"]
         move_type = turn_data.get("move_type", "")
+
+        # Apply state changes to real InformationState
+        if "state_changes" in turn_data:
+            self._apply_state_changes(self.state, turn_data["state_changes"])
 
         # Format speaker name
         if speaker == "user":
@@ -928,13 +934,107 @@ class BusinessDemo:
 
         return "\n".join(html_parts)
 
+    def _parse_question_from_string(self, question_str: str) -> Question | None:
+        """Parse a question from state_changes string.
+
+        Args:
+            question_str: String like "?x.legal_entities(x)" or "?nda_type"
+
+        Returns:
+            Question object or None if parsing fails
+        """
+        import re
+
+        from ibdm.core.questions import WhQuestion, YNQuestion
+
+        if not question_str:
+            return None
+
+        # Wh-question pattern: ?x.predicate(x) or ?x.predicate
+        wh_match = re.match(r"\?(\w+)\.(\w+)(?:\(.*\))?", question_str)
+        if wh_match:
+            variable = wh_match.group(1)
+            predicate = wh_match.group(2)
+            return WhQuestion(variable=variable, predicate=predicate)
+
+        # Simple proposition (default to YN question)
+        proposition = question_str.replace("?", "").strip()
+        if proposition:
+            return YNQuestion(proposition=proposition)
+
+        return None
+
+    def _create_plan_from_description(self, plan_description: str) -> Plan:
+        """Create a Plan object from description string.
+
+        Args:
+            plan_description: String describing the plan
+
+        Returns:
+            Plan object
+        """
+        # Simple plan creation - in production this would be more sophisticated
+        return Plan(plan_type="findout", content=plan_description, status="active")
+
+    def _apply_state_changes(self, state: InformationState, state_changes: dict[str, Any]) -> None:
+        """Apply state_changes from JSON to InformationState.
+
+        This method updates the real InformationState object based on the
+        state_changes recorded in the scenario JSON files.
+
+        Args:
+            state: InformationState to update
+            state_changes: Dictionary of state changes from turn
+        """
+        # Handle QUD operations
+        if "qud_pushed" in state_changes:
+            question_str = state_changes["qud_pushed"]
+            question = self._parse_question_from_string(question_str)
+            if question:
+                state.shared.qud.append(question)
+
+        if "qud_popped" in state_changes:
+            if state.shared.qud:
+                state.shared.qud.pop()
+
+        # Handle commitments
+        if "commitment_added" in state_changes:
+            proposition = state_changes["commitment_added"]
+            state.shared.commitments.add(proposition)
+
+        # Handle private issues (IBiS3)
+        if "issues_added" in state_changes:
+            issues_list = state_changes["issues_added"]
+            if isinstance(issues_list, list):
+                for issue_item in issues_list:
+                    issue_str = str(issue_item)  # Ensure string type
+                    question = self._parse_question_from_string(issue_str)
+                    if question:
+                        state.private.issues.append(question)
+
+        # Handle plans
+        if "plan_created" in state_changes:
+            plan_description = state_changes["plan_created"]
+            plan = self._create_plan_from_description(plan_description)
+            state.private.plan.append(plan)
+
+        if "plan_status" in state_changes:
+            # Update status of most recent plan
+            if state.private.plan:
+                status = state_changes["plan_status"]
+                state.private.plan[-1].status = status
+
     def _update_cumulative_state(
         self, cumulative_state: dict[str, Any], state_changes: dict[str, Any]
     ) -> None:
         """Update cumulative state based on state changes.
 
+        DEPRECATED: This method maintains the old dictionary-based state
+        for backward compatibility with HTML reports. New code should use
+        _apply_state_changes() which updates the real InformationState.
+
         Args:
-            cumulative_state: Running state to update
+            cumulative_state: Running state to update (dict)
             state_changes: Changes from this turn
         """
         # Handle QUD operations
