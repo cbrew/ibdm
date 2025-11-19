@@ -8,7 +8,6 @@ import logging
 from dataclasses import dataclass
 from typing import Any
 
-from ibdm.burr_integration.nlu_context import NLUContext
 from ibdm.core import Answer, DialogueMove, InformationState, Question
 from ibdm.core.questions import AltQuestion, WhQuestion, YNQuestion
 from ibdm.engine.dialogue_engine import DialogueMoveEngine
@@ -20,6 +19,7 @@ from ibdm.nlu import (
     DialogueActType,
     LLMConfig,
     ModelType,
+    NLUContext,
     QuestionAnalyzer,
     QuestionAnalyzerConfig,
     QuestionType,

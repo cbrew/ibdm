@@ -19,7 +19,6 @@ if TYPE_CHECKING:
     from ibdm.core.answers import Answer
     from ibdm.core.questions import Question
 
-from ibdm.burr_integration.nlu_context import NLUContext
 from ibdm.core import DialogueMove, InformationState
 from ibdm.core.answers import Answer as AnswerClass
 from ibdm.core.questions import AltQuestion, WhQuestion, YNQuestion
@@ -27,6 +26,7 @@ from ibdm.nlu.base_nlu_service import (
     BaseNLUService,
     NLUConfidence,
 )
+from ibdm.nlu.nlu_context import NLUContext
 from ibdm.nlu.nlu_engine import NLUEngine, NLUEngineConfig
 from ibdm.nlu.nlu_result import NLUResult
 

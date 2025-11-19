@@ -5,19 +5,16 @@ Quick reference for AI agents working on the Issue-Based Dialogue Management (IB
 ## Quick Start
 
 ```bash
-# 0. Setup environment (ALWAYS RUN FIRST - at start of every session)
-uv pip install --system -e .
+# 0. Setup is automatic (SessionStart hook runs at session start)
+#    Installs all dependencies and verifies environment
 
-# 1. Verify environment
-python -c "import os; assert os.getenv('IBDM_API_KEY'), 'Missing IBDM_API_KEY'"
-
-# 2. Check ready tasks
+# 1. Check ready tasks
 .claude/beads-helpers.sh ready
 
-# 3. Before every commit
+# 2. Before every commit
 ruff format src/ tests/ && ruff check --fix src/ tests/ && pyright src/ && pytest
 
-# 4. Commit
+# 3. Commit
 git commit -m "feat(scope): description"
 ```
 
@@ -174,21 +171,24 @@ Language (ZFC) → Dialogue Semantics (NOT ZFC) → Language (ZFC)
 
 ## Tooling
 
-### 0. Environment Setup: ALWAYS RUN FIRST
+### 0. Environment Setup: AUTOMATIC
 
-**Policy**: Run setup at the start of EVERY session to ensure all dependencies are installed.
+**Policy**: The SessionStart hook automatically runs setup at the start of EVERY session.
 
-```bash
-uv pip install --system -e .                 # Install all dependencies (RUN THIS FIRST!)
-```
-
-**What this does**:
+**What it does** (`.claude/SessionStart`):
 - Installs the project in editable mode from `pyproject.toml`
 - Installs all runtime dependencies (burr, pydantic, litellm, rich, graphviz)
 - Installs all dev tools (pytest, pyright, ruff, ipython, jupyter)
 - Makes `ibdm` package importable from anywhere
+- Verifies core imports and tools work
+- Checks API key configuration
 
-**Why this matters**: Without this, you'll get "module not found" errors and waste time debugging imports.
+**Manual setup** (if needed):
+```bash
+uv pip install --system -e .                 # Install all dependencies
+```
+
+**Why this matters**: Without proper setup, you'll get "module not found" errors and waste time debugging imports.
 
 ### 1. Dependency Management: uv
 

@@ -1,0 +1,47 @@
+#!/bin/bash
+# SessionStart hook for IBDM project
+# This runs automatically at the start of every Claude Code session
+
+set -e
+
+echo "🔧 IBDM Environment Setup"
+echo "=========================="
+
+# 1. Install dependencies
+echo "📦 Installing dependencies..."
+uv pip install --system -e . > /dev/null 2>&1
+if [ $? -eq 0 ]; then
+    echo "✓ Dependencies installed"
+else
+    echo "✗ Failed to install dependencies"
+    exit 1
+fi
+
+# 2. Verify core imports
+echo "🔍 Verifying imports..."
+python -c "from ibdm.core import InformationState; from ibdm.nlu import NLUContext; from ibdm.engine import DialogueMoveEngine" 2>/dev/null
+if [ $? -eq 0 ]; then
+    echo "✓ Core imports working"
+else
+    echo "✗ Import verification failed"
+    exit 1
+fi
+
+# 3. Verify tools
+echo "🛠️  Verifying tools..."
+python -m pytest --version > /dev/null 2>&1 && echo "✓ pytest available"
+python -m ruff --version > /dev/null 2>&1 && echo "✓ ruff available"
+python -m pyright --version > /dev/null 2>&1 && echo "✓ pyright available"
+
+# 4. Check API key (non-blocking)
+echo "🔑 Checking API key..."
+python -c "import os; assert os.getenv('IBDM_API_KEY'), 'Missing IBDM_API_KEY'" 2>/dev/null
+if [ $? -eq 0 ]; then
+    echo "✓ IBDM_API_KEY configured"
+else
+    echo "⚠️  IBDM_API_KEY not set (LLM features will not work)"
+fi
+
+echo ""
+echo "✅ IBDM environment ready!"
+echo ""
