@@ -24,7 +24,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 # Simplified imports for demo - avoid heavy dependencies
 try:
-    from ibdm.core import DialogueMove, InformationState, WhQuestion
+    from ibdm.core import InformationState
     from ibdm.domains.nda_domain import get_nda_domain
 except ImportError as e:
     print(f"Error importing IBDM modules: {e}")
@@ -156,7 +156,7 @@ class BusinessDemo:
 
         # Print state changes
         if self.verbose and "state_changes" in turn_data:
-            print(f"\n📊 State Changes:")
+            print("\n📊 State Changes:")
             for key, value in turn_data["state_changes"].items():
                 key_display = key.replace("_", " ").title()
                 print(f"   • {key_display}: {value}")
@@ -255,7 +255,8 @@ class BusinessDemo:
         """
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        filename = f"business-demo-{self.scenario['scenario_id']}-{datetime.now().strftime('%Y%m%d-%H%M%S')}.html"
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        filename = f"business-demo-{self.scenario['scenario_id']}-{timestamp}.html"
         report_path = output_dir / filename
 
         # Generate HTML using visualizer
@@ -394,13 +395,16 @@ class BusinessDemo:
 
         for turn in self.scenario["turns"]:
             speaker_class = turn["speaker"]
-            speaker_icon = "👤" if speaker == "user" else "🤖"
+            speaker_icon = "👤" if speaker_class == "user" else "🤖"
             speaker_name = turn["speaker"].upper()
 
+            move_type = turn.get("move_type", "")
+            turn_num = turn["turn"]
+            turn_header = f"{speaker_icon} Turn {turn_num}: {speaker_name} [{move_type}]"
             html_parts.append(
                 f"""
         <div class="turn {speaker_class}">
-            <div class="turn-header">{speaker_icon} Turn {turn["turn"]}: {speaker_name} [{turn.get("move_type", "")}]</div>
+            <div class="turn-header">{turn_header}</div>
             <div>{turn["utterance"]}</div>"""
             )
 
@@ -544,7 +548,7 @@ def main() -> int:
                 auto_advance=not args.manual,
             )
 
-            metrics = demo.run_scenario()
+            demo.run_scenario()
 
             # Generate report
             if not args.no_report:
