@@ -98,10 +98,15 @@ class BusinessDemo:
                 default_strategy="llm",  # Use LLM strategy to verify it's working
                 use_plan_awareness=True,
                 use_domain_descriptions=True,
+                verbose_logging=False,  # Keep logging quiet in demo mode
+                use_structured_output=True,  # Enable structured output with user/system separation
             )
             self.nlg_engine = NLGEngine(config)
             if self.verbose:
-                print(f"✓ NLG engine initialized (mode: {nlg_mode}, strategy: llm)")
+                print(
+                    f"✓ NLG engine initialized "
+                    f"(mode: {nlg_mode}, strategy: llm, structured_output: enabled)"
+                )
 
     def print_banner(self) -> None:
         """Print demo banner."""

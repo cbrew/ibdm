@@ -5,6 +5,9 @@ Quick reference for AI agents working on the Issue-Based Dialogue Management (IB
 ## Quick Start
 
 ```bash
+# 0. Setup environment (ALWAYS RUN FIRST - at start of every session)
+uv pip install --system -e .
+
 # 1. Verify environment
 python -c "import os; assert os.getenv('IBDM_API_KEY'), 'Missing IBDM_API_KEY'"
 
@@ -171,10 +174,26 @@ Language (ZFC) → Dialogue Semantics (NOT ZFC) → Language (ZFC)
 
 ## Tooling
 
+### 0. Environment Setup: ALWAYS RUN FIRST
+
+**Policy**: Run setup at the start of EVERY session to ensure all dependencies are installed.
+
+```bash
+uv pip install --system -e .                 # Install all dependencies (RUN THIS FIRST!)
+```
+
+**What this does**:
+- Installs the project in editable mode from `pyproject.toml`
+- Installs all runtime dependencies (burr, pydantic, litellm, rich, graphviz)
+- Installs all dev tools (pytest, pyright, ruff, ipython, jupyter)
+- Makes `ibdm` package importable from anywhere
+
+**Why this matters**: Without this, you'll get "module not found" errors and waste time debugging imports.
+
 ### 1. Dependency Management: uv
 
 ```bash
-uv pip install --system -e ".[dev]"          # Install dependencies
+uv pip install --system -e .                 # Install dependencies (see Policy #0 above)
 uv pip install --system <package>            # Add package (then update pyproject.toml)
 ```
 
@@ -355,6 +374,9 @@ Next: Week 3 tasks in NEXT-TASK.md (clarification questions + dependent issues)
 ### Daily Session
 
 ```bash
+# 0. Setup environment (ALWAYS RUN FIRST - at start of every session)
+uv pip install --system -e .
+
 # 1. Check and start task (with Larsson tracking)
 .claude/beads-helpers.sh ready
 .claude/beads-larsson.sh start <task-id>

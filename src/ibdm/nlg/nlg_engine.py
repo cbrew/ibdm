@@ -22,7 +22,7 @@ from ibdm.core import (
     YNQuestion,
 )
 from ibdm.core.domain import DomainModel
-from ibdm.nlg.nlg_result import NLGResult
+from ibdm.nlg.nlg_result import NLGResult, StructuredNLGResponse
 from ibdm.nlu.llm_adapter import LLMAdapter, LLMConfig, ModelType
 
 logger = logging.getLogger(__name__)
@@ -38,6 +38,8 @@ class NLGEngineConfig:
         use_domain_descriptions: Whether to use domain model descriptions
         llm_model: Which LLM model to use for LLM strategy (defaults to Haiku per Policy #9)
         temperature: LLM temperature for generation
+        verbose_logging: Whether to enable verbose console logging (default: False)
+        use_structured_output: Whether to use structured LLM responses (default: True)
     """
 
     default_strategy: str = "plan_aware"
@@ -45,6 +47,8 @@ class NLGEngineConfig:
     use_domain_descriptions: bool = True
     llm_model: ModelType = ModelType.HAIKU
     temperature: float = 0.7
+    verbose_logging: bool = False
+    use_structured_output: bool = True
 
 
 class NLGEngine:
@@ -108,15 +112,21 @@ class NLGEngine:
         # Determine generation strategy
         strategy = self._select_strategy(move, state)
 
-        # Add prominent tracing
-        logger.info(f"🎯 NLG GENERATION START: strategy={strategy}, move_type={move.move_type}")
-        print(f"\n🔍 [NLG TRACE] Strategy: {strategy} | Move Type: {move.move_type}")
+        # Optional verbose tracing
+        if self.config.verbose_logging:
+            logger.info(f"🎯 NLG GENERATION START: strategy={strategy}, move_type={move.move_type}")
+            print(f"\n🔍 [NLG TRACE] Strategy: {strategy} | Move Type: {move.move_type}")
 
         # Generate based on strategy
         tokens_used = 0
+        structured_response = None
+
         if strategy == "llm" and self.llm_adapter:
-            utterance_text, generation_rule, tokens_used = self._generate_llm(move, state)
-            print(f"✅ [NLG TRACE] LLM call completed! Tokens used: {tokens_used}")
+            utterance_text, generation_rule, tokens_used, structured_response = self._generate_llm(
+                move, state
+            )
+            if self.config.verbose_logging:
+                print(f"✅ [NLG TRACE] LLM call completed! Tokens used: {tokens_used}")
         elif strategy == "plan_aware" and self.config.use_plan_awareness:
             utterance_text, generation_rule = self._generate_plan_aware(move, state)
         elif strategy == "template":
@@ -126,7 +136,8 @@ class NLGEngine:
             utterance_text, generation_rule = self._generate_template(move, state)
 
         latency = time.time() - start_time
-        logger.info(f"✅ NLG GENERATION COMPLETE: latency={latency:.3f}s, tokens={tokens_used}")
+        if self.config.verbose_logging:
+            logger.info(f"✅ NLG GENERATION COMPLETE: latency={latency:.3f}s, tokens={tokens_used}")
 
         # Build result
         return NLGResult(
@@ -135,6 +146,7 @@ class NLGEngine:
             generation_rule=generation_rule,
             tokens_used=tokens_used,
             latency=latency,
+            structured_response=structured_response,
         )
 
     def _select_strategy(self, move: DialogueMove, state: InformationState) -> str:
@@ -229,58 +241,102 @@ class NLGEngine:
         else:
             return (str(move.content), "generate_default")
 
-    def _generate_llm(self, move: DialogueMove, state: InformationState) -> tuple[str, str, int]:
-        """Generate using LLM strategy with prominent tracing.
+    def _generate_llm(
+        self, move: DialogueMove, state: InformationState
+    ) -> tuple[str, str, int, StructuredNLGResponse | None]:
+        """Generate using LLM strategy with optional structured output.
 
         Args:
             move: Dialogue move
             state: Information state
 
         Returns:
-            Tuple of (generated text, generation rule name, tokens_used)
+            Tuple of (generated text, generation rule name, tokens_used, structured_response)
         """
         if not self.llm_adapter:
             logger.warning("LLM adapter not initialized, falling back to template")
             text, rule = self._generate_template(move, state)
-            return (text, rule, 0)
+            return (text, rule, 0, None)
 
         # Build prompt based on move type and context
         system_prompt = self._build_nlg_system_prompt(move, state)
         user_prompt = self._build_nlg_user_prompt(move, state)
 
-        # Trace the prompts being sent
-        logger.info(
-            f"📤 LLM NLG PROMPT:\nSystem: {system_prompt[:200]}...\nUser: {user_prompt[:200]}..."
-        )
-        print(f"\n📤 [LLM CALL] Sending NLG request to {self.llm_adapter.config.model.value}")
-        print(f"   Move: {move.move_type} | Content type: {type(move.content).__name__}")
+        # Optional verbose tracing
+        if self.config.verbose_logging:
+            logger.info(
+                f"📤 LLM NLG PROMPT:\n"
+                f"System: {system_prompt[:200]}...\n"
+                f"User: {user_prompt[:200]}..."
+            )
+            print(f"\n📤 [LLM CALL] Sending NLG request to {self.llm_adapter.config.model.value}")
+            print(f"   Move: {move.move_type} | Content type: {type(move.content).__name__}")
 
         try:
-            # Make LLM call
-            response = self.llm_adapter.call(
-                prompt=user_prompt,
-                system_prompt=system_prompt,
-                temperature=self.config.temperature,
-            )
+            # Use structured output if enabled
+            if self.config.use_structured_output:
+                structured = self.llm_adapter.call_structured(
+                    prompt=user_prompt,
+                    response_model=StructuredNLGResponse,
+                    system_prompt=system_prompt,
+                    temperature=self.config.temperature,
+                )
 
-            # Trace the response
-            logger.info(
-                f"📥 LLM NLG RESPONSE: {response.content[:200]}... (tokens: {response.tokens_used})"
-            )
-            print(f"📥 [LLM RESPONSE] Received: {response.content[:100]}...")
-            print(
-                f"   Tokens: {response.tokens_used} "
-                f"(prompt: {response.prompt_tokens}, completion: {response.completion_tokens})"
-            )
+                # Extract user-facing text
+                text = structured.user_message
 
-            return (response.content, "generate_llm", response.tokens_used)
+                # Optional verbose tracing
+                if self.config.verbose_logging:
+                    logger.info(
+                        f"📥 LLM NLG STRUCTURED RESPONSE: "
+                        f"user_message={text[:100]}..., "
+                        f"confidence={structured.confidence}, "
+                        f"has_reasoning={structured.internal_reasoning is not None}"
+                    )
+                    print("📥 [LLM RESPONSE] Received structured response")
+                    print(f"   User message: {text[:100]}...")
+                    if structured.confidence:
+                        print(f"   Confidence: {structured.confidence:.2f}")
+
+                # Get tokens from last response
+                tokens_used = (
+                    self.llm_adapter.last_response.tokens_used
+                    if self.llm_adapter.last_response
+                    else 0
+                )
+
+                return (text, "generate_llm_structured", tokens_used, structured)
+
+            else:
+                # Traditional text-only response
+                response = self.llm_adapter.call(
+                    prompt=user_prompt,
+                    system_prompt=system_prompt,
+                    temperature=self.config.temperature,
+                )
+
+                # Optional verbose tracing
+                if self.config.verbose_logging:
+                    logger.info(
+                        f"📥 LLM NLG RESPONSE: {response.content[:200]}... "
+                        f"(tokens: {response.tokens_used})"
+                    )
+                    print(f"📥 [LLM RESPONSE] Received: {response.content[:100]}...")
+                    print(
+                        f"   Tokens: {response.tokens_used} "
+                        f"(prompt: {response.prompt_tokens}, "
+                        f"completion: {response.completion_tokens})"
+                    )
+
+                return (response.content, "generate_llm", response.tokens_used, None)
 
         except Exception as e:
             logger.error(f"❌ LLM NLG call failed: {e}")
-            print(f"❌ [LLM ERROR] Generation failed: {e}")
+            if self.config.verbose_logging:
+                print(f"❌ [LLM ERROR] Generation failed: {e}")
             # Fallback to template
             text, rule = self._generate_template(move, state)
-            return (text, f"{rule}_fallback", 0)
+            return (text, f"{rule}_fallback", 0, None)
 
     def _build_nlg_system_prompt(self, move: DialogueMove, state: InformationState) -> str:
         """Build system prompt for NLG LLM call.
