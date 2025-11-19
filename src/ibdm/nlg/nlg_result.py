@@ -7,6 +7,38 @@ NLG processing stage, enabling visibility and debugging in the Burr pipeline.
 from dataclasses import dataclass
 from typing import Any
 
+from pydantic import BaseModel, Field
+
+
+class StructuredNLGResponse(BaseModel):
+    """Structured response from LLM-based NLG generation.
+
+    This model separates user-facing content from system-internal metadata,
+    enabling better debugging and quality monitoring while keeping the user
+    experience clean.
+
+    Attributes:
+        user_message: The natural language text the end user should see
+        internal_reasoning: Why this phrasing was chosen (for debugging)
+        confidence: Model's confidence in this generation (0.0-1.0)
+        alternative_phrasings: Other ways to express the same content
+        context_used: Which context elements influenced the generation
+    """
+
+    user_message: str = Field(description="The natural language text for the end user")
+    internal_reasoning: str | None = Field(
+        default=None, description="Explanation of why this phrasing was chosen"
+    )
+    confidence: float | None = Field(
+        default=None, ge=0.0, le=1.0, description="Confidence in this generation (0.0-1.0)"
+    )
+    alternative_phrasings: list[str] | None = Field(
+        default=None, description="Alternative ways to express the same content"
+    )
+    context_used: list[str] | None = Field(
+        default=None, description="Which context elements were relevant"
+    )
+
 
 @dataclass
 class NLGResult:
@@ -17,12 +49,13 @@ class NLGResult:
     and performance metrics.
 
     Attributes:
-        utterance_text: Generated natural language text
+        utterance_text: Generated natural language text (user-facing)
         strategy: Generation strategy used ("template" | "plan_aware" | "llm")
         generation_rule: Name of the generation rule applied (if any)
         tokens_used: Number of LLM tokens used during NLG processing
         latency: Processing time in seconds
         metadata: Additional generation metadata (optional)
+        structured_response: Structured LLM response (only present for LLM strategy)
     """
 
     utterance_text: str
@@ -31,6 +64,7 @@ class NLGResult:
     tokens_used: int = 0
     latency: float = 0.0
     metadata: dict[str, Any] | None = None
+    structured_response: StructuredNLGResponse | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dict for Burr state storage.
@@ -38,7 +72,7 @@ class NLGResult:
         Returns:
             Dictionary representation suitable for JSON serialization
         """
-        return {
+        result = {
             "utterance_text": self.utterance_text,
             "strategy": self.strategy,
             "generation_rule": self.generation_rule,
@@ -46,6 +80,11 @@ class NLGResult:
             "latency": self.latency,
             "metadata": self.metadata,
         }
+
+        if self.structured_response:
+            result["structured_response"] = self.structured_response.model_dump()
+
+        return result
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "NLGResult":
@@ -57,6 +96,10 @@ class NLGResult:
         Returns:
             NLGResult instance
         """
+        structured_response = None
+        if "structured_response" in data and data["structured_response"]:
+            structured_response = StructuredNLGResponse.model_validate(data["structured_response"])
+
         return cls(
             utterance_text=data["utterance_text"],
             strategy=data["strategy"],
@@ -64,6 +107,7 @@ class NLGResult:
             tokens_used=data.get("tokens_used", 0),
             latency=data.get("latency", 0.0),
             metadata=data.get("metadata"),
+            structured_response=structured_response,
         )
 
     def __str__(self) -> str:
