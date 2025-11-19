@@ -441,8 +441,52 @@ class ScenarioExplorer:
         self.rule_traces.append(trace)
 
     def display_state(self) -> None:
-        """Display current dialogue state using rich renderer."""
-        self.renderer.print_state(self.state, title="Current Dialogue State")
+        """Display current dialogue state using rich visualization."""
+        try:
+            # Try to use rich visualization if available (it should be)
+            from ibdm.visualization.state_snapshot import StateSnapshot
+            from ibdm.visualization.terminal import TerminalVisualizer
+
+            # Create snapshot for current state
+            timestamp = len(self.tracker.actual_moves)
+            label = f"Turn {timestamp}"
+            snapshot = StateSnapshot.from_state(self.state, timestamp, label)
+
+            # Use TerminalVisualizer for beautiful output
+            print("\n")
+            visualizer = TerminalVisualizer()
+            visualizer.render_snapshot(snapshot)
+
+            # Optionally generate HTML report
+            self._generate_html_report(snapshot)
+            
+            # Publish to monitor
+            self._publish_state(snapshot)
+
+        except ImportError:
+            # Fallback to old method if visualization modules missing
+            print("\n" + "=" * 70)
+            print("Current Dialogue State:")
+            print("=" * 70)
+            print(f"QUD: {len(self.state.shared.qud)} questions")
+            if self.state.shared.qud:
+                for i, q in enumerate(self.state.shared.qud):
+                    print(f"  {i + 1}. {getattr(q, 'predicate', str(q))} = ?")
+
+            print(f"Private Issues: {len(self.state.private.issues)} pending")
+            if self.state.private.issues:
+                for i, q in enumerate(self.state.private.issues[:3]):
+                    print(f"  {i + 1}. {getattr(q, 'predicate', str(q))} = ?")
+                if len(self.state.private.issues) > 3:
+                    print(f"  ... and {len(self.state.private.issues) - 3} more")
+
+            print(f"Commitments: {len(self.state.shared.commitments)} facts")
+            for i, c in enumerate(list(self.state.shared.commitments)[:5]):
+                print(f"  - {c}")
+            if len(self.state.shared.commitments) > 5:
+                print(f"  ... and {len(self.state.shared.commitments) - 5} more")
+
+            print("=" * 70)
 
     def display_diff(self) -> None:
         """Display diff between last two snapshots."""
@@ -450,20 +494,58 @@ class ScenarioExplorer:
             print("Not enough history to show diff.")
             return
             
-        before = self.snapshots[-2]
-        after = self.snapshots[-1]
-        diff = compute_diff(before, after)
-        
-        self.renderer.print_diff(diff, title=f"Changes: {before.label} → {after.label}")
+        try:
+            from ibdm.visualization.diff_engine import compute_diff
+            from ibdm.visualization.terminal import TerminalVisualizer
+            
+            before = self.snapshots[-2]
+            after = self.snapshots[-1]
+            diff = compute_diff(before, after)
+            
+            print("\n")
+            visualizer = TerminalVisualizer()
+            visualizer.render_diff(diff)
+        except ImportError:
+            print("Visualization modules not available.")
 
     def display_rule_trace(self) -> None:
-        """Display the most recent rule trace.
-        """
-        if not self.rule_traces:
-            print("No rule trace available.")
-            return
-        trace = self.rule_traces[-1]
-        self.renderer.print_rule_trace(trace, title=f"Rule Trace: {trace.label}")
+        """Display the most recent rule trace."""
+        # Not fully implemented in TerminalVisualizer yet, falling back or TODO
+        print("Rule trace visualization is currently available in HTML reports.")
+        if self.rule_traces:
+            trace = self.rule_traces[-1]
+            print(f"Last trace: {trace.label} (Selected: {trace.selected_rule})")
+
+    def _generate_html_report(self, snapshot: Any) -> None:
+        """Generate HTML report for current state."""
+        try:
+            from ibdm.visualization.html_export import HtmlExporter
+            exporter = HtmlExporter()
+            
+            # Export snapshot
+            html = exporter.export_snapshot(snapshot)
+            with open(f"state_turn_{snapshot.timestamp}.html", "w") as f:
+                f.write(html)
+                
+            # If we have rule traces, try to export the latest one too
+            if self.rule_traces:
+                trace = self.rule_traces[-1]
+                trace_html = exporter.export_rule_trace(trace)
+                with open(f"trace_turn_{snapshot.timestamp}.html", "w") as f:
+                    f.write(trace_html)
+                    
+            print(f"[Visualizer] Generated HTML reports for Turn {snapshot.timestamp}")
+        except Exception as e:
+            print(f"[Visualizer] Failed to generate HTML report: {e}")
+
+    def _publish_state(self, snapshot: Any) -> None:
+        """Publish state to monitor."""
+        try:
+            from ibdm.visualization.monitor import StatePublisher
+            publisher = StatePublisher()
+            publisher.publish(snapshot)
+        except Exception as e:
+            print(f"[Visualizer] Failed to publish state: {e}")
 
     def display_help(self) -> None:
         """Display help information."""

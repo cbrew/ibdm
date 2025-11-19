@@ -2427,6 +2427,10 @@ ROI Calculation:
     )
 
 
+# Import new scenarios here to avoid circular dependencies
+from ibdm.demo.scenarios_customer_service import scenario_customer_service_escalation  # noqa: E402
+from ibdm.demo.scenarios_multidomain import scenario_multi_domain  # noqa: E402
+
 # Scenario registry
 
 ALL_SCENARIOS: dict[str, DemoScenario] = {
@@ -2442,6 +2446,8 @@ ALL_SCENARIOS: dict[str, DemoScenario] = {
     "action-confirmation": scenario_action_confirmation(),
     "negotiation": scenario_negotiation_alternatives(),
     "rollback": scenario_action_rollback(),
+    "multi-domain": scenario_multi_domain(),
+    "customer-service": scenario_customer_service_escalation(),
 }
 
 

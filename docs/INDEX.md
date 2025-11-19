@@ -84,7 +84,7 @@ Quick navigation to all IBDM documentation, organized by purpose and currency.
 | [SCENARIO_EXECUTION_GUIDE.md](SCENARIO_EXECUTION_GUIDE.md) | **Start here** - How to run all demos and scenarios |
 | [INTERACTIVE_SCENARIO_EXPLORER.md](INTERACTIVE_SCENARIO_EXPLORER.md) | Choice-based scenario navigation tool |
 | [PATH_EXPLORER_GUIDE.md](PATH_EXPLORER_GUIDE.md) | Exhaustive path exploration and analysis tool |
-| [scenario_explorer_guide.md](scenario_explorer_guide.md) | Additional scenario explorer documentation |
+| [scenario_explorer_guide.md](scenario_explorer_guide.md) | **Interactive Explorer Guide** - How to use the scenario explorer tool |
 
 ### Scenario Definitions
 
@@ -96,6 +96,11 @@ Quick navigation to all IBDM documentation, organized by purpose and currency.
 | [ibis4_demo_scenarios.md](ibis4_demo_scenarios.md) | IBiS-4 (actions) scenario specifications |
 | [ibis_scenarios_presentation.md](ibis_scenarios_presentation.md) | Scenario presentation material |
 | [scenario1_distractors.md](scenario1_distractors.md) | Distractor specification reference |
+
+---
+
+| [visualization.md](visualization.md) | **Visualization System** - Terminal, HTML, Live Monitor documentation |
+| [scenario_explorer_guide.md](scenario_explorer_guide.md) | **Interactive Explorer Guide** - How to use the scenario explorer tool |
 
 ---
 
