@@ -205,7 +205,7 @@ class BusinessDemo:
 
                 # Generate natural language using NLG engine
                 nlg_result = self.nlg_engine.generate(move, self.state)
-                nlg_utterance = nlg_result.text
+                nlg_utterance = nlg_result.utterance_text
             except Exception as e:
                 # Fall back to scripted on error
                 if self.verbose:
