@@ -4,11 +4,23 @@
 One-command demo script that runs pre-configured dialogue scenarios
 with professional output and auto-generated HTML reports.
 
+ARCHITECTURAL NOTE - Semantic Parsing vs NLU:
+    This demo parses DialogueMoves from STRUCTURED SEMANTIC DATA in scenario JSON
+    (e.g., state_changes.qud_pushed: "?x.legal_entities(x)"), NOT from natural
+    language text. This is semantic parsing for NLG demonstration purposes.
+
+    What the demo shows:  MEANING → TEXT (NLG)
+    Future work:          TEXT → MEANING (NLU)
+
+    Parsing DialogueMoves from natural language utterances would be NLU work,
+    which is explicitly out of scope for this demo.
+
 Usage:
     python scripts/run_business_demo.py                    # Run default (nda_basic)
     python scripts/run_business_demo.py --scenario nda_volunteer
     python scripts/run_business_demo.py --all              # Run all scenarios
     python scripts/run_business_demo.py --scenario nda_basic --no-report
+    python scripts/run_business_demo.py --nlg-mode compare # Show NLG comparison
 """
 
 import argparse
@@ -183,7 +195,12 @@ class BusinessDemo:
         nlg_utterance = None
         if speaker == "system" and self.nlg_engine is not None and self.nlg_mode != "off":
             try:
-                # Create DialogueMove from turn data
+                # Create DialogueMove from semantic annotations in turn data
+                # NOTE: This parses from structured semantic data (qud_pushed, etc.),
+                # NOT from natural language text. The scenario JSON contains
+                # semantic representations that we convert to DialogueMove objects.
+                # This demonstrates: SEMANTIC REPRESENTATION → NATURAL LANGUAGE (NLG)
+                # Future NLU work would be: NATURAL LANGUAGE → SEMANTIC REPRESENTATION
                 move = self._create_system_dialogue_move(turn_data)
 
                 # Generate natural language using NLG engine
@@ -1008,10 +1025,14 @@ class BusinessDemo:
         return "\n".join(html_parts)
 
     def _parse_question_from_string(self, question_str: str) -> Question | None:
-        """Parse a question from state_changes string.
+        """Parse a question from semantic representation string.
+
+        This parses from SEMANTIC NOTATION (e.g., "?x.legal_entities(x)"),
+        NOT from natural language text (e.g., "What are the parties?").
+        This is semantic parsing for the NLG demo, not NLU.
 
         Args:
-            question_str: String like "?x.legal_entities(x)" or "?nda_type"
+            question_str: Semantic notation like "?x.legal_entities(x)" or "?nda_type"
 
         Returns:
             Question object or None if parsing fails
@@ -1052,12 +1073,25 @@ class BusinessDemo:
     def _create_system_dialogue_move(self, turn_data: dict[str, Any]) -> Any:
         """Create DialogueMove for SYSTEM turns (for NLG generation).
 
-        This method creates DialogueMove objects from scenario JSON for SYSTEM
-        turns only. These moves contain semantic representations that can be
-        passed to the NLG engine to generate natural language utterances.
+        IMPORTANT ARCHITECTURAL NOTE:
+        This method parses DialogueMoves from STRUCTURED SEMANTIC DATA
+        (e.g., state_changes.qud_pushed: "?x.legal_entities(x)"), NOT from
+        natural language text. This is semantic parsing, not NLU.
 
-        For NLG purposes, we only need to construct moves for system turns,
-        since user turns are already natural language in the scenario JSON.
+        What we ARE doing (semantic parsing for NLG demo):
+        - Parse semantic representations → DialogueMove
+        - Example: "?x.legal_entities(x)" → WhQuestion(variable="x", predicate="legal_entities")
+        - Pass DialogueMove to NLG → Generate natural language
+
+        What we are NOT doing (NLU - future work):
+        - Parse natural language → DialogueMove
+        - Example: "What are the parties?" → WhQuestion (this would be NLU)
+
+        The demo shows: MEANING → TEXT (NLG)
+        Future work:    TEXT → MEANING (NLU)
+
+        For NLG purposes, we only construct moves for system turns, since user
+        turns are already natural language in the scenario JSON.
 
         Args:
             turn_data: Turn data from scenario JSON (must be system turn)
@@ -1066,8 +1100,8 @@ class BusinessDemo:
             DialogueMove with properly typed content
 
         Note:
-            This is for NLG (generation), not NLU (understanding).
-            User utterances don't need move construction.
+            This parses from semantic annotations, not utterance text.
+            Parsing from utterance text would be NLU (not implemented).
         """
         from ibdm.core.moves import DialogueMove
 
