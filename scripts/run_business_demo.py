@@ -65,17 +65,25 @@ except ImportError:
 class BusinessDemo:
     """Run pre-scripted business demonstration scenarios."""
 
-    def __init__(self, scenario_path: Path, verbose: bool = True, auto_advance: bool = True):
+    def __init__(
+        self,
+        scenario_path: Path,
+        verbose: bool = True,
+        auto_advance: bool = True,
+        nlg_mode: str = "off",
+    ):
         """Initialize business demo.
 
         Args:
             scenario_path: Path to scenario JSON file
             verbose: Whether to print detailed output
             auto_advance: Whether to auto-advance turns (vs manual)
+            nlg_mode: NLG mode - "off" (scripted only), "compare" (both), or "replace" (NLG only)
         """
         self.scenario_path = scenario_path
         self.verbose = verbose
         self.auto_advance = auto_advance
+        self.nlg_mode = nlg_mode
 
         # Load scenario
         self.scenario = json.loads(scenario_path.read_text())
@@ -88,6 +96,7 @@ class BusinessDemo:
                 "scenario_id": self.scenario["scenario_id"],
                 "scenario_title": self.scenario["title"],
                 "run_mode": "automated",
+                "nlg_mode": nlg_mode,
             },
         )
 
@@ -99,6 +108,27 @@ class BusinessDemo:
 
         # Mock state for tracking (simplified)
         self.state = InformationState(agent_id="system")
+
+        # Initialize NLG engine conditionally (only if needed)
+        self.nlg_engine = None
+        if self.nlg_mode != "off":
+            try:
+                from ibdm.nlg.nlg_engine import NLGEngine, NLGEngineConfig
+
+                config = NLGEngineConfig(
+                    default_strategy="plan_aware",
+                    use_plan_awareness=True,
+                    use_domain_descriptions=True,
+                )
+                self.nlg_engine = NLGEngine(config)
+                if self.verbose:
+                    print(f"✓ NLG engine initialized (mode: {nlg_mode})")
+            except ImportError:
+                print(
+                    f"⚠ Warning: NLG mode '{nlg_mode}' requested but NLG engine not available. "
+                    "Falling back to scripted mode."
+                )
+                self.nlg_mode = "off"
 
     def print_banner(self) -> None:
         """Print demo banner."""
@@ -149,8 +179,47 @@ class BusinessDemo:
         print(f"{color_code}Turn {turn_num}: {speaker_display} [{move_type}]{reset_code}")
         print(f"{'─' * 80}")
 
-        # Print utterance
-        print(f"{utterance}")
+        # Generate NLG utterance for system turns if needed
+        nlg_utterance = None
+        if speaker == "system" and self.nlg_engine is not None and self.nlg_mode != "off":
+            try:
+                # Create DialogueMove from turn data
+                move = self._create_system_dialogue_move(turn_data)
+
+                # Generate natural language using NLG engine
+                nlg_result = self.nlg_engine.generate(move, self.state)
+                nlg_utterance = nlg_result.text
+            except Exception as e:
+                # Fall back to scripted on error
+                if self.verbose:
+                    print(f"⚠ NLG generation failed: {e}")
+                nlg_utterance = None
+
+        # Display utterances based on mode
+        if speaker == "user" or self.nlg_mode == "off":
+            # User turns: always show scripted
+            # System turns in "off" mode: show scripted
+            print(f"{utterance}")
+
+        elif self.nlg_mode == "compare":
+            # Compare mode: show both scripted and NLG
+            print("\n📜 SCRIPTED (Gold Standard):")
+            print(f'   "{utterance}"')
+
+            if nlg_utterance:
+                print("\n🤖 NLG GENERATED:")
+                print(f'   "{nlg_utterance}"')
+            else:
+                print("\n🤖 NLG GENERATED: (generation failed, using scripted)")
+
+        elif self.nlg_mode == "replace":
+            # Replace mode: show NLG only (or fallback to scripted)
+            if nlg_utterance:
+                print(f"{nlg_utterance}")
+            else:
+                print(f"{utterance}")
+                if self.verbose:
+                    print("   (using scripted - NLG unavailable)")
 
         # Print business explanation if verbose
         if self.verbose and "business_explanation" in turn_data:
@@ -167,11 +236,15 @@ class BusinessDemo:
                 key_display = key.replace("_", " ").title()
                 print(f"   • {key_display}: {value}")
 
-        # Record in dialogue history
+        # Record in dialogue history (use NLG utterance if in replace mode)
+        displayed_utterance = utterance
+        if speaker == "system" and self.nlg_mode == "replace" and nlg_utterance:
+            displayed_utterance = nlg_utterance
+
         self.dialogue_history.add_turn(
             turn_number=turn_num,
             speaker=speaker,
-            utterance=utterance,
+            utterance=displayed_utterance,
             move_type=move_type,
             state_snapshot=turn_data.get("state_changes", {}),
         )
@@ -1167,6 +1240,14 @@ def main() -> int:
         action="store_true",
         help="Manual mode (press Enter to advance)",
     )
+    parser.add_argument(
+        "--nlg-mode",
+        choices=["off", "compare", "replace"],
+        default="off",
+        help=(
+            "NLG mode: 'off' (scripted only, default), 'compare' (show both), 'replace' (NLG only)"
+        ),
+    )
 
     args = parser.parse_args()
 
@@ -1198,6 +1279,7 @@ def main() -> int:
                 scenario_file,
                 verbose=not args.quiet,
                 auto_advance=not args.manual,
+                nlg_mode=args.nlg_mode,
             )
 
             demo.run_scenario()

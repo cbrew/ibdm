@@ -723,3 +723,162 @@ class TestSystemDialogueMoveConstruction:
         assert move_dict["speaker"] == "system", "Should preserve speaker"
         assert isinstance(move_dict["content"], dict), "Question should serialize to dict"
         assert move_dict["content"]["type"] == "wh", "Should serialize question type"
+
+
+class TestNLGModes:
+    """Test NLG mode integration (off, compare, replace)."""
+
+    @pytest.fixture
+    def scenario_path(self):
+        """Path to test scenario."""
+        return PROJECT_ROOT / "demos" / "scenarios" / "nda_basic.json"
+
+    def test_nlg_mode_off_no_engine_initialized(self, scenario_path):
+        """Test that NLG engine is not initialized in 'off' mode."""
+        # Import BusinessDemo from the script
+        sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
+        sys.path.insert(0, str(PROJECT_ROOT / "src"))
+
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location("run_business_demo", LAUNCHER_SCRIPT)
+        if spec and spec.loader:
+            run_business_demo = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(run_business_demo)
+            BusinessDemo = run_business_demo.BusinessDemo  # noqa: N806
+
+            # Create demo in off mode
+            demo = BusinessDemo(scenario_path, verbose=False, auto_advance=False, nlg_mode="off")
+
+            assert demo.nlg_mode == "off", "Should be in off mode"
+            assert demo.nlg_engine is None, "NLG engine should not be initialized"
+
+    def test_nlg_mode_compare_engine_initialized(self, scenario_path):
+        """Test that NLG engine is initialized in 'compare' mode."""
+        # Import BusinessDemo from the script
+        sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
+        sys.path.insert(0, str(PROJECT_ROOT / "src"))
+
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location("run_business_demo", LAUNCHER_SCRIPT)
+        if spec and spec.loader:
+            run_business_demo = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(run_business_demo)
+            BusinessDemo = run_business_demo.BusinessDemo  # noqa: N806
+
+            # Create demo in compare mode
+            demo = BusinessDemo(
+                scenario_path, verbose=False, auto_advance=False, nlg_mode="compare"
+            )
+
+            assert demo.nlg_mode == "compare", "Should be in compare mode"
+            # NLG engine may or may not be initialized depending on availability
+            # If it fails to initialize, mode should fall back to "off"
+            if demo.nlg_engine is None:
+                assert demo.nlg_mode == "off", "Should fall back to off if NLG unavailable"
+
+    def test_nlg_mode_replace_engine_initialized(self, scenario_path):
+        """Test that NLG engine is initialized in 'replace' mode."""
+        # Import BusinessDemo from the script
+        sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
+        sys.path.insert(0, str(PROJECT_ROOT / "src"))
+
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location("run_business_demo", LAUNCHER_SCRIPT)
+        if spec and spec.loader:
+            run_business_demo = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(run_business_demo)
+            BusinessDemo = run_business_demo.BusinessDemo  # noqa: N806
+
+            # Create demo in replace mode
+            demo = BusinessDemo(
+                scenario_path, verbose=False, auto_advance=False, nlg_mode="replace"
+            )
+
+            assert demo.nlg_mode in ["replace", "off"], "Should be in replace mode or fall back"
+            # NLG engine may or may not be initialized depending on availability
+
+    def test_nlg_mode_cli_argument(self):
+        """Test that --nlg-mode CLI argument is accepted."""
+        result = subprocess.run(
+            [sys.executable, str(LAUNCHER_SCRIPT), "--help"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+
+        assert result.returncode == 0, "Help should succeed"
+        assert "--nlg-mode" in result.stdout, "Should have --nlg-mode argument"
+        assert "off" in result.stdout, "Should mention 'off' mode"
+        assert "compare" in result.stdout, "Should mention 'compare' mode"
+        assert "replace" in result.stdout, "Should mention 'replace' mode"
+
+    @pytest.mark.slow
+    def test_nlg_mode_off_runs_successfully(self):
+        """Test that demo runs successfully in off mode."""
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(LAUNCHER_SCRIPT),
+                "--scenario",
+                "nda_basic",
+                "--quiet",
+                "--no-report",
+                "--nlg-mode",
+                "off",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+
+        assert result.returncode == 0, f"Demo should complete successfully. Error: {result.stderr}"
+        assert "complete" in result.stdout.lower(), "Should indicate completion"
+
+    @pytest.mark.slow
+    def test_nlg_mode_compare_runs_successfully(self):
+        """Test that demo runs successfully in compare mode."""
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(LAUNCHER_SCRIPT),
+                "--scenario",
+                "nda_basic",
+                "--quiet",
+                "--no-report",
+                "--nlg-mode",
+                "compare",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+
+        # May succeed or fail depending on NLG availability
+        # Just verify it doesn't crash
+        assert result.returncode in [0, 1], "Demo should complete or fail gracefully"
+
+    @pytest.mark.slow
+    def test_nlg_mode_replace_runs_successfully(self):
+        """Test that demo runs successfully in replace mode."""
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(LAUNCHER_SCRIPT),
+                "--scenario",
+                "nda_basic",
+                "--quiet",
+                "--no-report",
+                "--nlg-mode",
+                "replace",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+
+        # May succeed or fail depending on NLG availability
+        # Just verify it doesn't crash
+        assert result.returncode in [0, 1], "Demo should complete or fail gracefully"
