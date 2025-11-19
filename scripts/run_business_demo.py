@@ -4,11 +4,23 @@
 One-command demo script that runs pre-configured dialogue scenarios
 with professional output and auto-generated HTML reports.
 
+ARCHITECTURAL NOTE - Loading Semantic Representations vs NLU:
+    This demo LOADS semantic representations from scenario JSON
+    (e.g., state_changes.qud_pushed: "?x.legal_entities(x)") and converts
+    them to DialogueMove objects. This is NOT parsing natural language text.
+
+    What the demo shows:  MEANING → TEXT (NLG)
+    Future work:          TEXT → MEANING (NLU)
+
+    Inferring DialogueMoves from natural language utterances would be NLU work,
+    which is explicitly out of scope for this demo.
+
 Usage:
     python scripts/run_business_demo.py                    # Run default (nda_basic)
     python scripts/run_business_demo.py --scenario nda_volunteer
     python scripts/run_business_demo.py --all              # Run all scenarios
     python scripts/run_business_demo.py --scenario nda_basic --no-report
+    python scripts/run_business_demo.py --nlg-mode compare # Show NLG comparison
 """
 
 import argparse
@@ -65,17 +77,25 @@ except ImportError:
 class BusinessDemo:
     """Run pre-scripted business demonstration scenarios."""
 
-    def __init__(self, scenario_path: Path, verbose: bool = True, auto_advance: bool = True):
+    def __init__(
+        self,
+        scenario_path: Path,
+        verbose: bool = True,
+        auto_advance: bool = True,
+        nlg_mode: str = "off",
+    ):
         """Initialize business demo.
 
         Args:
             scenario_path: Path to scenario JSON file
             verbose: Whether to print detailed output
             auto_advance: Whether to auto-advance turns (vs manual)
+            nlg_mode: NLG mode - "off" (scripted only), "compare" (both), or "replace" (NLG only)
         """
         self.scenario_path = scenario_path
         self.verbose = verbose
         self.auto_advance = auto_advance
+        self.nlg_mode = nlg_mode
 
         # Load scenario
         self.scenario = json.loads(scenario_path.read_text())
@@ -88,6 +108,7 @@ class BusinessDemo:
                 "scenario_id": self.scenario["scenario_id"],
                 "scenario_title": self.scenario["title"],
                 "run_mode": "automated",
+                "nlg_mode": nlg_mode,
             },
         )
 
@@ -99,6 +120,27 @@ class BusinessDemo:
 
         # Mock state for tracking (simplified)
         self.state = InformationState(agent_id="system")
+
+        # Initialize NLG engine conditionally (only if needed)
+        self.nlg_engine = None
+        if self.nlg_mode != "off":
+            try:
+                from ibdm.nlg.nlg_engine import NLGEngine, NLGEngineConfig
+
+                config = NLGEngineConfig(
+                    default_strategy="plan_aware",
+                    use_plan_awareness=True,
+                    use_domain_descriptions=True,
+                )
+                self.nlg_engine = NLGEngine(config)
+                if self.verbose:
+                    print(f"✓ NLG engine initialized (mode: {nlg_mode})")
+            except ImportError:
+                print(
+                    f"⚠ Warning: NLG mode '{nlg_mode}' requested but NLG engine not available. "
+                    "Falling back to scripted mode."
+                )
+                self.nlg_mode = "off"
 
     def print_banner(self) -> None:
         """Print demo banner."""
@@ -149,8 +191,52 @@ class BusinessDemo:
         print(f"{color_code}Turn {turn_num}: {speaker_display} [{move_type}]{reset_code}")
         print(f"{'─' * 80}")
 
-        # Print utterance
-        print(f"{utterance}")
+        # Generate NLG utterance for system turns if needed
+        nlg_utterance = None
+        if speaker == "system" and self.nlg_engine is not None and self.nlg_mode != "off":
+            try:
+                # Create DialogueMove from semantic annotations in turn data
+                # NOTE: This LOADS structured semantic data from JSON (qud_pushed, etc.),
+                # NOT from natural language text. The scenario JSON contains
+                # semantic representations that we convert to DialogueMove objects.
+                # This demonstrates: SEMANTIC REPRESENTATION → NATURAL LANGUAGE (NLG)
+                # Future NLU work would be: NATURAL LANGUAGE → SEMANTIC REPRESENTATION
+                move = self._create_system_dialogue_move(turn_data)
+
+                # Generate natural language using NLG engine
+                nlg_result = self.nlg_engine.generate(move, self.state)
+                nlg_utterance = nlg_result.text
+            except Exception as e:
+                # Fall back to scripted on error
+                if self.verbose:
+                    print(f"⚠ NLG generation failed: {e}")
+                nlg_utterance = None
+
+        # Display utterances based on mode
+        if speaker == "user" or self.nlg_mode == "off":
+            # User turns: always show scripted
+            # System turns in "off" mode: show scripted
+            print(f"{utterance}")
+
+        elif self.nlg_mode == "compare":
+            # Compare mode: show both scripted and NLG
+            print("\n📜 SCRIPTED (Gold Standard):")
+            print(f'   "{utterance}"')
+
+            if nlg_utterance:
+                print("\n🤖 NLG GENERATED:")
+                print(f'   "{nlg_utterance}"')
+            else:
+                print("\n🤖 NLG GENERATED: (generation failed, using scripted)")
+
+        elif self.nlg_mode == "replace":
+            # Replace mode: show NLG only (or fallback to scripted)
+            if nlg_utterance:
+                print(f"{nlg_utterance}")
+            else:
+                print(f"{utterance}")
+                if self.verbose:
+                    print("   (using scripted - NLG unavailable)")
 
         # Print business explanation if verbose
         if self.verbose and "business_explanation" in turn_data:
@@ -167,11 +253,15 @@ class BusinessDemo:
                 key_display = key.replace("_", " ").title()
                 print(f"   • {key_display}: {value}")
 
-        # Record in dialogue history
+        # Record in dialogue history (use NLG utterance if in replace mode)
+        displayed_utterance = utterance
+        if speaker == "system" and self.nlg_mode == "replace" and nlg_utterance:
+            displayed_utterance = nlg_utterance
+
         self.dialogue_history.add_turn(
             turn_number=turn_num,
             speaker=speaker,
-            utterance=utterance,
+            utterance=displayed_utterance,
             move_type=move_type,
             state_snapshot=turn_data.get("state_changes", {}),
         )
@@ -935,13 +1025,17 @@ class BusinessDemo:
         return "\n".join(html_parts)
 
     def _parse_question_from_string(self, question_str: str) -> Question | None:
-        """Parse a question from state_changes string.
+        """Load a Question from semantic representation string.
+
+        This loads from SEMANTIC NOTATION loaded from JSON (e.g., "?x.legal_entities(x)"),
+        NOT from natural language text (e.g., "What are the parties?").
+        This is loading semantic representations for the NLG demo, not NLU.
 
         Args:
-            question_str: String like "?x.legal_entities(x)" or "?nda_type"
+            question_str: Semantic notation like "?x.legal_entities(x)" or "?nda_type"
 
         Returns:
-            Question object or None if parsing fails
+            Question object or None if loading fails
         """
         import re
 
@@ -975,6 +1069,62 @@ class BusinessDemo:
         """
         # Simple plan creation - in production this would be more sophisticated
         return Plan(plan_type="findout", content=plan_description, status="active")
+
+    def _create_system_dialogue_move(self, turn_data: dict[str, Any]) -> Any:
+        """Create DialogueMove for SYSTEM turns (for NLG generation).
+
+        IMPORTANT ARCHITECTURAL NOTE:
+        This method LOADS semantic representations from JSON
+        (e.g., state_changes.qud_pushed: "?x.legal_entities(x)") and converts
+        them to DialogueMove objects. This is NOT parsing natural language text.
+
+        What we ARE doing (loading semantic representations for NLG demo):
+        - Load semantic representations from JSON → DialogueMove
+        - Example: "?x.legal_entities(x)" → WhQuestion(variable="x", predicate="legal_entities")
+        - Pass DialogueMove to NLG → Generate natural language
+
+        What we are NOT doing (NLU - future work):
+        - Infer DialogueMove from natural language text
+        - Example: "What are the parties?" → WhQuestion (this would be NLU)
+
+        The demo shows: MEANING → TEXT (NLG)
+        Future work:    TEXT → MEANING (NLU)
+
+        For NLG purposes, we only construct moves for system turns, since user
+        turns are already natural language in the scenario JSON.
+
+        Args:
+            turn_data: Turn data from scenario JSON (must be system turn)
+
+        Returns:
+            DialogueMove with properly typed content
+
+        Note:
+            This loads from semantic annotations in JSON, not utterance text.
+            Inferring from utterance text would be NLU (not implemented).
+        """
+        from ibdm.core.moves import DialogueMove
+
+        move_type = turn_data.get("move_type", "unknown")
+        speaker = turn_data.get("speaker", "system")
+        state_changes = turn_data.get("state_changes", {})
+
+        # Construct content based on move_type
+        content: Any = None
+
+        if move_type == "ask":
+            # For ask moves, extract the Question from state_changes
+            # This Question will be passed to NLG to generate the question text
+            question_str = state_changes.get("qud_pushed", "")
+            content = self._parse_question_from_string(question_str)
+            if content is None:
+                # Fallback to utterance if we can't parse the question
+                content = turn_data.get("utterance", "")
+        else:
+            # For other system moves (greet, assert, etc.), use utterance as content
+            content = turn_data.get("utterance", "")
+
+        return DialogueMove(move_type=move_type, content=content, speaker=speaker)
 
     def _apply_state_changes(self, state: InformationState, state_changes: dict[str, Any]) -> None:
         """Apply state_changes from JSON to InformationState.
@@ -1124,6 +1274,14 @@ def main() -> int:
         action="store_true",
         help="Manual mode (press Enter to advance)",
     )
+    parser.add_argument(
+        "--nlg-mode",
+        choices=["off", "compare", "replace"],
+        default="off",
+        help=(
+            "NLG mode: 'off' (scripted only, default), 'compare' (show both), 'replace' (NLG only)"
+        ),
+    )
 
     args = parser.parse_args()
 
@@ -1155,6 +1313,7 @@ def main() -> int:
                 scenario_file,
                 verbose=not args.quiet,
                 auto_advance=not args.manual,
+                nlg_mode=args.nlg_mode,
             )
 
             demo.run_scenario()

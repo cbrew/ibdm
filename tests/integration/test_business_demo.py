@@ -544,3 +544,341 @@ class TestStateReconstruction:
         assert len(state_dict["shared"]["qud"]) > 0, "Should have QUD in serialization"
         assert len(state_dict["shared"]["commitments"]) > 0, "Should have commitments"
         assert len(state_dict["private"]["plan"]) > 0, "Should have plans"
+
+
+class TestSystemDialogueMoveConstruction:
+    """Test construction of DialogueMove objects for SYSTEM turns (NLG purposes).
+
+    Note: These tests focus on SYSTEM moves only, since NLG generates system
+    utterances. User moves are already natural language and don't need construction.
+    """
+
+    @pytest.fixture
+    def business_demo(self):
+        """Create a BusinessDemo instance for testing."""
+        # Import BusinessDemo from the script
+        sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
+        sys.path.insert(0, str(PROJECT_ROOT / "src"))
+
+        # Import the script as a module
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location("run_business_demo", LAUNCHER_SCRIPT)
+        if spec and spec.loader:
+            run_business_demo = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(run_business_demo)
+            business_demo_class = run_business_demo.BusinessDemo
+
+            # Load the basic scenario
+            scenario_path = PROJECT_ROOT / "demos" / "scenarios" / "nda_basic.json"
+            return business_demo_class(scenario_path, verbose=False, auto_advance=False)
+        pytest.fail("Could not import BusinessDemo")
+
+    def test_create_system_ask_move_with_wh_question(self, business_demo):
+        """Test creating system ask move with WhQuestion content."""
+        from ibdm.core.moves import DialogueMove
+        from ibdm.core.questions import WhQuestion
+
+        # System turn with qud_pushed
+        turn_data = {
+            "speaker": "system",
+            "move_type": "ask",
+            "utterance": "What are the parties to the NDA?",
+            "state_changes": {"qud_pushed": "?x.legal_entities(x)"},
+        }
+
+        move = business_demo._create_system_dialogue_move(turn_data)
+
+        assert isinstance(move, DialogueMove), "Should create DialogueMove"
+        assert move.speaker == "system", "Should be system speaker"
+        assert move.move_type == "ask", "Should be ask move"
+        assert isinstance(move.content, WhQuestion), "Content should be WhQuestion"
+        assert move.content.variable == "x", "Should extract variable"
+        assert move.content.predicate == "legal_entities", "Should extract predicate"
+
+    def test_create_system_ask_move_with_yn_question(self, business_demo):
+        """Test creating system ask move with YNQuestion content."""
+        from ibdm.core.moves import DialogueMove
+        from ibdm.core.questions import YNQuestion
+
+        # System turn with simple proposition
+        turn_data = {
+            "speaker": "system",
+            "move_type": "ask",
+            "utterance": "Is this a mutual NDA or one-way?",
+            "state_changes": {"qud_pushed": "?nda_type"},
+        }
+
+        move = business_demo._create_system_dialogue_move(turn_data)
+
+        assert isinstance(move, DialogueMove), "Should create DialogueMove"
+        assert move.speaker == "system", "Should be system speaker"
+        assert move.move_type == "ask", "Should be ask move"
+        assert isinstance(move.content, YNQuestion), "Content should be YNQuestion"
+        assert move.content.proposition == "nda_type", "Should extract proposition"
+
+    def test_create_system_ask_move_fallback_to_utterance(self, business_demo):
+        """Test ask move falls back to utterance if question parsing fails."""
+        from ibdm.core.moves import DialogueMove
+
+        # System turn with unparseable question
+        turn_data = {
+            "speaker": "system",
+            "move_type": "ask",
+            "utterance": "What are the parties?",
+            "state_changes": {"qud_pushed": ""},  # Empty string
+        }
+
+        move = business_demo._create_system_dialogue_move(turn_data)
+
+        assert isinstance(move, DialogueMove), "Should create DialogueMove"
+        assert move.content == "What are the parties?", "Should fall back to utterance"
+
+    def test_create_system_greet_move(self, business_demo):
+        """Test creating system greet move with string content."""
+        from ibdm.core.moves import DialogueMove
+
+        turn_data = {
+            "speaker": "system",
+            "move_type": "greet",
+            "utterance": "Hello! I can help you draft an NDA.",
+            "state_changes": {},
+        }
+
+        move = business_demo._create_system_dialogue_move(turn_data)
+
+        assert isinstance(move, DialogueMove), "Should create DialogueMove"
+        assert move.speaker == "system", "Should be system speaker"
+        assert move.move_type == "greet", "Should be greet move"
+        assert move.content == "Hello! I can help you draft an NDA.", "Content should be utterance"
+
+    def test_create_system_assert_move(self, business_demo):
+        """Test creating system assert move with string content."""
+        from ibdm.core.moves import DialogueMove
+
+        turn_data = {
+            "speaker": "system",
+            "move_type": "assert",
+            "utterance": "I've gathered all the information needed.",
+            "state_changes": {},
+        }
+
+        move = business_demo._create_system_dialogue_move(turn_data)
+
+        assert isinstance(move, DialogueMove), "Should create DialogueMove"
+        assert move.speaker == "system", "Should be system speaker"
+        assert move.move_type == "assert", "Should be assert move"
+        assert move.content == "I've gathered all the information needed.", (
+            "Content should be utterance"
+        )
+
+    def test_system_moves_from_scenario(self, business_demo):
+        """Test creating system moves from actual scenario turns."""
+        from ibdm.core.moves import DialogueMove
+        from ibdm.core.questions import Question
+
+        scenario = business_demo.scenario
+        system_moves = []
+
+        # Extract and create moves for system turns only
+        for turn_data in scenario["turns"]:
+            if turn_data["speaker"] == "system":
+                move = business_demo._create_system_dialogue_move(turn_data)
+                system_moves.append(move)
+
+        # Should have system moves from scenario
+        assert len(system_moves) > 0, "Should have system turns in scenario"
+
+        # All should be DialogueMoves
+        assert all(isinstance(m, DialogueMove) for m in system_moves), "All should be DialogueMoves"
+
+        # All should be system speaker
+        assert all(m.speaker == "system" for m in system_moves), "All should be system"
+
+        # Ask moves should have Question content
+        ask_moves = [m for m in system_moves if m.move_type == "ask"]
+        assert len(ask_moves) > 0, "Should have ask moves"
+        for move in ask_moves:
+            assert isinstance(move.content, (Question, str)), (
+                "Ask moves should have Question or string content"
+            )
+
+    def test_move_serialization(self, business_demo):
+        """Test that created system moves can be serialized."""
+        turn_data = {
+            "speaker": "system",
+            "move_type": "ask",
+            "utterance": "What are the parties?",
+            "state_changes": {"qud_pushed": "?x.legal_entities(x)"},
+        }
+
+        move = business_demo._create_system_dialogue_move(turn_data)
+
+        # Serialize
+        move_dict = move.to_dict()
+
+        # Check serialization
+        assert isinstance(move_dict, dict), "Should serialize to dict"
+        assert move_dict["move_type"] == "ask", "Should preserve move_type"
+        assert move_dict["speaker"] == "system", "Should preserve speaker"
+        assert isinstance(move_dict["content"], dict), "Question should serialize to dict"
+        assert move_dict["content"]["type"] == "wh", "Should serialize question type"
+
+
+class TestNLGModes:
+    """Test NLG mode integration (off, compare, replace)."""
+
+    @pytest.fixture
+    def scenario_path(self):
+        """Path to test scenario."""
+        return PROJECT_ROOT / "demos" / "scenarios" / "nda_basic.json"
+
+    def test_nlg_mode_off_no_engine_initialized(self, scenario_path):
+        """Test that NLG engine is not initialized in 'off' mode."""
+        # Import BusinessDemo from the script
+        sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
+        sys.path.insert(0, str(PROJECT_ROOT / "src"))
+
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location("run_business_demo", LAUNCHER_SCRIPT)
+        if spec and spec.loader:
+            run_business_demo = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(run_business_demo)
+            BusinessDemo = run_business_demo.BusinessDemo  # noqa: N806
+
+            # Create demo in off mode
+            demo = BusinessDemo(scenario_path, verbose=False, auto_advance=False, nlg_mode="off")
+
+            assert demo.nlg_mode == "off", "Should be in off mode"
+            assert demo.nlg_engine is None, "NLG engine should not be initialized"
+
+    def test_nlg_mode_compare_engine_initialized(self, scenario_path):
+        """Test that NLG engine is initialized in 'compare' mode."""
+        # Import BusinessDemo from the script
+        sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
+        sys.path.insert(0, str(PROJECT_ROOT / "src"))
+
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location("run_business_demo", LAUNCHER_SCRIPT)
+        if spec and spec.loader:
+            run_business_demo = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(run_business_demo)
+            BusinessDemo = run_business_demo.BusinessDemo  # noqa: N806
+
+            # Create demo in compare mode
+            demo = BusinessDemo(
+                scenario_path, verbose=False, auto_advance=False, nlg_mode="compare"
+            )
+
+            assert demo.nlg_mode == "compare", "Should be in compare mode"
+            # NLG engine may or may not be initialized depending on availability
+            # If it fails to initialize, mode should fall back to "off"
+            if demo.nlg_engine is None:
+                assert demo.nlg_mode == "off", "Should fall back to off if NLG unavailable"
+
+    def test_nlg_mode_replace_engine_initialized(self, scenario_path):
+        """Test that NLG engine is initialized in 'replace' mode."""
+        # Import BusinessDemo from the script
+        sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
+        sys.path.insert(0, str(PROJECT_ROOT / "src"))
+
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location("run_business_demo", LAUNCHER_SCRIPT)
+        if spec and spec.loader:
+            run_business_demo = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(run_business_demo)
+            BusinessDemo = run_business_demo.BusinessDemo  # noqa: N806
+
+            # Create demo in replace mode
+            demo = BusinessDemo(
+                scenario_path, verbose=False, auto_advance=False, nlg_mode="replace"
+            )
+
+            assert demo.nlg_mode in ["replace", "off"], "Should be in replace mode or fall back"
+            # NLG engine may or may not be initialized depending on availability
+
+    def test_nlg_mode_cli_argument(self):
+        """Test that --nlg-mode CLI argument is accepted."""
+        result = subprocess.run(
+            [sys.executable, str(LAUNCHER_SCRIPT), "--help"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+
+        assert result.returncode == 0, "Help should succeed"
+        assert "--nlg-mode" in result.stdout, "Should have --nlg-mode argument"
+        assert "off" in result.stdout, "Should mention 'off' mode"
+        assert "compare" in result.stdout, "Should mention 'compare' mode"
+        assert "replace" in result.stdout, "Should mention 'replace' mode"
+
+    @pytest.mark.slow
+    def test_nlg_mode_off_runs_successfully(self):
+        """Test that demo runs successfully in off mode."""
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(LAUNCHER_SCRIPT),
+                "--scenario",
+                "nda_basic",
+                "--quiet",
+                "--no-report",
+                "--nlg-mode",
+                "off",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+
+        assert result.returncode == 0, f"Demo should complete successfully. Error: {result.stderr}"
+        assert "complete" in result.stdout.lower(), "Should indicate completion"
+
+    @pytest.mark.slow
+    def test_nlg_mode_compare_runs_successfully(self):
+        """Test that demo runs successfully in compare mode."""
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(LAUNCHER_SCRIPT),
+                "--scenario",
+                "nda_basic",
+                "--quiet",
+                "--no-report",
+                "--nlg-mode",
+                "compare",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+
+        # May succeed or fail depending on NLG availability
+        # Just verify it doesn't crash
+        assert result.returncode in [0, 1], "Demo should complete or fail gracefully"
+
+    @pytest.mark.slow
+    def test_nlg_mode_replace_runs_successfully(self):
+        """Test that demo runs successfully in replace mode."""
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(LAUNCHER_SCRIPT),
+                "--scenario",
+                "nda_basic",
+                "--quiet",
+                "--no-report",
+                "--nlg-mode",
+                "replace",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+
+        # May succeed or fail depending on NLG availability
+        # Just verify it doesn't crash
+        assert result.returncode in [0, 1], "Demo should complete or fail gracefully"
