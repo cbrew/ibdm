@@ -41,6 +41,43 @@ git commit -m "feat(scope): description"
 
 📖 **Details**: [`docs/architecture_principles.md`](docs/architecture_principles.md)
 
+#### NO SILENT FALLBACKS (CRITICAL)
+
+**Rule**: NEVER use silent fallbacks. If something fails, raise an exception or log an error loudly. Silent fallbacks hide bugs and make debugging impossible.
+
+**Examples of FORBIDDEN patterns**:
+```python
+# ❌ NEVER DO THIS - Silent fallback
+try:
+    result = parse_question(text)
+except:
+    result = text  # Silent fallback - hides the bug!
+
+# ❌ NEVER DO THIS - Silent fallback with None check
+result = parse_question(text)
+if result is None:
+    result = text  # Silent fallback - hides the bug!
+
+# ✅ DO THIS - Fail fast with clear error
+result = parse_question(text)
+if result is None:
+    raise ValueError(f"Failed to parse question: {text!r}")
+
+# ✅ OR THIS - Log loudly and fail
+result = parse_question(text)
+if result is None:
+    logger.error(f"CRITICAL: Failed to parse question: {text!r}")
+    raise ValueError(f"Cannot proceed without valid question")
+```
+
+**Why this matters**:
+- Silent fallbacks hide bugs that should be fixed
+- Makes it impossible to know when something is broken
+- Creates "working but wrong" behavior
+- Wastes debugging time trying to figure out why output is wrong
+
+**When you think about adding a fallback, DON'T. Fix the root cause instead.**
+
 ### 10. Domain Semantic Layer
 
 **Policy**: Define predicates, sorts, and semantic operations explicitly using domain models.
