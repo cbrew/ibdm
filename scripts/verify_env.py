@@ -34,7 +34,7 @@ def verify_environment():
             missing.append((var, description))
             print(f"✗ {var}")
             print(f"  {description}")
-            print(f"  Status: NOT FOUND")
+            print("  Status: NOT FOUND")
             print()
 
     # Summary

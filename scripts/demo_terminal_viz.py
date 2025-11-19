@@ -32,7 +32,9 @@ def create_dummy_state(timestamp: int, label: str) -> StateSnapshot:
         state.private.agenda = []
         # Add a subplan to show hierarchy
         plan = Plan(
-            "findout", WhQuestion("x", "age(x)"), subplans=[Plan("raise", WhQuestion("x", "age(x)"))]
+            "findout",
+            WhQuestion("x", "age(x)"),
+            subplans=[Plan("raise", WhQuestion("x", "age(x)"))],
         )
         state.private.plan.insert(0, plan)
 
