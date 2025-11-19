@@ -338,6 +338,68 @@ class NLGEngine:
             text, rule = self._generate_template(move, state)
             return (text, f"{rule}_fallback", 0, None)
 
+    def _format_dialogue_history(self, moves: list[DialogueMove], max_moves: int = 10) -> str:
+        """Format dialogue history for inclusion in prompts.
+
+        Args:
+            moves: List of dialogue moves
+            max_moves: Maximum number of recent moves to include (default: 10)
+
+        Returns:
+            Formatted dialogue history string
+        """
+        # Take only the most recent moves to avoid token bloat
+        recent_moves = moves[-max_moves:] if len(moves) > max_moves else moves
+
+        if not recent_moves:
+            return "(no prior dialogue)"
+
+        lines: list[str] = []
+        for i, move in enumerate(recent_moves, 1):
+            # Format: "User: ask - What is your name?"
+            speaker = move.speaker.capitalize()
+            move_type = move.move_type
+
+            # Extract readable content
+            content_str = self._format_move_content_for_history(move.content)
+
+            # Add grounding status if available (useful context)
+            grounding_info = ""
+            if move.metadata.get("grounding_status"):
+                status = move.metadata["grounding_status"]
+                if status != "grounded":  # Only show non-grounded states
+                    grounding_info = f" [{status}]"
+
+            lines.append(f"{i}. {speaker}: {move_type} - {content_str}{grounding_info}")
+
+        return "\n".join(lines)
+
+    def _format_move_content_for_history(self, content: Any) -> str:
+        """Format move content for dialogue history display.
+
+        Args:
+            content: Move content (Question, Answer, string, etc.)
+
+        Returns:
+            Formatted string representation
+        """
+        # Handle different content types
+        if isinstance(content, (WhQuestion, YNQuestion, AltQuestion)):
+            return str(content)
+        elif isinstance(content, Answer):
+            return f"{content.content}"
+        elif isinstance(content, str):
+            # Limit string length
+            if len(content) > 80:
+                return content[:77] + "..."
+            return content
+        else:
+            # Generic string conversion with length limit
+            content_str = str(content)
+            if len(content_str) > 80:
+                return content_str[:77] + "..."
+            return content_str
+
     def _build_nlg_system_prompt(self, move: DialogueMove, state: InformationState) -> str:
         """Build system prompt for NLG LLM call.
 
@@ -352,6 +414,11 @@ class NLGEngine:
             "You are a natural language generation system for a dialogue management system. "
             "Generate natural, professional responses based on dialogue moves and context."
         )
+
+        # Add dialogue history for context
+        if state.shared.moves:
+            history_str = self._format_dialogue_history(state.shared.moves)
+            base_prompt += f"\n\nDialogue history:\n{history_str}"
 
         # Add context from state
         if state.shared.qud:
