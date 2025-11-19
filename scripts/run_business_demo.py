@@ -161,11 +161,25 @@ class BusinessDemo:
             # semantic representations that we convert to DialogueMove objects.
             # This demonstrates: SEMANTIC REPRESENTATION → NATURAL LANGUAGE (NLG)
             # Future NLU work would be: NATURAL LANGUAGE → SEMANTIC REPRESENTATION
-            move = self._create_system_dialogue_move(turn_data)
+            try:
+                move = self._create_system_dialogue_move(turn_data)
 
-            # Generate natural language using NLG engine
-            nlg_result = self.nlg_engine.generate(move, self.state)
-            nlg_utterance = nlg_result.utterance_text
+                # Generate natural language using NLG engine
+                nlg_result = self.nlg_engine.generate(move, self.state)
+                nlg_utterance = nlg_result.utterance_text
+
+                # Log if NLG output matches scripted (indicates fallback bug)
+                if nlg_utterance == utterance and self.verbose:
+                    print("\n⚠️  WARNING: NLG output matches scripted text exactly!")
+                    print(
+                        "   This suggests NLG is falling back to scripted instead of generating."
+                    )
+                    print(f"   Move content type: {type(move.content).__name__}")
+            except Exception as e:
+                # Log NLG failures instead of crashing
+                if self.verbose:
+                    print(f"\n❌ NLG generation failed: {e}")
+                nlg_utterance = None
 
         # Display utterances based on mode
         if speaker == "user" or self.nlg_mode == "off":
@@ -986,8 +1000,14 @@ class BusinessDemo:
         NOT from natural language text (e.g., "What are the parties?").
         This is loading semantic representations for the NLG demo, not NLU.
 
+        Supported formats:
+        - ?x.predicate(x) or ?x.predicate  → WhQuestion
+        - ?predicate  → WhQuestion with variable "x"
+        - ?clarify(arg)  → WhQuestion with predicate "clarification_needed"
+
         Args:
-            question_str: Semantic notation like "?x.legal_entities(x)" or "?nda_type"
+            question_str: Semantic notation like "?x.legal_entities(x)", "?nda_type",
+                or "?clarify(mutual_nda)"
 
         Returns:
             Question object or None if loading fails
@@ -1006,7 +1026,21 @@ class BusinessDemo:
             predicate = wh_match.group(2)
             return WhQuestion(variable=variable, predicate=predicate)
 
-        # Simple proposition (default to YN question)
+        # Clarification pattern: ?clarify(arg)
+        clarify_match = re.match(r"\?clarify\((\w+)\)", question_str)
+        if clarify_match:
+            # Treat clarifications as WhQuestions with special predicate
+            return WhQuestion(variable="x", predicate="clarification_needed")
+
+        # Simple predicate: ?predicate → WhQuestion with default variable
+        simple_match = re.match(r"\?(\w+)", question_str)
+        if simple_match:
+            predicate = simple_match.group(1)
+            # Common predicates that should be WhQuestions
+            if predicate in ["nda_type", "date", "time_period", "jurisdiction", "legal_entities"]:
+                return WhQuestion(variable="x", predicate=predicate)
+
+        # Last resort: treat as proposition for YN question
         proposition = question_str.replace("?", "").strip()
         if proposition:
             return YNQuestion(proposition=proposition)
@@ -1022,8 +1056,13 @@ class BusinessDemo:
         Returns:
             Plan object
         """
-        # Simple plan creation - in production this would be more sophisticated
-        return Plan(plan_type="findout", content=plan_description, status="active")
+        # Infer plan type from description for NLG plan-aware generation
+        if "nda" in plan_description.lower():
+            plan_type = "nda_drafting"
+        else:
+            plan_type = "findout"
+
+        return Plan(plan_type=plan_type, content=plan_description, status="active")
 
     def _create_system_dialogue_move(self, turn_data: dict[str, Any]) -> Any:
         """Create DialogueMove for SYSTEM turns (for NLG generation).
@@ -1073,8 +1112,20 @@ class BusinessDemo:
             question_str = state_changes.get("qud_pushed", "")
             content = self._parse_question_from_string(question_str)
             if content is None:
-                # Fallback to utterance if we can't parse the question
-                content = turn_data.get("utterance", "")
+                # WARNING: Parsing failed! Log and use generic question as fallback
+                # Policy #0: Fail fast, but log clearly for debugging
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.warning(
+                    f"Failed to parse question from: {question_str!r}. "
+                    f"Using generic WhQuestion fallback. "
+                    f"Turn {turn_data.get('turn')}, utterance: {turn_data.get('utterance')!r}"
+                )
+                # Create a generic WhQuestion instead of falling back to string
+                from ibdm.core.questions import WhQuestion
+
+                content = WhQuestion(variable="x", predicate="information")
         else:
             # For other system moves (greet, assert, etc.), use utterance as content
             content = turn_data.get("utterance", "")
