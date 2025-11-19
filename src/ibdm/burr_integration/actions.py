@@ -10,7 +10,7 @@ from burr.core import State, action
 
 from ibdm.burr_integration.nlu_context import NLUContext
 from ibdm.core import DialogueMove, InformationState
-from ibdm.engine import DialogueMoveEngine
+from ibdm.engine.dialogue_engine import DialogueMoveEngine
 
 if TYPE_CHECKING:
     from ibdm.nlg import NLGEngine

@@ -16,7 +16,8 @@ from pathlib import Path
 # Add project to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from ibdm.burr_integration import actions
+# Import actions module directly (not from __init__) to avoid circular import
+import ibdm.burr_integration.actions as actions
 from ibdm.burr_integration.nlu_context import NLUContext
 from ibdm.core import InformationState
 from ibdm.engine import DialogueMoveEngine
@@ -51,7 +52,7 @@ def validate_bsr_2() -> tuple[bool, str]:
             return False, "initialize doesn't create InformationState"
 
         # Check 2: Writes to Burr state
-        if 'information_state' not in init_source or 'to_dict()' not in init_source:
+        if "information_state" not in init_source or "to_dict()" not in init_source:
             return False, "initialize doesn't write information_state to Burr State"
 
         # Check 3: Returns information_state in state.update()
@@ -147,7 +148,7 @@ def validate_bsr_6() -> tuple[bool, str]:
             return False, "generate() doesn't accept state parameter"
 
         # Check 2: Returns str (not tuple)
-        if sig.return_annotation != str:
+        if sig.return_annotation is not str:
             return False, f"generate() should return str: {sig.return_annotation}"
 
         # Check 3: Method source doesn't mutate self.state
@@ -194,7 +195,10 @@ def validate_bsr_8() -> tuple[bool, str]:
             return False, "interpret action doesn't read information_state"
 
         # Check 2: Reads from state["information_state"]
-        if 'state["information_state"]' not in source and 'state.get("information_state")' not in source:
+        if (
+            'state["information_state"]' not in source
+            and 'state.get("information_state")' not in source
+        ):
             return False, "interpret action doesn't access information_state from Burr state"
 
         # Check 3: Converts from dict to InformationState
