@@ -69,6 +69,7 @@ from ibdm.nlu.llm_adapter import (
     ModelType,
     create_adapter,
 )
+from ibdm.nlu.nlu_context import NLUContext
 
 # Import at end to avoid circular import with nlu_engine
 from ibdm.nlu.nlu_engine import NLUEngine, NLUEngineConfig, create_nlu_engine  # noqa: E402, I001
@@ -207,4 +208,6 @@ __all__ = [
     "NLUEngine",
     "NLUEngineConfig",
     "create_nlu_engine",
+    # NLU Context
+    "NLUContext",
 ]

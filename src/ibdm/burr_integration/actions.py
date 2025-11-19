@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING, Any
 
 from burr.core import State, action
 
-from ibdm.burr_integration.nlu_context import NLUContext
 from ibdm.core import DialogueMove, InformationState
 from ibdm.engine.dialogue_engine import DialogueMoveEngine
+from ibdm.nlu.nlu_context import NLUContext
 
 if TYPE_CHECKING:
     from ibdm.nlg import NLGEngine

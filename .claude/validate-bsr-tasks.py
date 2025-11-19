@@ -18,9 +18,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 # Import actions module directly (not from __init__) to avoid circular import
 import ibdm.burr_integration.actions as actions
-from ibdm.burr_integration.nlu_context import NLUContext
 from ibdm.core import InformationState
 from ibdm.engine import DialogueMoveEngine
+from ibdm.nlu.nlu_context import NLUContext
 
 
 def validate_bsr_1() -> tuple[bool, str]:
