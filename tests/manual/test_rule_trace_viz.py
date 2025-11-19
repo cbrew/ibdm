@@ -7,7 +7,7 @@ import sys
 sys.path.insert(0, os.path.join(os.getcwd(), "src"))
 
 from ibdm.core import InformationState
-from ibdm.demo.scenario_explorer import ScenarioExplorer, MoveCategory
+from ibdm.demo.scenario_explorer import ScenarioExplorer
 from ibdm.demo.scenarios import get_ibis3_scenarios
 from ibdm.domains.travel_domain import get_travel_domain
 
@@ -35,6 +35,7 @@ def test_rule_trace_viz():
     # Show diff and rule trace
     explorer.display_diff()
     explorer.display_rule_trace()
+
 
 if __name__ == "__main__":
     test_rule_trace_viz()

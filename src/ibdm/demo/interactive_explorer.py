@@ -306,7 +306,7 @@ class InteractiveExplorerCLI:
                     print(f"  → Added volunteer commitment: {vc}")
         elif choice.category == MoveCategory.CORRECTION:
             print("  → Initiating belief revision")
-            
+
         # Capture snapshot after move
         assert self.explorer is not None
         self.explorer.capture_snapshot(f"After user move: {choice.category.value}")

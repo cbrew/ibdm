@@ -110,7 +110,7 @@ class HtmlExporter:
     .number { color: #005cc5; }
     .boolean { color: #005cc5; }
     .null { color: #005cc5; }
-    
+
     /* Rule Trace Styles */
     .rule-table {
         width: 100%;
@@ -293,7 +293,7 @@ class HtmlExporter:
                 # For subsequent items, if there are changes, show Diff + Full Snapshot inside
 
                 step_content = ""
-                summary_text = snapshot.label or f"Step {i+1}"
+                summary_text = snapshot.label or f"Step {i + 1}"
 
                 if i > 0:
                     prev = snapshots[i - 1]
@@ -313,14 +313,14 @@ class HtmlExporter:
 
                 # Wrap in collapsible details
                 # Open by default if it's the last item
-                is_open = (i == len(snapshots) - 1)
+                is_open = i == len(snapshots) - 1
                 open_attr = " open" if is_open else ""
 
                 content_parts.append(f"""
                 <details class="timeline-step"{open_attr}>
                     <summary>
                         <div class="step-header">
-                            <div class="step-marker">{i+1}</div>
+                            <div class="step-marker">{i + 1}</div>
                             <div class="step-title">{html.escape(summary_text)}</div>
                         </div>
                         <div class="step-meta">t={snapshot.timestamp}</div>
@@ -351,9 +351,7 @@ class HtmlExporter:
 
     def _render_snapshot(self, snapshot: StateSnapshot) -> str:
         """Render a snapshot as an HTML component."""
-        qud_section = self._render_section(
-            "QUD (Questions Under Discussion)", snapshot.qud
-        )
+        qud_section = self._render_section("QUD (Questions Under Discussion)", snapshot.qud)
         commitments_section = self._render_section("Commitments", snapshot.commitments)
         agenda_section = self._render_section("Agenda", snapshot.agenda)
         plan_section = self._render_section("Plan", snapshot.plan)
@@ -397,18 +395,14 @@ class HtmlExporter:
         """Render a diff as an HTML component."""
         snapshot = diff.after
 
-        qud = self._render_diff_section(
-            "QUD", snapshot.qud, diff.get_changed_field("qud")
-        )
+        qud = self._render_diff_section("QUD", snapshot.qud, diff.get_changed_field("qud"))
         commitments = self._render_diff_section(
             "Commitments", snapshot.commitments, diff.get_changed_field("commitments")
         )
         agenda = self._render_diff_section(
             "Agenda", snapshot.agenda, diff.get_changed_field("agenda")
         )
-        plan = self._render_diff_section(
-            "Plan", snapshot.plan, diff.get_changed_field("plan")
-        )
+        plan = self._render_diff_section("Plan", snapshot.plan, diff.get_changed_field("plan"))
         issues = self._render_diff_section(
             "Private Issues", snapshot.issues, diff.get_changed_field("issues")
         )
@@ -546,9 +540,7 @@ class HtmlExporter:
 
             k_esc = html.escape(str(k))
             v_esc = html.escape(str(v))
-            lis.append(
-                f'<li{class_attr}><span class="key">{k_esc}:</span> {v_esc}</li>'
-            )
+            lis.append(f'<li{class_attr}><span class="key">{k_esc}:</span> {v_esc}</li>')
 
         for item in changed_field.removed_items:
             lis.append(f'<li class="diff-removed">{html.escape(str(item))}</li>')
@@ -613,7 +605,7 @@ class HtmlExporter:
 
             status_icon = "✓" if eval.preconditions_met else "✗"
             selected_icon = "★" if eval.was_selected else ""
-            
+
             rows.append(f"""
             <tr class="{row_class}">
                 <td class="col-status">{status_icon}</td>
@@ -660,12 +652,12 @@ class HtmlExporter:
                     <span class="stats">{trace.rules_with_met_preconditions()}/{trace.rules_evaluated()} met</span>
                 </div>
             </div>
-            
+
             <div class="section">
                 <h3>Rule Evaluations</h3>
                 {evaluations_table}
             </div>
-            
+
             <div class="section">
                 <h3>Effects</h3>
                 {diff_html}

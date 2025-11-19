@@ -34,22 +34,19 @@ class TerminalVisualizer:
         layout.split_column(
             Layout(name="header", size=3),
             Layout(name="body", ratio=1),
-            Layout(name="footer", size=3)
+            Layout(name="footer", size=3),
         )
 
         # Header
         header_text = Text(
             f"{snapshot.label} (t={snapshot.timestamp})",
             style="bold white on blue",
-            justify="center"
+            justify="center",
         )
         layout["header"].update(Panel(header_text, style="blue"))
 
         # Body - Split into Shared and Private
-        layout["body"].split_row(
-            Layout(name="shared"),
-            Layout(name="private")
-        )
+        layout["body"].split_row(Layout(name="shared"), Layout(name="private"))
 
         # Shared State Column
         shared_content = self._render_shared_state(snapshot)
@@ -80,20 +77,12 @@ class TerminalVisualizer:
 
         # Create main layout
         layout = Layout()
-        layout.split_column(
-            Layout(name="header", size=3),
-            Layout(name="body", ratio=1)
-        )
+        layout.split_column(Layout(name="header", size=3), Layout(name="body", ratio=1))
 
-        layout["header"].update(
-            Panel(Text(title, style="bold white on magenta", justify="center"))
-        )
+        layout["header"].update(Panel(Text(title, style="bold white on magenta", justify="center")))
 
         # Body
-        layout["body"].split_row(
-            Layout(name="shared"),
-            Layout(name="private")
-        )
+        layout["body"].split_row(Layout(name="shared"), Layout(name="private"))
 
         # Shared State with Diff
         shared_content = self._render_shared_diff(snapshot, diff)
@@ -194,9 +183,7 @@ class TerminalVisualizer:
 
         # Commitments Diff
         com_table = Table(title="Commitments", show_header=False, box=None, expand=True)
-        self._add_diff_rows(
-            com_table, snapshot.commitments, diff.get_changed_field("commitments")
-        )
+        self._add_diff_rows(com_table, snapshot.commitments, diff.get_changed_field("commitments"))
 
         return Columns([qud_table, com_table], expand=True)
 
@@ -212,9 +199,7 @@ class TerminalVisualizer:
 
         # Beliefs Diff
         beliefs_table = Table(title="Beliefs", show_header=False, box=None, expand=True)
-        self._add_dict_diff_rows(
-            beliefs_table, snapshot.beliefs, diff.get_changed_field("beliefs")
-        )
+        self._add_dict_diff_rows(beliefs_table, snapshot.beliefs, diff.get_changed_field("beliefs"))
 
         # Plan Diff (Tree is hard to diff row-by-row, simplified view)
         plan_tree = Tree("Plans")
