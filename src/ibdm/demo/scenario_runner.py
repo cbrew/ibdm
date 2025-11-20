@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from rich.console import Console
@@ -23,6 +24,7 @@ from ibdm.core import DialogueMove, InformationState
 from ibdm.demo.execution_controller import ExecutionController, ExecutionMode
 from ibdm.demo.orchestrator import DemoDialogueOrchestrator
 from ibdm.demo.scenario_loader import Scenario, ScenarioTurn, load_scenario
+from ibdm.demo.state_trace import StateTraceRecorder
 from ibdm.domains.legal_domain import get_legal_domain
 from ibdm.domains.nda_domain import get_nda_domain
 from ibdm.rules import (
@@ -88,6 +90,7 @@ class ScenarioRunner:
         show_larsson_rules: bool = True,
         show_metrics: bool = True,
         show_engine_state: bool = False,
+        trace_recorder: StateTraceRecorder | None = None,
     ):
         """Initialize scenario runner with real Larsson engine.
 
@@ -101,6 +104,7 @@ class ScenarioRunner:
             show_larsson_rules: Show Larsson rule references
             show_metrics: Show scenario metrics at the end
             show_engine_state: Show actual engine state after each turn
+            trace_recorder: Optional trace recorder to capture structured state snapshots
         """
         self.scenario = scenario
         self.controller = controller or ExecutionController(mode=ExecutionMode.AUTO)
@@ -111,6 +115,7 @@ class ScenarioRunner:
         self.show_larsson_rules = show_larsson_rules
         self.show_metrics = show_metrics
         self.show_engine_state = show_engine_state
+        self.trace_recorder = trace_recorder
 
         # Detect domain from scenario metadata
         domain_name: str = (
@@ -172,6 +177,8 @@ class ScenarioRunner:
 
         self._display_summary()
         self.controller.wait_at_end()
+        if self.trace_recorder is not None:
+            self.trace_recorder.flush()
 
     def _display_banner(self) -> None:
         """Display scenario banner with metadata."""
@@ -418,6 +425,8 @@ class ScenarioRunner:
         if turn.speaker == "system":
             self.orchestrator.complete_system_turn()
 
+        self._record_trace(turn)
+
     def _display_summary(self) -> None:
         """Display scenario summary and metrics."""
         self.console.print("\n" + "═" * 80 + "\n")
@@ -443,6 +452,20 @@ class ScenarioRunner:
                 self.console.print(f"  • {formatted_key}: {value}")
 
         self.console.print()
+
+    def _record_trace(self, turn: ScenarioTurn) -> None:
+        """Capture a structured state trace for the current turn."""
+        if self.trace_recorder is None:
+            return
+
+        self.trace_recorder.record(
+            turn=turn.turn,
+            speaker=turn.speaker,
+            move_type=turn.move_type,
+            state=self.state,
+            pending_system_move=self.orchestrator.pending_system_move,
+            expected_state_changes=turn.state_changes,
+        )
 
     def _create_user_dialogue_move(self, turn: ScenarioTurn) -> DialogueMove | list[DialogueMove]:
         """Create DialogueMove(s) for USER turns (Mocked NLU).
@@ -654,6 +677,7 @@ def run_scenario(
     show_larsson_rules: bool = True,
     show_metrics: bool = True,
     show_engine_state: bool = False,
+    trace_path: str | None = None,
 ) -> None:
     """Convenience function to run a scenario by ID.
 
@@ -667,6 +691,7 @@ def run_scenario(
         show_larsson_rules: Show Larsson rule references
         show_metrics: Show scenario metrics
         show_engine_state: Show actual engine state after each turn
+        trace_path: Optional path to write structured state trace (JSONL)
 
     Examples:
         >>> # Run with defaults (scripted playback)
@@ -689,6 +714,8 @@ def run_scenario(
         auto_delay=auto_delay,
     )
 
+    trace_recorder = StateTraceRecorder(Path(trace_path)) if trace_path else None
+
     runner = ScenarioRunner(
         scenario=scenario,
         controller=controller,
@@ -698,6 +725,7 @@ def run_scenario(
         show_larsson_rules=show_larsson_rules,
         show_metrics=show_metrics,
         show_engine_state=show_engine_state,
+        trace_recorder=trace_recorder,
     )
 
     runner.run()

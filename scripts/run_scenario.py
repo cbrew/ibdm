@@ -72,6 +72,7 @@ def run_scenario_cli(
     minimal: bool = False,
     nlg_mode: str = "off",
     show_engine_state: bool = False,
+    trace_path: str | None = None,
 ) -> None:
     """Run a scenario with specified options.
 
@@ -82,6 +83,7 @@ def run_scenario_cli(
         minimal: If True, hide detailed information
         nlg_mode: NLG mode - "off" (scripted), "compare" (both), "replace" (NLG only)
         show_engine_state: If True, show actual engine state after each turn
+        trace_path: Optional path to write structured state trace (JSONL)
     """
     console = Console()
 
@@ -97,6 +99,7 @@ def run_scenario_cli(
             show_larsson_rules=not minimal,
             show_metrics=not minimal,
             show_engine_state=show_engine_state,
+            trace_path=trace_path,
         )
     except KeyboardInterrupt:
         console.print("\n\n[yellow]⚠️  Interrupted by user (Ctrl+C)[/yellow]")
@@ -200,6 +203,12 @@ Examples:
         help="Show actual dialogue engine state after each turn (QUD, commitments, plans)",
     )
 
+    parser.add_argument(
+        "--trace-file",
+        metavar="PATH",
+        help="Write structured state trace (JSONL) to PATH",
+    )
+
     args = parser.parse_args()
 
     # Handle list option
@@ -233,6 +242,7 @@ Examples:
         minimal=args.minimal,
         nlg_mode=args.nlg_mode,
         show_engine_state=args.show_engine_state,
+        trace_path=args.trace_file,
     )
 
 
