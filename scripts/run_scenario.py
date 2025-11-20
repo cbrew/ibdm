@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
-"""CLI script to run IBDM scenarios with rich formatting.
+"""CLI script to run IBDM scenarios with the real Larsson dialogue engine.
 
-This script provides a simple interface to run JSON-based scenarios
-using the unified ScenarioRunner.
+This script runs scenarios through the actual Larsson dialogue manager,
+executing integrate→select→generate phases with optional NLG support.
 
 Usage:
-    python scripts/run_scenario.py                        # List available scenarios
-    python scripts/run_scenario.py nda_basic              # Run specific scenario
-    python scripts/run_scenario.py nda_basic --step       # Run in step mode
-    python scripts/run_scenario.py nda_basic --delay 1.0  # Custom delay
-    python scripts/run_scenario.py --list                 # List by category
-    python scripts/run_scenario.py --search grounding     # Search scenarios
+    python scripts/run_scenario.py                              # List available scenarios
+    python scripts/run_scenario.py nda_basic                    # Run with scripted text
+    python scripts/run_scenario.py nda_basic --step             # Run in step mode
+    python scripts/run_scenario.py nda_basic --nlg-mode compare # Compare scripted vs NLG
+    python scripts/run_scenario.py nda_basic --nlg-mode replace # NLG only (no scripted)
+    python scripts/run_scenario.py nda_basic --show-engine-state # Show engine internals
+    python scripts/run_scenario.py --list                       # List by category
+    python scripts/run_scenario.py --search grounding           # Search scenarios
 """
 
 import argparse
@@ -74,6 +76,8 @@ def run_scenario_cli(
     mode: ExecutionMode = ExecutionMode.AUTO,
     delay: float = 2.0,
     minimal: bool = False,
+    nlg_mode: str = "off",
+    show_engine_state: bool = False,
 ) -> None:
     """Run a scenario with specified options.
 
@@ -82,6 +86,8 @@ def run_scenario_cli(
         mode: Execution mode
         delay: Auto-advance delay in seconds
         minimal: If True, hide detailed information
+        nlg_mode: NLG mode - "off" (scripted), "compare" (both), "replace" (NLG only)
+        show_engine_state: If True, show actual engine state after each turn
     """
     console = Console()
 
@@ -105,10 +111,12 @@ def run_scenario_cli(
         scenario=scenario,
         controller=controller,
         console=console,
+        nlg_mode=nlg_mode,
         show_explanations=not minimal,
         show_state_changes=not minimal,
         show_larsson_rules=not minimal,
         show_metrics=not minimal,
+        show_engine_state=show_engine_state,
     )
 
     try:
@@ -125,13 +133,16 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s                        List available scenarios
-  %(prog)s nda_basic              Run NDA basic scenario (auto mode)
-  %(prog)s nda_basic --step       Run in step mode (press Enter to advance)
-  %(prog)s nda_basic --delay 1.0  Run with 1-second delay
-  %(prog)s nda_basic --minimal    Run with minimal output
-  %(prog)s --list                 List scenarios by category
-  %(prog)s --search grounding     Search for scenarios about grounding
+  %(prog)s                                  List available scenarios
+  %(prog)s nda_basic                        Run with scripted text (auto mode)
+  %(prog)s nda_basic --step                 Run in step mode (press Enter)
+  %(prog)s nda_basic --nlg-mode compare     Compare scripted vs NLG output
+  %(prog)s nda_basic --nlg-mode replace     NLG only (no scripted text)
+  %(prog)s nda_basic --show-engine-state    Show QUD, commitments, plans
+  %(prog)s nda_basic --delay 1.0            Run with 1-second delay
+  %(prog)s nda_basic --minimal              Run with minimal output
+  %(prog)s --list                           List scenarios by category
+  %(prog)s --search grounding               Search for scenarios
         """,
     )
 
@@ -189,6 +200,20 @@ Examples:
         help="Minimal output: hide explanations, state changes, and rules",
     )
 
+    parser.add_argument(
+        "--nlg-mode",
+        choices=["off", "compare", "replace"],
+        default="off",
+        metavar="MODE",
+        help="NLG mode: 'off' (scripted text), 'compare' (show both), 'replace' (NLG only)",
+    )
+
+    parser.add_argument(
+        "--show-engine-state",
+        action="store_true",
+        help="Show actual dialogue engine state after each turn (QUD, commitments, plans)",
+    )
+
     args = parser.parse_args()
 
     # Handle list option
@@ -220,6 +245,8 @@ Examples:
         mode=mode,
         delay=args.delay,
         minimal=args.minimal,
+        nlg_mode=args.nlg_mode,
+        show_engine_state=args.show_engine_state,
     )
 
 

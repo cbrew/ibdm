@@ -1,6 +1,16 @@
 #!/usr/bin/env python3
 """Business Demo Launcher for IBDM.
 
+⚠️  DEPRECATED: This script is deprecated in favor of run_scenario.py
+    Use: python scripts/run_scenario.py <scenario> --nlg-mode <mode>
+
+    Migration examples:
+      run_business_demo.py                          → run_scenario.py nda_basic
+      run_business_demo.py --scenario nda_volunteer → run_scenario.py nda_volunteer
+      run_business_demo.py --nlg-mode compare       → run_scenario.py nda_basic --nlg-mode compare
+      run_business_demo.py --nlg-mode replace       → run_scenario.py nda_basic --nlg-mode replace
+      run_business_demo.py --mode step              → run_scenario.py nda_basic --step
+
 One-command demo script that runs pre-configured dialogue scenarios
 with professional console output (no HTML reports).
 
@@ -16,7 +26,7 @@ ARCHITECTURAL NOTE - Mocked NLU Only:
     Inferring DialogueMoves from natural language utterances would be NLU work,
     which is explicitly out of scope for this demo.
 
-Usage:
+Usage (DEPRECATED - use run_scenario.py instead):
     python scripts/run_business_demo.py                    # Run default (nda_basic)
     python scripts/run_business_demo.py --scenario nda_volunteer
     python scripts/run_business_demo.py --all              # Run all scenarios
@@ -696,8 +706,27 @@ Guidelines (err on "equivalent"/"similar" unless conversation derails):
 
 def main() -> int:
     """Main entry point."""
+    # Print deprecation warning
+    print("\n" + "=" * 80)
+    print("⚠️  DEPRECATION WARNING")
+    print("=" * 80)
+    print()
+    print("This script (run_business_demo.py) is DEPRECATED.")
+    print("Please use run_scenario.py instead, which provides the same functionality")
+    print("with a cleaner interface and better Rich formatting.")
+    print()
+    print("Migration guide:")
+    print("  Old: python scripts/run_business_demo.py --scenario nda_basic")
+    print("  New: python scripts/run_scenario.py nda_basic")
+    print()
+    print("  Old: python scripts/run_business_demo.py --nlg-mode compare")
+    print("  New: python scripts/run_scenario.py nda_basic --nlg-mode compare")
+    print()
+    print("=" * 80)
+    print()
+
     parser = argparse.ArgumentParser(
-        description="Run IBDM business demonstration scenarios",
+        description="Run IBDM business demonstration scenarios (DEPRECATED)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
