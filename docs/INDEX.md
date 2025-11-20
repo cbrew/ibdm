@@ -39,7 +39,11 @@ Clean, focused documentation for the Issue-Based Dialogue Management system.
 
 ## 🎮 Demo & Scenarios
 
-### Running Scenarios
+| Document | Purpose |
+|----------|---------|
+| [UNIFIED_SCENARIO_SYSTEM.md](UNIFIED_SCENARIO_SYSTEM.md) | **Complete guide** - JSON format, loading, running, creating scenarios |
+
+### Quick Start
 
 ```bash
 # List available scenarios
@@ -55,7 +59,9 @@ python scripts/run_scenario.py nda_basic --step
 python scripts/run_scenario.py --search grounding
 ```
 
-**See**: `demos/scenarios/*.json` for all scenario definitions
+**See**:
+- `demos/scenarios/*.json` for all scenario definitions
+- [UNIFIED_SCENARIO_SYSTEM.md](UNIFIED_SCENARIO_SYSTEM.md) for complete documentation
 
 ---
 
