@@ -6,10 +6,13 @@ They form the core mechanism for dialogue state transitions.
 Based on Larsson (2002) Issue-based Dialogue Management.
 """
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 
 from ibdm.core import InformationState
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -144,12 +147,24 @@ class RuleSet:
         Returns:
             Updated information state after applying all matching rules
         """
+        rules_list = self.rules.get(rule_type, [])
+        logger.debug(f"Evaluating {len(rules_list)} {rule_type} rules")
+
         current_state = state
+        rules_fired = 0
 
-        for rule in self.rules.get(rule_type, []):
-            if rule.applies(current_state):
+        for rule in rules_list:
+            preconditions_met = rule.applies(current_state)
+            status = "✓" if preconditions_met else "✗"
+            logger.debug(f"  {status} {rule.name} (priority={rule.priority})")
+
+            if preconditions_met:
+                logger.info(f"  → Executing rule: {rule.name}")
                 current_state = rule.apply(current_state)
+                rules_fired += 1
+                logger.debug(f"  ← Rule completed: {rule.name}")
 
+        logger.debug(f"Applied {rules_fired}/{len(rules_list)} {rule_type} rules")
         return current_state
 
     def apply_first_matching(
@@ -166,10 +181,21 @@ class RuleSet:
         Returns:
             Tuple of (updated state, rule that was applied or None)
         """
-        for rule in self.rules.get(rule_type, []):
-            if rule.applies(state):
-                return rule.apply(state), rule
+        rules_list = self.rules.get(rule_type, [])
+        logger.debug(f"Evaluating {len(rules_list)} {rule_type} rules (first match only)")
 
+        for rule in rules_list:
+            preconditions_met = rule.applies(state)
+            status = "✓" if preconditions_met else "✗"
+            logger.debug(f"  {status} {rule.name} (priority={rule.priority})")
+
+            if preconditions_met:
+                logger.info(f"  → Executing first matching rule: {rule.name}")
+                new_state = rule.apply(state)
+                logger.debug(f"  ← Rule completed: {rule.name}")
+                return new_state, rule
+
+        logger.debug(f"No matching {rule_type} rules found")
         return state, None
 
     def clear_rules(self, rule_type: str | None = None) -> None:

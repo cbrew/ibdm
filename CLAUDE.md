@@ -228,6 +228,63 @@ pyright src/ibdm/core/                       # Type check specific module
 - `reportUnnecessaryIsInstance`: Remove redundant type checks after earlier isinstance() calls
 - `reportUnknownArgumentType`: Ensure function parameters have proper type annotations
 
+### 4. Debugging with Logging
+
+**Policy**: Use structured logging to trace dialogue engine execution. Logging is controlled via `IBDM_DEBUG` environment variable.
+
+```bash
+# Enable all debug logging
+export IBDM_DEBUG=all
+
+# Enable specific categories
+export IBDM_DEBUG=rules                      # Rule evaluation only
+export IBDM_DEBUG=qud                        # QUD stack operations only
+export IBDM_DEBUG=phases                     # Dialogue phases only
+export IBDM_DEBUG=rules,qud                  # Multiple categories
+
+# Disable debug logging (default)
+unset IBDM_DEBUG
+```
+
+**What's logged**:
+- **phases**: INTERPRET → INTEGRATE → SELECT → GENERATE phases
+- **rules**: Rule evaluation (✓/✗), selection, execution
+- **qud**: QUD stack operations (PUSH/POP with depth)
+- **state**: State transitions and modifications
+
+**Example output** (with `IBDM_DEBUG=all`):
+```
+[INFO] ibdm.engine.dialogue_engine: Processing input from user: What's the NDA type?
+[DEBUG] ibdm.engine.dialogue_engine: [INTERPRET] Starting interpretation phase
+[DEBUG] ibdm.rules.update_rules: Evaluating 11 interpretation rules
+[DEBUG] ibdm.rules.update_rules:   ✓ interpret_answer (priority=10)
+[INFO] ibdm.rules.update_rules:   → Executing rule: interpret_answer
+[DEBUG] ibdm.rules.update_rules:   ← Rule completed: interpret_answer
+[DEBUG] ibdm.engine.dialogue_engine: [INTERPRET] Generated 1 move(s): ['answer']
+[DEBUG] ibdm.engine.dialogue_engine: [INTEGRATE] Integrating move 1/1: answer
+[DEBUG] ibdm.rules.update_rules: Evaluating 16 integration rules
+[DEBUG] ibdm.rules.update_rules:   ✗ form_task_plan (priority=14)
+[DEBUG] ibdm.rules.update_rules:   ✗ accommodate_issue_from_plan (priority=13)
+[DEBUG] ibdm.rules.update_rules:   ✓ integrate_answer (priority=8)
+[INFO] ibdm.rules.update_rules:   → Executing rule: integrate_answer
+[DEBUG] ibdm.core.information_state: QUD POP: AltQuestion(alternatives=['mutual', 'one-way']) (depth: 0)
+[DEBUG] ibdm.rules.update_rules:   ← Rule completed: integrate_answer
+[INFO] ibdm.engine.dialogue_engine: Processing complete. Response: None
+```
+
+**Configuration**:
+- Logging is configured automatically on module import
+- Default level: WARNING (quiet unless `IBDM_DEBUG` is set)
+- Uses Python standard logging module
+- See `src/ibdm/config/debug_config.py` for implementation
+
+**When to use**:
+- Debugging dialogue flow issues
+- Understanding which rules fire and why
+- Tracing QUD stack evolution
+- Investigating state transitions
+- Validating Larsson algorithm implementation
+
 ### 9. LLM Provider: LiteLLM
 
 **Policy**: Use LiteLLM with Claude models. Always pass `api_key=os.getenv("IBDM_API_KEY")`.

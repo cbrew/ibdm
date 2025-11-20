@@ -8,6 +8,7 @@ Based on Larsson (2002) Issue-based Dialogue Management.
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Any
 
 from ibdm.core import Answer, DialogueMove, InformationState, Question, WhQuestion, YNQuestion
@@ -15,6 +16,8 @@ from ibdm.rules import RuleSet
 
 if TYPE_CHECKING:
     from ibdm.nlu.nlu_result import NLUResult
+
+logger = logging.getLogger(__name__)
 
 
 class DialogueMoveEngine:
@@ -54,25 +57,45 @@ class DialogueMoveEngine:
         Returns:
             Tuple of (updated state, response move or None)
         """
+        logger.info(
+            f"Processing input from {speaker}: {utterance[:50]}{'...' if len(utterance) > 50 else ''}"
+        )
+
         # 1. Interpretation: utterance → dialogue moves
+        logger.debug("[INTERPRET] Starting interpretation phase")
         moves = self.interpret(utterance, speaker, state)
+        logger.debug(f"[INTERPRET] Generated {len(moves)} move(s): {[m.move_type for m in moves]}")
 
         # 2. Integration: apply moves to update state
         current_state = state
-        for move in moves:
+        for i, move in enumerate(moves, 1):
+            logger.debug(f"[INTEGRATE] Integrating move {i}/{len(moves)}: {move.move_type}")
             current_state = self.integrate(move, current_state)
 
         # 3. Selection: choose next action if it's our turn
         response_move = None
         if current_state.control.next_speaker == self.agent_id:
+            logger.debug("[SELECT] Starting selection phase")
             response_move, current_state = self.select_action(current_state)
+            logger.debug(
+                f"[SELECT] Selected move: {response_move.move_type if response_move else 'None'}"
+            )
 
             # 4. Generation: produce utterance and integrate our move
             if response_move:
+                logger.debug(f"[GENERATE] Generating utterance for move: {response_move.move_type}")
                 utterance_text = self.generate(response_move, current_state)
                 response_move.content = utterance_text
+                logger.debug(
+                    f"[GENERATE] Generated: {utterance_text[:50]}{'...' if len(utterance_text) > 50 else ''}"
+                )
+
+                logger.debug("[INTEGRATE] Integrating system response")
                 current_state = self.integrate(response_move, current_state)
 
+        logger.info(
+            f"Processing complete. Response: {response_move.move_type if response_move else 'None'}"
+        )
         return current_state, response_move
 
     def interpret(
@@ -94,12 +117,16 @@ class DialogueMoveEngine:
         temp_state.private.beliefs["_temp_speaker"] = speaker
 
         # Apply interpretation rules
+        logger.debug(f"Applying interpretation rules for utterance: '{utterance}'")
         new_state = self.rules.apply_rules("interpretation", temp_state)
 
         # Extract moves from agenda (interpretation rules add them there)
         moves = new_state.private.agenda.copy()
 
         # If no interpretation rules matched, return empty list
+        if not moves:
+            logger.warning(f"No interpretation rules matched for utterance: '{utterance}'")
+
         return moves
 
     def interpret_from_nlu_result(
@@ -275,6 +302,8 @@ class DialogueMoveEngine:
         Returns:
             Updated information state
         """
+        logger.debug(f"Integrating {move.move_type} move from {move.speaker}")
+
         # Store the move temporarily for rules to access
         temp_state = state.clone()
         temp_state.private.beliefs["_temp_move"] = move
@@ -286,6 +315,7 @@ class DialogueMoveEngine:
         if "_temp_move" in new_state.private.beliefs:
             del new_state.private.beliefs["_temp_move"]
 
+        logger.debug(f"Integration complete for {move.move_type} move")
         return new_state
 
     def select_action(
@@ -302,14 +332,17 @@ class DialogueMoveEngine:
             Tuple of (selected move or None, updated state with item removed from agenda)
         """
         # First check if there's something on the agenda
+        logger.debug(f"Agenda size: {len(state.private.agenda)}")
         if state.private.agenda:
             # Clone state and pop from agenda
             new_state = state.clone()
             move = new_state.private.agenda.pop(0)
+            logger.debug(f"Selected move from agenda: {move.move_type}")
             return move, new_state
 
         # Otherwise, apply selection rules to determine what to do
         # Selection rules should add moves to the agenda
+        logger.debug("Agenda empty, applying selection rules")
         new_state, _ = self.rules.apply_first_matching("selection", state)
 
         # Check agenda again after selection rules
@@ -317,8 +350,10 @@ class DialogueMoveEngine:
             # Clone and pop from agenda
             final_state = new_state.clone()
             move = final_state.private.agenda.pop(0)
+            logger.debug(f"Selected move after rules: {move.move_type}")
             return move, final_state
 
+        logger.debug("No move selected (agenda still empty)")
         return None, new_state
 
     def generate(self, move: DialogueMove, state: InformationState) -> str:
@@ -331,6 +366,8 @@ class DialogueMoveEngine:
         Returns:
             Generated utterance text
         """
+        logger.debug(f"Generating utterance for {move.move_type} move")
+
         # Store the move temporarily for rules to access
         temp_state = state.clone()
         temp_state.private.beliefs["_temp_generate_move"] = move
@@ -343,6 +380,7 @@ class DialogueMoveEngine:
 
         # If no text was generated, use a default based on move type
         if not generated_text:
+            logger.debug("No generation rule matched, using default generation")
             generated_text = self._default_generation(move)
 
         return generated_text

@@ -7,6 +7,7 @@ Based on Larsson (2002) Issue-based Dialogue Management.
 """
 
 import copy
+import logging
 from dataclasses import dataclass, field
 from typing import Any, cast
 
@@ -14,6 +15,8 @@ from ibdm.core.actions import Action, Proposition
 from ibdm.core.moves import DialogueMove
 from ibdm.core.plans import Plan
 from ibdm.core.questions import Question
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -295,10 +298,17 @@ class SharedIS:
     def push_qud(self, question: Question) -> None:
         """Push a question onto the QUD stack."""
         self.qud.append(question)
+        logger.debug(f"QUD PUSH: {question} (depth: {len(self.qud)})")
 
     def pop_qud(self) -> Question | None:
         """Pop and return the top question from QUD stack."""
-        return self.qud.pop() if self.qud else None
+        if self.qud:
+            question = self.qud.pop()
+            logger.debug(f"QUD POP: {question} (depth: {len(self.qud)})")
+            return question
+        else:
+            logger.debug("QUD POP: stack empty")
+            return None
 
     def top_qud(self) -> Question | None:
         """Return the top question without removing it."""
