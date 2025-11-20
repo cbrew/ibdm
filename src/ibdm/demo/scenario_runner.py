@@ -426,6 +426,8 @@ class ScenarioRunner:
             self.orchestrator.complete_system_turn()
 
         self._record_trace(turn)
+        if self.show_state_changes:
+            self._verify_state_changes(turn)
 
     def _display_summary(self) -> None:
         """Display scenario summary and metrics."""
@@ -466,6 +468,37 @@ class ScenarioRunner:
             pending_system_move=self.orchestrator.pending_system_move,
             expected_state_changes=turn.state_changes,
         )
+
+    def _verify_state_changes(self, turn: ScenarioTurn) -> None:
+        """Compare expected state changes from the scenario with the actual engine state."""
+        expected = turn.state_changes or {}
+        if not expected:
+            return
+
+        qud_stack = [str(q) for q in self.state.shared.qud]
+        commitments = self.state.shared.commitments
+        warnings: list[str] = []
+
+        expected_commitments = expected.get("commitments_added") or expected.get("commitment_added")
+        if expected_commitments:
+            if isinstance(expected_commitments, str):
+                expected_commitments = [expected_commitments]
+            missing = [c for c in expected_commitments if c not in commitments]
+            if missing:
+                warnings.append(f"Missing commitments: {', '.join(missing)}")
+
+        qud_pushed = expected.get("qud_pushed")
+        if qud_pushed and (not qud_stack or qud_stack[-1] != qud_pushed):
+            warnings.append(f"Expected QUD top '{qud_pushed}', found '{qud_stack[-1] if qud_stack else 'None'}'")
+
+        qud_popped = expected.get("qud_popped")
+        if qud_popped and qud_popped in qud_stack:
+            warnings.append(f"Expected QUD '{qud_popped}' to be popped but it remains on stack")
+
+        if warnings:
+            self.console.print(
+                f"[yellow]⚠️ State mismatch (turn {turn.turn}):[/yellow] " + " | ".join(warnings)
+            )
 
     def _create_user_dialogue_move(self, turn: ScenarioTurn) -> DialogueMove | list[DialogueMove]:
         """Create DialogueMove(s) for USER turns (Mocked NLU).
