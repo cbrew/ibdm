@@ -179,6 +179,7 @@ Language (ZFC) → Dialogue Semantics (NOT ZFC) → Language (ZFC)
 - Installs the project in editable mode from `pyproject.toml`
 - Installs all runtime dependencies (burr, pydantic, litellm, rich, graphviz)
 - Installs all dev tools (pytest, pyright, ruff, ipython, jupyter)
+- Installs beads task tracker (`bd` command)
 - Makes `ibdm` package importable from anywhere
 - Verifies core imports and tools work
 - Checks API key configuration

@@ -17,7 +17,20 @@ else
     exit 1
 fi
 
-# 2. Verify core imports
+# 2. Install beads task tracker
+echo "📋 Installing beads..."
+if ! command -v bd &> /dev/null; then
+    GOTOOLCHAIN=auto go install github.com/steveyegge/beads/cmd/bd@latest > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        echo "✓ beads installed"
+    else
+        echo "⚠️  beads installation failed (task tracking unavailable)"
+    fi
+else
+    echo "✓ beads already installed"
+fi
+
+# 3. Verify core imports
 echo "🔍 Verifying imports..."
 python -c "from ibdm.core import InformationState; from ibdm.nlu import NLUContext; from ibdm.engine import DialogueMoveEngine" 2>/dev/null
 if [ $? -eq 0 ]; then
@@ -27,13 +40,13 @@ else
     exit 1
 fi
 
-# 3. Verify tools
+# 4. Verify tools
 echo "🛠️  Verifying tools..."
 python -m pytest --version > /dev/null 2>&1 && echo "✓ pytest available"
 python -m ruff --version > /dev/null 2>&1 && echo "✓ ruff available"
 python -m pyright --version > /dev/null 2>&1 && echo "✓ pyright available"
 
-# 4. Check API key (non-blocking)
+# 5. Check API key (non-blocking)
 echo "🔑 Checking API key..."
 python -c "import os; assert os.getenv('IBDM_API_KEY'), 'Missing IBDM_API_KEY'" 2>/dev/null
 if [ $? -eq 0 ]; then
