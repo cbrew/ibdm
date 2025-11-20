@@ -27,7 +27,6 @@ import argparse
 import json
 import os
 import sys
-import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -37,6 +36,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 # Required imports - fail fast if not available
 from ibdm.core import DialogueMove, InformationState
+from ibdm.demo import ExecutionController, ExecutionMode
 from ibdm.demo.orchestrator import DemoDialogueOrchestrator
 from ibdm.domains.legal_domain import get_legal_domain
 from ibdm.domains.nda_domain import get_nda_domain
@@ -56,7 +56,8 @@ class BusinessDemo:
         self,
         scenario_path: Path,
         verbose: bool = True,
-        auto_advance: bool = True,
+        auto_advance: bool | None = None,
+        execution_mode: ExecutionMode | str | None = None,
         nlg_mode: str = "off",
     ):
         """Initialize business demo.
@@ -64,13 +65,37 @@ class BusinessDemo:
         Args:
             scenario_path: Path to scenario JSON file
             verbose: Whether to print detailed output
-            auto_advance: Whether to auto-advance turns (vs manual)
-            nlg_mode: NLG mode - "off" (scripted only), "compare" (both), or "replace" (NLG only)
+            auto_advance: DEPRECATED - use execution_mode instead.
+                If True, uses AUTO mode; if False, uses STEP mode
+            execution_mode: Execution mode - STEP (manual), AUTO (automatic),
+                or REPLAY (playback)
+            nlg_mode: NLG mode - "off" (scripted only), "compare" (both),
+                or "replace" (NLG only)
         """
         self.scenario_path = scenario_path
         self.verbose = verbose
-        self.auto_advance = auto_advance
         self.nlg_mode = nlg_mode
+
+        # Handle backward compatibility: auto_advance -> execution_mode
+        if execution_mode is not None:
+            # New API: execution_mode parameter
+            if isinstance(execution_mode, str):
+                self.execution_mode = ExecutionMode(execution_mode)
+            else:
+                self.execution_mode = execution_mode
+        elif auto_advance is not None:
+            # Old API: auto_advance parameter (backward compatibility)
+            self.execution_mode = ExecutionMode.AUTO if auto_advance else ExecutionMode.STEP
+        else:
+            # Default: AUTO mode
+            self.execution_mode = ExecutionMode.AUTO
+
+        # Create execution controller
+        self.controller = ExecutionController(
+            mode=self.execution_mode,
+            auto_delay=2.0,
+            banner_delay=3.0,
+        )
 
         # Load scenario
         self.scenario = json.loads(scenario_path.read_text())
@@ -136,11 +161,13 @@ class BusinessDemo:
         print(self.scenario["business_narrative"])
         print("-" * 80 + "\n")
 
-        if self.auto_advance:
+        if self.execution_mode == ExecutionMode.AUTO:
             print("⏵ Auto-advance mode: Dialogue will play automatically")
             print("  (Press Ctrl+C to pause)\n")
-        else:
+        elif self.execution_mode == ExecutionMode.STEP:
             print("⏵ Manual mode: Press Enter to advance each turn\n")
+        elif self.execution_mode == ExecutionMode.REPLAY:
+            print("⏵ Replay mode: Playing back saved scenario\n")
 
     def print_turn(self, turn_data: dict[str, Any], turn_index: int) -> None:
         """Print a single turn with formatting.
@@ -297,21 +324,15 @@ class BusinessDemo:
         self.print_banner()
 
         # Wait for user to read banner
-        if self.auto_advance:
-            time.sleep(3)
-        else:
-            input("Press Enter to start... ")
+        self.controller.wait_at_banner()
 
         # Run each turn
         for i, turn in enumerate(self.scenario["turns"]):
             self.print_turn(turn, i)
 
-            # Auto-advance delay or manual control
-            if i < len(self.scenario["turns"]) - 1:  # Not last turn
-                if self.auto_advance:
-                    time.sleep(2)  # 2 second delay between turns
-                else:
-                    input("\nPress Enter for next turn... ")
+            # Wait between turns (unless it's the last turn)
+            if i < len(self.scenario["turns"]) - 1:
+                self.controller.wait_between_turns()
 
         # Final summary
         self.print_summary()
@@ -701,7 +722,21 @@ def main() -> int:
     parser.add_argument(
         "--manual",
         action="store_true",
-        help="Manual mode (press Enter to advance)",
+        help="DEPRECATED: Use --mode step instead. Manual mode (press Enter to advance)",
+    )
+    parser.add_argument(
+        "--mode",
+        choices=["step", "auto", "replay"],
+        help=(
+            "Execution mode: 'step' (manual, press Enter), 'auto' (automatic delays), "
+            "'replay' (fast playback). Default: auto (or step if --manual is used)"
+        ),
+    )
+    parser.add_argument(
+        "--delay",
+        type=float,
+        default=2.0,
+        help="Delay between turns in auto mode (seconds, default: 2.0)",
     )
     parser.add_argument(
         "--nlg-mode",
@@ -735,14 +770,26 @@ def main() -> int:
             return 1
         scenario_files = [scenario_file]
 
+    # Determine execution mode (handle backward compatibility)
+    if args.mode:
+        execution_mode = args.mode
+    elif args.manual:
+        execution_mode = "step"
+    else:
+        execution_mode = "auto"
+
     # Run scenarios
     for scenario_file in scenario_files:
         demo = BusinessDemo(
             scenario_file,
             verbose=not args.quiet,
-            auto_advance=not args.manual,
+            execution_mode=execution_mode,
             nlg_mode=args.nlg_mode,
         )
+
+        # Configure delay if specified
+        if args.delay != 2.0:
+            demo.controller.configure(auto_delay=args.delay)
 
         demo.run_scenario()
 
