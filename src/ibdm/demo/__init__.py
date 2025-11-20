@@ -3,6 +3,7 @@
 Showcases IBiS3 question accommodation and IBiS2 grounding in action.
 """
 
+from ibdm.demo.execution_controller import ExecutionController, ExecutionMode
 from ibdm.demo.interactive_demo import InteractiveDemo
 from ibdm.demo.orchestrator import DemoDialogueOrchestrator
 from ibdm.demo.scenarios import (
@@ -16,6 +17,8 @@ from ibdm.demo.scenarios import (
 from ibdm.demo.visualization import DialogueHistory, DialogueVisualizer, TurnRecord
 
 __all__ = [
+    "ExecutionController",
+    "ExecutionMode",
     "InteractiveDemo",
     "DemoDialogueOrchestrator",
     "DemoScenario",
