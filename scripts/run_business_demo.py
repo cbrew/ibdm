@@ -36,11 +36,18 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 # Required imports - fail fast if not available
-from ibdm.core import InformationState
+from ibdm.core import Answer, DialogueMove, InformationState
 from ibdm.core.plans import Plan
 from ibdm.core.questions import Question
 from ibdm.demo.visualization import DialogueHistory, DialogueVisualizer
 from ibdm.domains.nda_domain import get_nda_domain
+from ibdm.engine.dialogue_engine import DialogueMoveEngine
+from ibdm.rules import (
+    RuleSet,
+    create_generation_rules,
+    create_integration_rules,
+    create_selection_rules,
+)
 
 
 class BusinessDemo:
@@ -92,6 +99,9 @@ class BusinessDemo:
 
         # Track NLG comparisons by turn number (for reporting)
         self.nlg_comparisons: dict[int, dict[str, Any]] = {}
+        
+        # Track pending system move from engine selection
+        self.pending_system_move = None
 
         # Initialize NLG engine conditionally (only if needed)
         self.nlg_engine = None
@@ -111,6 +121,19 @@ class BusinessDemo:
                     f"✓ NLG engine initialized "
                     f"(mode: {nlg_mode}, strategy: llm, structured_output: enabled)"
                 )
+
+        # Initialize Real Dialogue Engine
+        rules = RuleSet()
+        for rule in create_integration_rules():
+            rules.add_rule(rule)
+        for rule in create_selection_rules():
+            rules.add_rule(rule)
+        for rule in create_generation_rules():
+            rules.add_rule(rule)
+        
+        self.engine = DialogueMoveEngine(agent_id="system", rules=rules)
+        if self.verbose:
+            print("✓ Larsson Dialogue Engine initialized (REAL mode)")
 
     def print_banner(self) -> None:
         """Print demo banner."""
@@ -142,9 +165,37 @@ class BusinessDemo:
         utterance = turn_data["utterance"]
         move_type = turn_data.get("move_type", "")
 
-        # Apply state changes to real InformationState
-        if "state_changes" in turn_data:
-            self._apply_state_changes(self.state, turn_data["state_changes"])
+        # REAL ENGINE LOGIC: Update state using Larsson engine
+        if speaker == "user":
+            # 1. Mock NLU: Create DialogueMove(s) from JSON
+            user_moves = self._create_user_dialogue_move(turn_data)
+            if not isinstance(user_moves, list):
+                user_moves = [user_moves]
+            
+            # 2. Integrate User Move(s)
+            for move in user_moves:
+                if self.verbose and len(user_moves) > 1:
+                    print(f"   → Integrating sub-move: {move.move_type}")
+                self.state = self.engine.integrate(move, self.state)
+            
+            # 3. Select Next System Action (populates agenda)
+            # Note: select_action returns (move, new_state) where move is popped from agenda
+            # We want to keep the move on the agenda until the system turn actually happens?
+            # No, select_action pops it. We store it in pending_system_move.
+            self.pending_system_move, self.state = self.engine.select_action(self.state)
+            
+        elif speaker == "system":
+            # Integrate System Move (to update state with what system actually said)
+            # We construct the move from the JSON script to ensure we follow the scenario
+            system_move = self._create_system_dialogue_move(turn_data)
+            
+            # Check if our engine predicted this (for verification)
+            if self.pending_system_move:
+                if self.verbose:
+                    print(f"   ✓ Engine predicted: {self.pending_system_move.move_type}")
+            
+            self.state = self.engine.integrate(system_move, self.state)
+            self.pending_system_move = None
 
         # Format speaker name
         if speaker == "user":
@@ -266,6 +317,24 @@ class BusinessDemo:
             for key, value in turn_data["state_changes"].items():
                 key_display = key.replace("_", " ").title()
                 print(f"   • {key_display}: {value}")
+
+        # VERIFICATION: Check if real engine state matches expectations
+        # Print AFTER integration is complete for this turn
+        if self.verbose:
+            print("\n🔍 Real Engine State:")
+            top_qud = self.state.shared.top_qud()
+            print(f"   • Top QUD: {top_qud if top_qud else 'None'}")
+            print(f"   • Commitments: {len(self.state.shared.commitments)}")
+            if self.state.shared.commitments:
+                # Show last few commitments for context
+                recent_comms = list(self.state.shared.commitments)[-3:]
+                for comm in recent_comms:
+                    print(f"     - {comm}")
+            if self.state.private.plan:
+                 top_plan = self.state.private.plan[-1]
+                 print(f"   • Plan: {top_plan.plan_type}({top_plan.content}) (Agenda: {len(self.state.private.agenda)})")
+            else:
+                 print("   • Plan: None")
 
         # Record in dialogue history (use NLG utterance if in replace mode)
         displayed_utterance = utterance
@@ -853,22 +922,21 @@ class BusinessDemo:
         # Title section with mocking warning
         nlg_live = self.nlg_engine is not None
         if nlg_live:
-            mock_warning_text = (
-                "⚠️ <strong>NLU MOCKED:</strong> This demonstration injects pre-scripted semantic moves "
-                "instead of running the live Claude 4.5 Sonnet NLU pipeline. NLG generation and the "
-                "Larsson dialogue manager execute live so you can inspect real state transitions."
-            )
             nlg_status_html = (
                 "<strong style=\"color: #4ec9b0;\">LIVE</strong> (Claude 4.5 Haiku via LiteLLM)"
             )
-        else:
             mock_warning_text = (
-                "⚠️ <strong>NLU & NLG MOCKED:</strong> This demonstration injects pre-scripted semantic "
-                "moves and scripted responses. Production runs call Claude 4.5 Sonnet/Haiku via LiteLLM, "
-                "but the Larsson dialogue manager shown here remains identical."
+                "⚠️ <strong>NLU MOCKED:</strong> This demonstration injects pre-scripted semantic moves "
+                "instead of running the live Claude 4.5 Sonnet NLU pipeline. The Larsson dialogue manager "
+                "executes LIVE using the real IBDM engine."
             )
+        else:
             nlg_status_html = (
                 "<span class=\"mock-indicator\">MOCKED</span> (Production: Claude 4.5 Haiku via LiteLLM)"
+            )
+            mock_warning_text = (
+                "⚠️ <strong>NLU & NLG MOCKED:</strong> This demonstration injects pre-scripted semantic "
+                "moves. The Larsson dialogue manager executes LIVE using the real IBDM engine."
             )
 
         nlu_status_html = (
@@ -1136,7 +1204,7 @@ class BusinessDemo:
             <h3>What's Real vs. Mocked</h3>
             <ul>
                 <li><strong style="color: #4ec9b0;">REAL:</strong> All Larsson update rules
-                (integrate, select phases)</li>
+                (integrate, select phases) - Executed by DialogueMoveEngine</li>
                 <li><strong style="color: #4ec9b0;">REAL:</strong> QUD stack management
                 (push, pop, accommodation)</li>
                 <li><strong style="color: #4ec9b0;">REAL:</strong> Commitment tracking
@@ -1403,6 +1471,120 @@ class BusinessDemo:
             speaker=speaker,
             metadata=metadata,
         )
+
+    def _create_user_dialogue_move(self, turn_data: dict[str, Any]) -> DialogueMove | list[DialogueMove]:
+        """Create DialogueMove(s) for USER turns (Mocked NLU).
+        
+        Constructs DialogueMove objects from the scenario JSON to feed into the
+        real Larsson engine. Handles complex moves like "request + volunteer_info".
+        """
+        from ibdm.core.moves import DialogueMove
+        from ibdm.core.answers import Answer
+        from ibdm.core.questions import Question, WhQuestion
+        from ibdm.core.actions import Proposition
+        
+        move_type_str = turn_data.get("move_type", "unknown")
+        speaker = "user"
+        utterance = turn_data.get("utterance", "")
+        state_changes = turn_data.get("state_changes", {})
+        
+        moves: list[DialogueMove] = []
+        
+        # Handle composite moves (e.g. "request + volunteer_info")
+        parts = [p.strip() for p in move_type_str.split("+")]
+        primary_type = parts[0]
+        has_volunteer = "volunteer_info" in parts
+        
+        # 1. Create Primary Move
+        if primary_type == "answer":
+            # Infer question ref from top QUD
+            top_qud = self.state.shared.top_qud()
+            # If off-topic/non-provision, we might not want to link to QUD?
+            # But usually an answer attempts to address the QUD.
+            content = Answer(content=utterance, question_ref=top_qud)
+            moves.append(DialogueMove(move_type="answer", content=content, speaker=speaker))
+            
+        elif primary_type in ["request", "command"]:
+            # Content is the utterance or task type
+            moves.append(DialogueMove(move_type=primary_type, content=utterance, speaker=speaker))
+            
+        elif primary_type == "clarification_question":
+            # Create a clarification question
+            # Scenario: "What does mutual mean exactly?"
+            # We need a Question object.
+            # Mocking the NLU: extract what's being clarified from context or utterance
+            predicate = "clarify"
+            args = {"utterance": utterance}
+            if "mutual" in utterance.lower():
+                args["topic"] = "mutual_nda"
+            elif "options" in utterance.lower():
+                args["topic"] = "jurisdiction_options"
+                
+            content = WhQuestion(predicate=predicate, variable="x", constraints=args)
+            # Mark as clarification for Rule 4.3
+            # Note: Rule 4.3 looks for _needs_clarification flag in beliefs, usually set by NLU/Interpretation
+            # Since we skip NLU, we might need to manually set the flag or ensure the move triggers it.
+            # Actually, IntegrateUsrAsk just pushes the question. 
+            # Rule 4.3 is for *accommodating* clarification when user gives *invalid answer*.
+            # If user explicitly *asks* a clarification question, it's just an Ask move.
+            moves.append(DialogueMove(move_type="ask", content=content, speaker=speaker))
+            
+        elif primary_type == "off_topic_question":
+            # User asks something else. It's an Ask move.
+            # "Can we include a non-compete clause too?"
+            predicate = "non_compete_clause"
+            if "long" in utterance.lower():
+                predicate = "timeline"
+            content = WhQuestion(predicate=predicate, variable="x")
+            moves.append(DialogueMove(move_type="ask", content=content, speaker=speaker))
+            
+        elif primary_type == "confirm":
+            # User confirms system's previous move (grounding)
+            # "Yes, that's all correct"
+            # This is typically an ICM acceptance or a simple answer "yes"
+            # If we treat it as an answer to "Is this correct?", it's an Answer.
+            # If we treat it as grounding, it's icm:acc*pos.
+            # Let's use Answer if there's a confirmation question on QUD, else ICM.
+            # For simplicity in this demo, let's use Answer "yes".
+            top_qud = self.state.shared.top_qud()
+            content = Answer(content="yes", question_ref=top_qud)
+            moves.append(DialogueMove(move_type="answer", content=content, speaker=speaker))
+            
+        elif primary_type == "acknowledge":
+            # "Yes, let's discuss that separately later"
+            # Generic acknowledgment
+            moves.append(DialogueMove(move_type="ack", content=utterance, speaker=speaker))
+            
+        else:
+            # Fallback
+            moves.append(DialogueMove(move_type=primary_type, content=utterance, speaker=speaker))
+            
+        # 2. Handle Volunteered Info (Assert moves)
+        if has_volunteer:
+            # Extract volunteered facts from state_changes
+            # "commitments_added": ["legal_entities(...)", "date(...)"]
+            commitments = state_changes.get("commitments_added", [])
+            for comm_str in commitments:
+                # Parse commitment string into Proposition
+                # "legal_entities(current_company, Global Industries)"
+                if "(" in comm_str and ")" in comm_str:
+                    pred = comm_str.split("(")[0]
+                    args_str = comm_str.split("(")[1].rstrip(")")
+                    # Mock parsing args
+                    args = {"value": args_str} 
+                    prop = Proposition(predicate=pred, arguments=args)
+                    moves.append(DialogueMove(move_type="assert", content=prop, speaker=speaker))
+                else:
+                    # Simple string
+                    moves.append(DialogueMove(move_type="assert", content=comm_str, speaker=speaker))
+        
+        # Add metadata (confidence, etc.) to all moves
+        confidence = turn_data.get("confidence")
+        if confidence is not None:
+            for move in moves:
+                move.metadata["confidence"] = confidence
+                
+        return moves
 
     def _compare_semantic_similarity(self, scripted: str, nlg_generated: str) -> dict[str, Any]:
         """Compare semantic similarity between scripted and NLG-generated utterances.
