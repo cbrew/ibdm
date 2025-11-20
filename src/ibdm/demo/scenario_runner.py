@@ -22,7 +22,7 @@ from rich.text import Text
 from ibdm.core import DialogueMove, InformationState
 from ibdm.demo.execution_controller import ExecutionController, ExecutionMode
 from ibdm.demo.orchestrator import DemoDialogueOrchestrator
-from ibdm.demo.scenario_loader import Scenario, ScenarioLoader, ScenarioTurn
+from ibdm.demo.scenario_loader import Scenario, ScenarioTurn, load_scenario
 from ibdm.domains.legal_domain import get_legal_domain
 from ibdm.domains.nda_domain import get_nda_domain
 from ibdm.rules import (
@@ -54,8 +54,7 @@ class ScenarioRunner:
 
     Examples:
         >>> # Load and run a scenario (playback mode - no NLG)
-        >>> loader = ScenarioLoader()
-        >>> scenario = loader.load_scenario("nda_basic")
+        >>> scenario = load_scenario("nda_basic")
         >>> runner = ScenarioRunner(scenario, nlg_mode="off")
         >>> runner.run()
 
@@ -190,8 +189,10 @@ class ScenarioRunner:
         # NLG mode indicator
         if self.nlg_mode != "off":
             nlg_emoji = {"compare": "🔄", "replace": "🤖"}.get(self.nlg_mode, "")
-            nlg_label = {"compare": "NLG Comparison", "replace": "NLG Only"}.get(self.nlg_mode, "")
-            self.console.print(f"\n[bold magenta]{nlg_emoji} {nlg_label} Mode[/bold magenta]")
+            nlg_label = {"compare": "NLG Comparison", "replace": "NLG Alternative (scripted used)"}[
+                self.nlg_mode
+            ]
+            self.console.print(f"\n[bold magenta]{nlg_emoji} {nlg_label}[/bold magenta]")
 
         # Larsson algorithms
         if self.scenario.metadata.larsson_algorithms:
@@ -234,8 +235,14 @@ class ScenarioRunner:
             # Ensure engine has prepared a system move
             engine_move = self.orchestrator.ensure_system_move()
             if engine_move is None:
-                self.console.print("[yellow]⚠️  No system move from engine; skipping[/yellow]")
-                return
+                # Fall back to the scripted move to keep the dialogue advancing
+                fallback_move = DialogueMove(
+                    move_type=turn.move_type, content=turn.utterance, speaker="system"
+                )
+                self.console.print(
+                    "[yellow]⚠️  Engine had no system move; using scripted turn[/yellow]"
+                )
+                engine_move = self.orchestrator.use_scripted_system_move(fallback_move)
 
         # Determine speaker styling
         if turn.speaker == "user":
@@ -320,12 +327,16 @@ class ScenarioRunner:
                 content_parts.append(Text("🤖 ENGINE OUTPUT: (generation failed)", style="red"))
 
         elif self.nlg_mode == "replace":
-            # Replace mode: show NLG only (or fallback to scripted)
+            # Replace mode: still advance and display with scripted text; show NLG as alternative
+            content_parts.append(Text("📜 SCRIPTED (Used for flow):", style="bold yellow"))
+            content_parts.append(Text(f'   "{turn.utterance}"', style="yellow"))
+            content_parts.append(Text())  # Blank line
+
             if generated_system_text:
-                utterance_text = Text(f'"{generated_system_text}"', style="white")
+                content_parts.append(Text("🤖 NLG ALTERNATIVE:", style="bold green"))
+                content_parts.append(Text(f'   "{generated_system_text}"', style="green"))
             else:
-                utterance_text = Text("[No response generated]", style="red")
-            content_parts.append(utterance_text)
+                content_parts.append(Text("🤖 NLG ALTERNATIVE: (generation failed)", style="red"))
 
         else:  # nlg_mode == "off"
             # Off mode: show scripted text for system, but engine still runs
@@ -670,8 +681,8 @@ def run_scenario(
         >>> # Run with NLG only (no scripted text)
         >>> run_scenario("nda_basic", nlg_mode="replace")
     """
-    loader = ScenarioLoader()
-    scenario = loader.load_scenario(scenario_id)
+    # Use the shared loader helper to keep discovery consistent.
+    scenario = load_scenario(scenario_id)
 
     controller = ExecutionController(
         mode=mode,

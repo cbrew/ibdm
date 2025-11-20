@@ -10,7 +10,7 @@
     "Context Maintenance - Return to main dialogue after clarification resolved"
   ],
   "expected_outcomes": {
-    "turns": 16,
+    "turns": 18,
     "clarifications": 3,
     "qud_depth_max": 2,
     "commitments_final": 5,
@@ -53,28 +53,18 @@
     {
       "turn": 4,
       "speaker": "system",
-      "utterance": "The parties are the organizations or individuals entering into the agreement - typically a disclosing party and a receiving party. For example: 'Acme Corp and TechStart Inc'.",
-      "move_type": "answer",
-      "business_explanation": "System provides clarification with an example. This is a nested dialogue - answering the clarification before returning to the main question.",
-      "larsson_rule": "Answer to local question",
+      "utterance": "The parties are the organizations or individuals entering into the agreement - typically a disclosing party and a receiving party. For example: 'Acme Corp and TechStart Inc'. So, what are the parties to your NDA?",
+      "move_type": "answer + ask",
+      "business_explanation": "System provides clarification with an example, then immediately re-raises the original question in the same turn.",
+      "larsson_rule": "Answer to local question + re-raise issue",
       "state_changes": {
         "qud_popped": "?clarify(parties)",
-        "qud_depth": 1
-      }
-    },
-    {
-      "turn": 5,
-      "speaker": "system",
-      "utterance": "So, what are the parties to your NDA?",
-      "move_type": "ask",
-      "business_explanation": "System returns to the original question after clarification resolved. This demonstrates proper context management.",
-      "larsson_rule": "Re-raise question after clarification",
-      "state_changes": {
+        "qud_depth": 1,
         "qud_top": "?x.legal_entities(x)"
       }
     },
     {
-      "turn": 6,
+      "turn": 5,
       "speaker": "user",
       "utterance": "GlobalTech and our company",
       "move_type": "answer",
@@ -86,7 +76,7 @@
       }
     },
     {
-      "turn": 7,
+      "turn": 6,
       "speaker": "system",
       "utterance": "I have GlobalTech as one party. What is the full legal name of your company?",
       "move_type": "ask",
@@ -97,7 +87,7 @@
       }
     },
     {
-      "turn": 8,
+      "turn": 7,
       "speaker": "user",
       "utterance": "InnovateCorp LLC",
       "move_type": "answer",
@@ -109,7 +99,7 @@
       }
     },
     {
-      "turn": 9,
+      "turn": 8,
       "speaker": "system",
       "utterance": "Is this a mutual NDA or one-way?",
       "move_type": "ask",
@@ -120,7 +110,7 @@
       }
     },
     {
-      "turn": 10,
+      "turn": 9,
       "speaker": "user",
       "utterance": "What's the difference?",
       "move_type": "question",
@@ -131,7 +121,7 @@
       }
     },
     {
-      "turn": 11,
+      "turn": 10,
       "speaker": "system",
       "utterance": "A mutual NDA means both parties share confidential information with each other. A one-way NDA means only one party discloses information to the other.",
       "move_type": "answer",
@@ -142,7 +132,7 @@
       }
     },
     {
-      "turn": 12,
+      "turn": 11,
       "speaker": "user",
       "utterance": "Mutual",
       "move_type": "answer",
@@ -154,7 +144,7 @@
       }
     },
     {
-      "turn": 13,
+      "turn": 12,
       "speaker": "system",
       "utterance": "What is the effective date?",
       "move_type": "ask",
@@ -165,7 +155,7 @@
       }
     },
     {
-      "turn": 14,
+      "turn": 13,
       "speaker": "user",
       "utterance": "Next Monday",
       "move_type": "answer",
@@ -177,7 +167,7 @@
       }
     },
     {
-      "turn": 15,
+      "turn": 14,
       "speaker": "system",
       "utterance": "What is the duration of confidentiality obligations?",
       "move_type": "ask",
@@ -188,7 +178,7 @@
       }
     },
     {
-      "turn": 16,
+      "turn": 15,
       "speaker": "user",
       "utterance": "2 years",
       "move_type": "answer",
@@ -199,7 +189,7 @@
       }
     },
     {
-      "turn": 17,
+      "turn": 16,
       "speaker": "system",
       "utterance": "What is the governing law jurisdiction?",
       "move_type": "ask",
@@ -210,7 +200,7 @@
       }
     },
     {
-      "turn": 18,
+      "turn": 17,
       "speaker": "user",
       "utterance": "Delaware",
       "move_type": "answer",
@@ -222,7 +212,7 @@
       }
     },
     {
-      "turn": 19,
+      "turn": 18,
       "speaker": "system",
       "utterance": "Thank you. I have all information: mutual NDA between GlobalTech and InnovateCorp LLC, effective November 24, 2025, 2-year duration, governed by Delaware law.",
       "move_type": "inform",
@@ -239,7 +229,8 @@
     "user_experience": "Excellent - System patiently clarifies and maintains context",
     "system_transparency": "Very High - Never loses track despite nested questions",
     "clarifications_handled": "3 (parties definition, NDA types, company name)",
-    "max_qud_depth": "2 levels"
+    "max_qud_depth": "2 levels",
+    "total_turns": 18
   },
   "business_value": "This scenario demonstrates IBDM's robustness. Traditional chatbots fail when users ask questions, give incomplete answers, or need clarification. IBDM's QUD stack naturally handles nested dialogues, maintaining perfect context even through complex interactions. This makes it suitable for real-world deployment where users aren't trained to give perfect responses."
 }

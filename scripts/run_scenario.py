@@ -17,22 +17,16 @@ Usage:
 
 import argparse
 import sys
-from pathlib import Path
-
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from rich.console import Console
 
 from ibdm.demo import (
     ExecutionMode,
-    ScenarioRunner,
     list_json_scenarios,
     list_scenarios_by_category,
-    load_scenario,
+    run_scenario,
     search_scenarios,
 )
-from ibdm.demo.execution_controller import ExecutionController
 
 
 def list_available_scenarios() -> None:
@@ -91,39 +85,31 @@ def run_scenario_cli(
     """
     console = Console()
 
+    # Delegate to shared runner helper to keep CLI behavior in sync.
     try:
-        scenario = load_scenario(scenario_id)
-    except FileNotFoundError as e:
-        console.print(f"[red]Error: {e}[/red]")
+        run_scenario(
+            scenario_id=scenario_id,
+            mode=mode,
+            auto_delay=delay,
+            nlg_mode=nlg_mode,
+            show_explanations=not minimal,
+            show_state_changes=not minimal,
+            show_larsson_rules=not minimal,
+            show_metrics=not minimal,
+            show_engine_state=show_engine_state,
+        )
+    except KeyboardInterrupt:
+        console.print("\n\n[yellow]⚠️  Interrupted by user (Ctrl+C)[/yellow]")
+        sys.exit(0)
+    except FileNotFoundError as error:
+        console.print(f"[red]Error: {error}[/red]")
         console.print("\n[yellow]Available scenarios:[/yellow]")
         for sid in list_json_scenarios():
             console.print(f"  • {sid}")
         sys.exit(1)
-    except Exception as e:
-        console.print(f"[red]Error loading scenario: {e}[/red]")
+    except Exception as error:  # pragma: no cover - defensive CLI surface
+        console.print(f"[red]Error loading scenario: {error}[/red]")
         sys.exit(1)
-
-    # Create controller
-    controller = ExecutionController(mode=mode, auto_delay=delay)
-
-    # Create runner with display options
-    runner = ScenarioRunner(
-        scenario=scenario,
-        controller=controller,
-        console=console,
-        nlg_mode=nlg_mode,
-        show_explanations=not minimal,
-        show_state_changes=not minimal,
-        show_larsson_rules=not minimal,
-        show_metrics=not minimal,
-        show_engine_state=show_engine_state,
-    )
-
-    try:
-        runner.run()
-    except KeyboardInterrupt:
-        console.print("\n\n[yellow]⚠️  Interrupted by user (Ctrl+C)[/yellow]")
-        sys.exit(0)
 
 
 def main() -> None:

@@ -109,6 +109,17 @@ class DemoDialogueOrchestrator:
             return ""
         return self.engine.generate(move, self._state)
 
+    def use_scripted_system_move(self, move: DialogueMove) -> DialogueMove:
+        """Set a scripted system move when the engine has none ready.
+
+        The move will be integrated when ``complete_system_turn`` is called,
+        keeping the integration flow consistent.
+        """
+
+        self._pending_system_move = move
+        self._last_nlg_result = None
+        return move
+
     def reset(self) -> None:
         """Reset orchestrator to a fresh InformationState."""
 

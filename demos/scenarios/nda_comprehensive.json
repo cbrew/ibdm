@@ -13,7 +13,7 @@
     "RAG Integration (Rule 5.2 extension) - Retrieve and synthesize relevant knowledge on-demand"
   ],
   "expected_outcomes": {
-    "turns": 23,
+    "turns": 21,
     "volunteer_instances": 2,
     "clarifications": 2,
     "non_provisions": 2,
@@ -79,30 +79,20 @@
     {
       "turn": 4,
       "speaker": "system",
-      "utterance": "A mutual NDA means both parties can share confidential information with each other and both are bound by confidentiality. A one-way NDA means only one party discloses confidential information to the other.",
-      "move_type": "answer",
-      "business_explanation": "System provides clarification, then will return to original question. This demonstrates proper handling of nested dialogues.",
-      "larsson_rule": "Answer to local question",
+      "utterance": "A mutual NDA means both parties can share confidential information with each other and both are bound by confidentiality. A one-way NDA means only one party discloses confidential information to the other. So, do you need a mutual NDA or a one-way NDA?",
+      "move_type": "answer + ask",
+      "business_explanation": "System provides clarification and immediately re-raises the original question in the same turn, keeping within a single Larsson cycle.",
+      "larsson_rule": "Answer to local question + re-raise issue",
       "state_changes": {
         "qud_popped": "?clarify(mutual_nda)",
         "qud_depth": 1,
-        "clarification_provided": true
-      }
-    },
-    {
-      "turn": 5,
-      "speaker": "system",
-      "utterance": "So, do you need a mutual NDA or a one-way NDA?",
-      "move_type": "ask",
-      "business_explanation": "System returns to original question after clarification. Context maintained perfectly.",
-      "larsson_rule": "Re-raise question after clarification resolved",
-      "state_changes": {
-        "qud_top": "?nda_type",
+        "clarification_provided": true,
+        "qud_pushed": "?nda_type",
         "returned_to_main_dialogue": true
       }
     },
     {
-      "turn": 6,
+      "turn": 5,
       "speaker": "user",
       "utterance": "I think mutual makes sense. Before I decide on the duration, what's typical for confidentiality periods?",
       "move_type": "answer + ask_guidance",
@@ -116,7 +106,7 @@
       }
     },
     {
-      "turn": 7,
+      "turn": 6,
       "speaker": "system",
       "utterance": "Great question! Let me check industry best practices for you.\n\n[Querying knowledge base... Retrieved 4 documents, 3 highly relevant]\n\nRegarding confidentiality_duration, here's what industry best practices suggest:\n\nBased on a survey of 500 NDAs across tech, finance, and healthcare sectors: \u2022 2-3 years: 45% (most common for general business relationships) \u2022 5 years: 35% (common for strategic partnerships) \u2022 7-10 years: 15% (trade secrets and highly sensitive IP) \u2022 Perpetual: 5% (rare, mainly for truly permanent secrets)\n\n(Source: LegalTech Industry Report 2024)\n\nAdditional resources:\n\u2022 Choosing Between Mutual and One-Way NDAs (Practical Law Company)\n\u2022 Jurisdiction Selection for NDAs (American Bar Association Guide)\n\nFor your strategic partnership with Global Industries, 3-5 years would be typical. What duration would you prefer?",
       "move_type": "inform + ask",
@@ -168,7 +158,7 @@
       }
     },
     {
-      "turn": 8,
+      "turn": 7,
       "speaker": "user",
       "utterance": "That's helpful, thanks! Let's go with 3 years",
       "move_type": "acknowledge + answer",
@@ -184,7 +174,7 @@
       }
     },
     {
-      "turn": 9,
+      "turn": 8,
       "speaker": "user",
       "utterance": "I think we should go with mutual, and by the way, we need this for 3 years",
       "move_type": "answer + volunteer_info",
@@ -203,7 +193,7 @@
       }
     },
     {
-      "turn": 10,
+      "turn": 9,
       "speaker": "system",
       "utterance": "Great. What is the governing law jurisdiction?",
       "move_type": "ask",
@@ -215,7 +205,7 @@
       }
     },
     {
-      "turn": 11,
+      "turn": 10,
       "speaker": "user",
       "utterance": "Actually, can we include a non-compete clause too?",
       "move_type": "off_topic_question",
@@ -228,7 +218,7 @@
       }
     },
     {
-      "turn": 12,
+      "turn": 11,
       "speaker": "system",
       "utterance": "I can note that for later discussion. First, let's complete the basic NDA requirements. What jurisdiction should govern this agreement?",
       "move_type": "polite_redirect",
@@ -241,7 +231,7 @@
       }
     },
     {
-      "turn": 13,
+      "turn": 12,
       "speaker": "user",
       "utterance": "I'm not sure. What are our options?",
       "move_type": "clarification_question",
@@ -253,30 +243,20 @@
       }
     },
     {
-      "turn": 14,
+      "turn": 13,
       "speaker": "system",
-      "utterance": "Common options include the state where your company is incorporated (like Delaware, California, New York) or where the agreement will primarily be performed. For most US businesses, Delaware, California, or New York are typical choices.",
-      "move_type": "answer",
-      "business_explanation": "System provides helpful guidance with examples.",
-      "larsson_rule": "Answer clarification question",
+      "utterance": "Common options include the state where your company is incorporated (like Delaware, California, New York) or where the agreement will primarily be performed. For most US businesses, Delaware, California, or New York are typical choices. Which jurisdiction would you prefer?",
+      "move_type": "answer + ask",
+      "business_explanation": "System provides guidance with examples, then re-raises the original question in the same turn to stay within the Larsson cycle.",
+      "larsson_rule": "Answer clarification question + re-raise issue",
       "state_changes": {
         "qud_popped": "?clarify(jurisdiction_options)",
-        "qud_depth": 1
-      }
-    },
-    {
-      "turn": 15,
-      "speaker": "system",
-      "utterance": "Which jurisdiction would you prefer?",
-      "move_type": "ask",
-      "business_explanation": "Return to original question after providing guidance.",
-      "larsson_rule": "Re-raise question after clarification",
-      "state_changes": {
+        "qud_depth": 1,
         "qud_pushed": "?x.jurisdiction(x)"
       }
     },
     {
-      "turn": 16,
+      "turn": 14,
       "speaker": "user",
       "utterance": "How long will it take to prepare the document?",
       "move_type": "off_topic_question",
@@ -289,7 +269,7 @@
       }
     },
     {
-      "turn": 17,
+      "turn": 15,
       "speaker": "system",
       "utterance": "I can generate the draft immediately once we have all required information. We just need the jurisdiction to complete the requirements. Which state's law should govern the agreement?",
       "move_type": "answer + redirect",
@@ -302,7 +282,7 @@
       }
     },
     {
-      "turn": 18,
+      "turn": 16,
       "speaker": "user",
       "utterance": "Let's go with Delaware",
       "move_type": "answer",
@@ -316,7 +296,7 @@
       }
     },
     {
-      "turn": 19,
+      "turn": 17,
       "speaker": "system",
       "utterance": "Perfect! Let me confirm what we have: mutual NDA between your company and Global Industries, effective February 1st, 2025, with a 3-year confidentiality period, governed by Delaware law. Is this correct?",
       "move_type": "confirm",
@@ -329,7 +309,7 @@
       }
     },
     {
-      "turn": 20,
+      "turn": 18,
       "speaker": "user",
       "utterance": "Yes, that's all correct",
       "move_type": "confirm",
@@ -341,7 +321,7 @@
       }
     },
     {
-      "turn": 21,
+      "turn": 19,
       "speaker": "system",
       "utterance": "Excellent. I'll prepare the NDA draft now. Regarding your earlier question about the non-compete clause - that would typically be a separate agreement or an addendum. Would you like me to note that for follow-up discussion?",
       "move_type": "inform + follow_up",
@@ -353,7 +333,7 @@
       }
     },
     {
-      "turn": 22,
+      "turn": 20,
       "speaker": "user",
       "utterance": "Yes, let's discuss that separately later",
       "move_type": "acknowledge",
@@ -364,7 +344,7 @@
       }
     },
     {
-      "turn": 23,
+      "turn": 21,
       "speaker": "system",
       "utterance": "Noted. I'll add that to your task list. Your NDA draft is ready for review.",
       "move_type": "inform",
@@ -373,7 +353,8 @@
       "state_changes": {
         "task_complete": true,
         "dialogue_status": "successfully_completed"
-      }
+      },
+      "is_payoff": true
     }
   ],
   "metrics": {
@@ -387,7 +368,7 @@
     "max_qud_depth": "2 levels (nested clarifications)",
     "user_experience": "Excellent - Patient, persistent, and context-aware",
     "system_transparency": "Very High - Acknowledged all user inputs, even deferred ones",
-    "total_turns": 23,
+    "total_turns": 21,
     "rag_query_instances": "1 guidance query (confidentiality duration)",
     "rag_docs_retrieved": "4 documents",
     "rag_docs_relevant": "3 documents (75% precision)"
@@ -397,7 +378,7 @@
     "volunteer_information": {
       "turns": [
         1,
-        6
+        8
       ],
       "description": "User provides information before being asked (parties, date, duration)",
       "system_response": "Acknowledges and accommodates, skips redundant questions"
@@ -405,22 +386,22 @@
     "clarification_questions": {
       "turns": [
         3,
-        10
+        12
       ],
       "description": "User asks for clarification about system questions",
       "system_response": "Nested dialogue: answer clarification, return to main question"
     },
     "non_provision_recovery": {
       "turns": [
-        8,
-        13
+        10,
+        14
       ],
       "description": "User doesn't answer question, goes off-topic instead",
       "system_response": "Polite redirect: acknowledge concern, persist with original question"
     }
   },
   "dialogue_complexity_metrics": {
-    "total_turns": 20,
+    "total_turns": 21,
     "baseline_turns": 12,
     "complexity_factors": [
       "3 volunteered facts",

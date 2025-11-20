@@ -9,7 +9,7 @@
     "Rule 4.8 (DependentQuestionReaccommodation)"
   ],
   "expected_outcomes": {
-    "turns": 12,
+    "turns": 10,
     "qud_depth_max": 1,
     "commitments_final": 5,
     "plan_completion": "100%",
@@ -79,28 +79,18 @@
     {
       "turn": 6,
       "speaker": "system",
-      "utterance": "Understood. I'll help you book a train from London to Paris instead.",
-      "move_type": "inform",
+      "utterance": "Understood. I'll help you book a train from London to Paris instead. The date April 4th is still valid. What time would you like to depart?",
+      "move_type": "inform + ask",
       "business_explanation": "System acknowledges dramatic plan change",
       "larsson_rule": "Dialogue update rule",
       "state_changes": {
-        "plan": "train_booking"
-      }
-    },
-    {
-      "turn": 7,
-      "speaker": "system",
-      "utterance": "The date April 4th is still valid. What time would you like to depart?",
-      "move_type": "ask",
-      "business_explanation": "System retains compatible commitment (date), asks train question",
-      "larsson_rule": "Rule 5.1 - Raise issue from private.issues to shared.qud",
-      "state_changes": {
+        "plan": "train_booking",
         "qud": "1 question",
         "commitments": "1 retained"
       }
     },
     {
-      "turn": 8,
+      "turn": 7,
       "speaker": "user",
       "utterance": "Morning, around 9 AM",
       "move_type": "answer",
@@ -112,7 +102,7 @@
       }
     },
     {
-      "turn": 9,
+      "turn": 8,
       "speaker": "system",
       "utterance": "Would you like standard or first class for the Eurostar?",
       "move_type": "ask",
@@ -123,7 +113,7 @@
       }
     },
     {
-      "turn": 10,
+      "turn": 9,
       "speaker": "user",
       "utterance": "Standard class is fine",
       "move_type": "answer",
@@ -136,34 +126,24 @@
       }
     },
     {
-      "turn": 11,
+      "turn": 10,
       "speaker": "system",
-      "utterance": "Perfect! Booking your Eurostar train for April 4th at 9:00 AM...",
-      "move_type": "inform",
+      "utterance": "Perfect! Booking your Eurostar train for April 4th at 9:00 AM...\n\n\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n                    EUROSTAR TRAIN BOOKING\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\nConfirmation #:    ES-2025-47821\nStatus:            \u2713 CONFIRMED\n\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nJOURNEY DETAILS\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nRoute:             London St Pancras \u2192 Paris Gare du Nord\nDate:              April 4, 2025\nDeparture:         9:01 AM (London St Pancras International)\nArrival:           12:17 PM (Paris Gare du Nord) - Local time\nDuration:          2h 16min\nTrain:             Eurostar 9012\nClass:             Standard\nSeat:              Coach 5, Seat 42A (Window, Forward-facing)\n\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nCOST BREAKDOWN\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nStandard Class Ticket:                        \u00a389.00\nBooking Fee:                                   \u00a35.50\n                                              \u2500\u2500\u2500\u2500\u2500\u2500\nTOTAL:                                        \u00a394.50\n\nPayment Status:       \u2713 Charged to card ending 4567\n\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nBELIEF REVISION CASCADE - COMPLETE ANALYSIS\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\nORIGINAL PLAN (Retracted):\n  Mode:              Flight booking\n  Questions raised:  departure_date, cabin_class\n  Commitments:       date=April 4th\n  Status:            \u2717 ABANDONED after user revision\n\nREVISION EVENT:\n  Trigger:           \"I want to take a train instead\"\n  Type:              Major plan change (flight \u2192 train)\n  Scope:             Complete task reframing\n\nRETRACTION CASCADE (Rule 4.7):\n  \u2717 Retracted: cabin_class question (flight-specific)\n  \u2717 Retracted: flight_booking plan\n  \u2713 Retained: departure_date=April 4th (compatible with trains)\n\nNEW PLAN (Formed):\n  Mode:              Train booking\n  Questions raised:  departure_time, train_class\n  Commitments:       date=April 4th (retained), time=9AM, class=Standard\n  Status:            \u2713 COMPLETED\n\nRE-ACCOMMODATION (Rules 4.6, 4.8):\n  \u2713 Compatible commitment retained (date)\n  \u2713 Incompatible questions retracted (cabin class)\n  \u2713 New questions accommodated (departure time, train class)\n  \u2713 New plan successfully completed\n\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nSYSTEM BEHAVIOR DEMONSTRATED\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u2713 Handled dramatic mid-dialogue plan change gracefully\n\u2713 Rule 4.6: Re-accommodated compatible questions\n\u2713 Rule 4.7: Retracted incompatible commitments (cabin class)\n\u2713 Rule 4.8: Managed dependent question cascade\n\u2713 Completed alternative task successfully (train booking)\n\u2713 No user confusion or repetition needed\n\u2713 Seamless transition from flight to train domain\n\nImpact: User completely changed transportation mode mid-dialogue,\nsystem adapted without disruption and delivered complete booking.\n\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\n\u2713 Train booking confirmed despite major plan revision\n\u2713 Belief revision cascade handled automatically\n\u2713 Compatible information retained (date)\n\u2713 Incompatible information gracefully discarded (cabin class)\n\u2713 New task completed successfully\n\u2713 Ready for London \u2192 Paris journey!",
+      "move_type": "inform + present_document",
       "business_explanation": "System executes train booking",
       "larsson_rule": "Dialogue update rule",
       "state_changes": {
         "action": "train_booking",
-        "plan": "executing"
-      }
-    },
-    {
-      "turn": 12,
-      "speaker": "system",
-      "utterance": "\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n                    EUROSTAR TRAIN BOOKING\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\nConfirmation #:    ES-2025-47821\nStatus:            \u2713 CONFIRMED\n\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nJOURNEY DETAILS\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nRoute:             London St Pancras \u2192 Paris Gare du Nord\nDate:              April 4, 2025\nDeparture:         9:01 AM (London St Pancras International)\nArrival:           12:17 PM (Paris Gare du Nord) - Local time\nDuration:          2h 16min\nTrain:             Eurostar 9012\nClass:             Standard\nSeat:              Coach 5, Seat 42A (Window, Forward-facing)\n\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nCOST BREAKDOWN\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nStandard Class Ticket:                        \u00a389.00\nBooking Fee:                                   \u00a35.50\n                                              \u2500\u2500\u2500\u2500\u2500\u2500\nTOTAL:                                        \u00a394.50\n\nPayment Status:       \u2713 Charged to card ending 4567\n\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nBELIEF REVISION CASCADE - COMPLETE ANALYSIS\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\nORIGINAL PLAN (Retracted):\n  Mode:              Flight booking\n  Questions raised:  departure_date, cabin_class\n  Commitments:       date=April 4th\n  Status:            \u2717 ABANDONED after user revision\n\nREVISION EVENT:\n  Trigger:           \"I want to take a train instead\"\n  Type:              Major plan change (flight \u2192 train)\n  Scope:             Complete task reframing\n\nRETRACTION CASCADE (Rule 4.7):\n  \u2717 Retracted: cabin_class question (flight-specific)\n  \u2717 Retracted: flight_booking plan\n  \u2713 Retained: departure_date=April 4th (compatible with trains)\n\nNEW PLAN (Formed):\n  Mode:              Train booking\n  Questions raised:  departure_time, train_class\n  Commitments:       date=April 4th (retained), time=9AM, class=Standard\n  Status:            \u2713 COMPLETED\n\nRE-ACCOMMODATION (Rules 4.6, 4.8):\n  \u2713 Compatible commitment retained (date)\n  \u2713 Incompatible questions retracted (cabin class)\n  \u2713 New questions accommodated (departure time, train class)\n  \u2713 New plan successfully completed\n\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nSYSTEM BEHAVIOR DEMONSTRATED\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u2713 Handled dramatic mid-dialogue plan change gracefully\n\u2713 Rule 4.6: Re-accommodated compatible questions\n\u2713 Rule 4.7: Retracted incompatible commitments (cabin class)\n\u2713 Rule 4.8: Managed dependent question cascade\n\u2713 Completed alternative task successfully (train booking)\n\u2713 No user confusion or repetition needed\n\u2713 Seamless transition from flight to train domain\n\nImpact: User completely changed transportation mode mid-dialogue,\nsystem adapted without disruption and delivered complete booking.\n\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\n\u2713 Train booking confirmed despite major plan revision\n\u2713 Belief revision cascade handled automatically\n\u2713 Compatible information retained (date)\n\u2713 Incompatible information gracefully discarded (cabin class)\n\u2713 New task completed successfully\n\u2713 Ready for London \u2192 Paris journey!",
-      "move_type": "present_document",
-      "business_explanation": "Train booking confirmation with belief revision analysis",
-      "larsson_rule": "Rules 4.6-4.8 - Belief revision and reaccommodation",
-      "state_changes": {
+        "plan": "executing",
         "booking_confirmed": "true"
-      },
-      "is_payoff": true
+      }
     }
   ],
   "metrics": {
     "dialogue_efficiency": "High - Systematic information gathering",
     "information_completeness": "100% - All required fields gathered",
     "user_experience": "Good - Clear, logical progression",
-    "system_transparency": "High - User always knows what's being asked and why"
+    "system_transparency": "High - User always knows what's being asked and why",
+    "total_turns": 10
   }
 }
