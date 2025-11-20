@@ -4,7 +4,6 @@ Provides functionality to export state components (like plans) to SVG
 using Graphviz.
 """
 
-
 import graphviz
 
 from ibdm.core import Plan

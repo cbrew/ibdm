@@ -1,0 +1,118 @@
+{
+  "scenario_id": "ibis3_dependent_questions",
+  "title": "Dependent Questions",
+  "description": "Demonstrates prerequisite question ordering (Rule 4.4)",
+  "business_narrative": "This scenario shows how IBDM manages question dependencies. Some questions can only be asked after prerequisites are satisfied. The system tracks these dependencies and asks questions in the correct order, demonstrating sophisticated plan management.",
+  "larsson_algorithms": [
+    "Rule 4.4 (DependentIssueAccommodation)",
+    "Question dependencies"
+  ],
+  "expected_outcomes": {
+    "turns": 8,
+    "qud_depth_max": 1,
+    "commitments_final": 4,
+    "plan_completion": "100%",
+    "larsson_fidelity": "95%"
+  },
+  "confidence_mode": "optimistic",
+  "turns": [
+    {
+      "turn": 1,
+      "speaker": "user",
+      "utterance": "I need to book a flight",
+      "move_type": "request",
+      "business_explanation": "User initiates task with dependent questions",
+      "larsson_rule": "Task Accommodation (Section 2.5.1)",
+      "state_changes": {
+        "plan": "active",
+        "private.issues": "5+ questions"
+      }
+    },
+    {
+      "turn": 2,
+      "speaker": "system",
+      "utterance": "What's your departure city?",
+      "move_type": "ask",
+      "business_explanation": "System asks prerequisite question first",
+      "larsson_rule": "Rule 5.1 - Raise issue from private.issues to shared.qud",
+      "state_changes": {
+        "qud": "1 question"
+      }
+    },
+    {
+      "turn": 3,
+      "speaker": "user",
+      "utterance": "London",
+      "move_type": "answer",
+      "business_explanation": "User answers prerequisite",
+      "larsson_rule": "Rule 4.1 - Answer accommodates top question on QUD",
+      "state_changes": {
+        "commitments": "+1"
+      }
+    },
+    {
+      "turn": 4,
+      "speaker": "system",
+      "utterance": "What's your destination city?",
+      "move_type": "ask",
+      "business_explanation": "System continues with other prerequisites",
+      "larsson_rule": "Rule 4.4 - Dependent question ordering",
+      "state_changes": {
+        "qud": "1 question"
+      }
+    },
+    {
+      "turn": 5,
+      "speaker": "user",
+      "utterance": "New York",
+      "move_type": "answer",
+      "business_explanation": "User answers",
+      "larsson_rule": "Rule 4.1 - Answer accommodates top question on QUD",
+      "state_changes": {
+        "commitments": "+1"
+      }
+    },
+    {
+      "turn": 6,
+      "speaker": "system",
+      "utterance": "What's the price?",
+      "move_type": "ask",
+      "business_explanation": "System can NOW ask dependent question (after prerequisites answered)",
+      "larsson_rule": "Rule 4.4 - Dependent question ordering",
+      "state_changes": {
+        "qud": "1 question"
+      }
+    },
+    {
+      "turn": 7,
+      "speaker": "user",
+      "utterance": "Under $500",
+      "move_type": "answer",
+      "business_explanation": "User provides price constraint",
+      "larsson_rule": "Dialogue update rule",
+      "state_changes": {
+        "commitments": "+1",
+        "qud": "0"
+      }
+    },
+    {
+      "turn": 8,
+      "speaker": "system",
+      "utterance": "\n\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557\n\u2551      DEPENDENT QUESTION HANDLING ANALYSIS REPORT             \u2551\n\u255a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255d\n\nFlight Search Summary - WITH DEPENDENCY MANAGEMENT\n\nSearch Parameters:\n  Departure:       London\n  Destination:     New York\n  Price Constraint: Under $500\n  Status:          \u2713 All prerequisites satisfied\n\nDependency Analysis (Rule 4.4 - DependentIssueAccommodation):\n\nQuestion Dependency Structure:\n  Prerequisites (must be asked first):\n    \u2713 Q_departure_city  \u2192 Answered: London\n    \u2713 Q_destination     \u2192 Answered: New York\n\n  Dependent Questions (blocked until prerequisites satisfied):\n    \u23f8 Q_price          \u2192 BLOCKED initially (needs route info)\n    \u2713 Q_price          \u2192 UNBLOCKED after both cities known\n    \u2713 Q_price          \u2192 Answered: Under $500\n\nDialogue Flow with Dependency Management:\n  1. System asks: \"What's your departure city?\" (Prerequisite #1)\n     User answers: \"London\"\n     Dependencies: price still BLOCKED (needs destination too)\n     Result:       \u2713 First prerequisite satisfied\n\n  2. System asks: \"What's your destination city?\" (Prerequisite #2)\n     User answers: \"New York\"\n     Dependencies: price now UNBLOCKED (route complete!)\n     Result:       \u2713 All prerequisites satisfied\n\n  3. System asks: \"What's the price?\" (Dependent Question)\n     Dependency Check: Can ask because [London, New York] known\n     User answers: \"Under $500\"\n     Result:       \u2713 Dependent question answered successfully\n\nRule 4.4 Demonstration:\n  \u2713 Identified prerequisite dependencies correctly\n  \u2713 Asked prerequisite questions BEFORE dependent questions\n  \u2713 Did NOT ask price before knowing route\n  \u2713 Unlocked price question after prerequisites satisfied\n  \u2713 Maintained correct question ordering throughout\n\nWhy Dependencies Matter:\n  Price depends on Route:\n    \u274c Cannot ask \"What's the price?\" without knowing route\n    \u274c Price varies by route: LON\u2192NYC \u2260 LON\u2192PAR\n    \u2713 Must know both cities before price makes sense\n\n  System Behavior:\n    \u2713 Detected dependency: price depends on [departure, destination]\n    \u2713 Ensured prerequisites asked first\n    \u2713 Only raised price question after route established\n\nPrerequisite Satisfaction Timeline:\n  Turn 0: price BLOCKED     (no prerequisites satisfied)\n  Turn 1: price BLOCKED     (1/2 prerequisites: departure only)\n  Turn 2: price UNBLOCKED   (2/2 prerequisites: departure + destination)\n  Turn 3: price ANSWERED    (constraint provided)\n\nComparison: With vs. Without Rule 4.4:\n  Without dependency management:\n    System: \"What's the price?\"\n    User:   \"For which route?\"\n    System: \"What's your departure city?\"\n    \u2192 Confusing, illogical question order\n\n  With Rule 4.4 (this dialogue):\n    System: \"What's your departure city?\"\n    User:   \"London\"\n    System: \"What's your destination city?\"\n    User:   \"New York\"\n    System: \"What's the price?\"\n    \u2192 Logical, natural question order \u2713\n\nFlight Search Results:\n  Route:           London (LHR) \u2192 New York (JFK)\n  Price Filter:    Maximum $500\n  Available Flights: 12 options found\n\n  Best Match:\n    Flight:        BA117 (British Airways)\n    Departure:     10:30 AM from Heathrow\n    Arrival:       1:15 PM at JFK\n    Price:         $485\n    Duration:      7h 45m\n    Status:        \u2713 Meets all criteria\n\nRecommendation:\n  Rule 4.4 (DependentIssueAccommodation) successfully managed\n  question dependencies. The system ensured prerequisite questions\n  were answered before asking dependent questions, resulting in\n  a logical, natural dialogue flow. Essential for complex domains\n  with interdependent information requirements.",
+      "move_type": "ask",
+      "business_explanation": "System generates dependency analysis + search results",
+      "larsson_rule": "Dialogue update rule",
+      "state_changes": {
+        "dependency_report": "generated",
+        "search_complete": "true"
+      },
+      "is_payoff": true
+    }
+  ],
+  "metrics": {
+    "dialogue_efficiency": "High - Systematic information gathering",
+    "information_completeness": "100% - All required fields gathered",
+    "user_experience": "Good - Clear, logical progression",
+    "system_transparency": "High - User always knows what's being asked and why"
+  }
+}

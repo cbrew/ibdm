@@ -1,0 +1,99 @@
+{
+  "scenario_id": "ibis3_volunteer_information",
+  "title": "Volunteer Information",
+  "description": "Demonstrates handling of unsolicited information",
+  "business_narrative": "This scenario shows how IBDM handles volunteered information gracefully. When users provide extra details before being asked, the system recognizes and integrates that information, skipping unnecessary questions. This demonstrates intelligent context awareness and efficiency.",
+  "larsson_algorithms": [
+    "Rule 4.1 (IssueAccommodation)",
+    "Volunteer information integration"
+  ],
+  "expected_outcomes": {
+    "turns": 6,
+    "qud_depth_max": 1,
+    "commitments_final": 3,
+    "plan_completion": "100%",
+    "larsson_fidelity": "95%"
+  },
+  "confidence_mode": "optimistic",
+  "turns": [
+    {
+      "turn": 1,
+      "speaker": "user",
+      "utterance": "I need to draft an NDA",
+      "move_type": "request",
+      "business_explanation": "User initiates task",
+      "larsson_rule": "Task Accommodation (Section 2.5.1)",
+      "state_changes": {
+        "plan": "active",
+        "private.issues": "4 questions"
+      }
+    },
+    {
+      "turn": 2,
+      "speaker": "system",
+      "utterance": "What are the parties to the NDA?",
+      "move_type": "ask",
+      "business_explanation": "System asks for parties",
+      "larsson_rule": "Dialogue update rule",
+      "state_changes": {
+        "qud": "1 question"
+      }
+    },
+    {
+      "turn": 3,
+      "speaker": "user",
+      "utterance": "Acme Corp and Smith Inc, effective January 1, 2025",
+      "move_type": "answer",
+      "business_explanation": "User provides parties AND effective date (volunteer info)",
+      "larsson_rule": "Rule 4.1 - IssueAccommodation (volunteer information)",
+      "state_changes": {
+        "commitments": "+2",
+        "qud": "0",
+        "private.issues": "-1"
+      }
+    },
+    {
+      "turn": 4,
+      "speaker": "system",
+      "utterance": "What is the duration of confidentiality obligations?",
+      "move_type": "ask",
+      "business_explanation": "System SKIPS date question (already answered) - asks next",
+      "larsson_rule": "Rule 5.1 - Raise issue from private.issues to shared.qud",
+      "state_changes": {
+        "qud": "1 question",
+        "private.issues": "1 question"
+      }
+    },
+    {
+      "turn": 5,
+      "speaker": "user",
+      "utterance": "3 years, mutual NDA, California law",
+      "move_type": "answer",
+      "business_explanation": "User volunteers remaining information efficiently",
+      "larsson_rule": "Rule 4.1 - IssueAccommodation (volunteer information)",
+      "state_changes": {
+        "commitments": "+3",
+        "qud": "0",
+        "plan": "complete"
+      }
+    },
+    {
+      "turn": 6,
+      "speaker": "system",
+      "utterance": "Perfect! I have all the details. Here's your NDA:\n\n\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557\n\u2551          MUTUAL NON-DISCLOSURE AGREEMENT                     \u2551\n\u255a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255d\n\nParties:     Acme Corp and Smith Inc\nEffective:   January 1, 2025\nTerm:        3 years\nType:        Mutual (both parties bound)\n\n\u2713 Document ready for execution\n\u2713 Efficiently gathered via volunteer information",
+      "move_type": "inform",
+      "business_explanation": "System generates NDA using volunteered information",
+      "larsson_rule": "Rule 4.1 - IssueAccommodation (volunteer information)",
+      "state_changes": {
+        "document_generated": "true"
+      },
+      "is_payoff": true
+    }
+  ],
+  "metrics": {
+    "dialogue_efficiency": "High - Systematic information gathering",
+    "information_completeness": "100% - All required fields gathered",
+    "user_experience": "Good - Clear, logical progression",
+    "system_transparency": "High - User always knows what's being asked and why"
+  }
+}

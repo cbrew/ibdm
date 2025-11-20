@@ -1,0 +1,185 @@
+{
+  "scenario_id": "ibis3_incremental_questioning",
+  "title": "Incremental Questioning",
+  "description": "Demonstrates how IBDM asks questions one at a time (Rule 4.2)",
+  "business_narrative": "This scenario demonstrates systematic information gathering through incremental questioning. The system asks one question at a time, avoiding user overwhelm while maintaining clear progress toward the goal. This shows the core value of IBDM: transparent, efficient dialogue management.",
+  "larsson_algorithms": [
+    "Rule 4.1 (IssueAccommodation)",
+    "Rule 4.2 (LocalQuestionAccommodation)"
+  ],
+  "expected_outcomes": {
+    "turns": 13,
+    "qud_depth_max": 1,
+    "commitments_final": 6,
+    "plan_completion": "100%",
+    "larsson_fidelity": "95%"
+  },
+  "confidence_mode": "optimistic",
+  "turns": [
+    {
+      "turn": 1,
+      "speaker": "user",
+      "utterance": "I need to draft an NDA",
+      "move_type": "request",
+      "business_explanation": "User initiates task - system forms plan with 5 questions",
+      "larsson_rule": "Task Accommodation (Section 2.5.1)",
+      "state_changes": {
+        "plan": "active",
+        "private.issues": "5 questions"
+      }
+    },
+    {
+      "turn": 2,
+      "speaker": "system",
+      "utterance": "What are the parties to the NDA?",
+      "move_type": "ask",
+      "business_explanation": "System asks FIRST question (not all 5 at once)",
+      "larsson_rule": "Rule 5.1 - Raise issue from private.issues to shared.qud",
+      "state_changes": {
+        "qud": "1 question",
+        "private.issues": "4 questions"
+      }
+    },
+    {
+      "turn": 3,
+      "speaker": "user",
+      "utterance": "Acme Corp and Smith Inc",
+      "move_type": "answer",
+      "business_explanation": "User answers first question",
+      "larsson_rule": "Rule 4.1 - Answer accommodates top question on QUD",
+      "state_changes": {
+        "commitments": "+1",
+        "qud": "0"
+      }
+    },
+    {
+      "turn": 4,
+      "speaker": "system",
+      "utterance": "Should this be a mutual or one-way NDA?",
+      "move_type": "ask",
+      "business_explanation": "System asks SECOND question (NDA type)",
+      "larsson_rule": "Rule 5.1 - Raise issue from private.issues to shared.qud",
+      "state_changes": {
+        "qud": "1 question",
+        "private.issues": "3 questions"
+      }
+    },
+    {
+      "turn": 5,
+      "speaker": "user",
+      "utterance": "Mutual",
+      "move_type": "answer",
+      "business_explanation": "User answers NDA type question",
+      "larsson_rule": "Rule 4.1 - Answer accommodates top question on QUD",
+      "state_changes": {
+        "commitments": "+1",
+        "qud": "0"
+      }
+    },
+    {
+      "turn": 6,
+      "speaker": "system",
+      "utterance": "What is the effective date?",
+      "move_type": "ask",
+      "business_explanation": "System asks THIRD question (incrementally)",
+      "larsson_rule": "Rule 5.1 - Raise issue from private.issues to shared.qud",
+      "state_changes": {
+        "qud": "1 question",
+        "private.issues": "2 questions"
+      }
+    },
+    {
+      "turn": 7,
+      "speaker": "user",
+      "utterance": "January 1, 2025",
+      "move_type": "answer",
+      "business_explanation": "User answers effective date question",
+      "larsson_rule": "Rule 4.1 - Answer accommodates top question on QUD",
+      "state_changes": {
+        "commitments": "+1",
+        "qud": "0"
+      }
+    },
+    {
+      "turn": 8,
+      "speaker": "system",
+      "utterance": "What is the duration of confidentiality obligations?",
+      "move_type": "ask",
+      "business_explanation": "System asks FOURTH question (duration)",
+      "larsson_rule": "Rule 5.1 - Raise issue from private.issues to shared.qud",
+      "state_changes": {
+        "qud": "1 question",
+        "private.issues": "1 question"
+      }
+    },
+    {
+      "turn": 9,
+      "speaker": "user",
+      "utterance": "5 years",
+      "move_type": "answer",
+      "business_explanation": "User answers duration question",
+      "larsson_rule": "Rule 4.1 - Answer accommodates top question on QUD",
+      "state_changes": {
+        "commitments": "+1",
+        "qud": "0"
+      }
+    },
+    {
+      "turn": 10,
+      "speaker": "system",
+      "utterance": "Which state law should govern this agreement?",
+      "move_type": "ask",
+      "business_explanation": "System asks FIFTH and FINAL question (governing law)",
+      "larsson_rule": "Rule 5.1 - Raise issue from private.issues to shared.qud",
+      "state_changes": {
+        "qud": "1 question",
+        "private.issues": "0 questions"
+      }
+    },
+    {
+      "turn": 11,
+      "speaker": "user",
+      "utterance": "California",
+      "move_type": "answer",
+      "business_explanation": "User answers final question - plan complete",
+      "larsson_rule": "Rule 4.1 - Answer accommodates top question on QUD",
+      "state_changes": {
+        "commitments": "+1",
+        "qud": "0",
+        "plan": "complete"
+      }
+    },
+    {
+      "turn": 12,
+      "speaker": "system",
+      "utterance": "I have all the information needed to draft your NDA.",
+      "move_type": "inform",
+      "business_explanation": "System confirms plan completion",
+      "larsson_rule": "ICM Rule 3.20 - Confirmation request",
+      "state_changes": {
+        "qud": "0",
+        "private.issues": "0"
+      }
+    },
+    {
+      "turn": 13,
+      "speaker": "system",
+      "utterance": "Here is your Non-Disclosure Agreement:\n\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n                    MUTUAL NON-DISCLOSURE AGREEMENT\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nThis Mutual Non-Disclosure Agreement (the \"Agreement\") is entered into\nas of January 1, 2025 (the \"Effective Date\") by and between:\n\n    Acme Corp (\"First Party\")\n    and\n    Smith Inc (\"Second Party\")\n\n(collectively, the \"Parties\")\n\nWHEREAS, the Parties wish to explore a business relationship and may\ndisclose certain confidential information to each other;\n\nNOW, THEREFORE, in consideration of the mutual covenants and agreements\ncontained herein, the Parties agree as follows:\n\n1. CONFIDENTIAL INFORMATION\n   Each Party agrees to hold in strict confidence any information marked\n   as confidential or that would reasonably be considered confidential.\n\n2. OBLIGATIONS\n   Each Party shall:\n   (a) Not disclose Confidential Information to third parties\n   (b) Use Confidential Information only for the intended purpose\n   (c) Protect such information with the same care as its own confidential\n       information\n\n3. TERM\n   This Agreement shall remain in effect for a period of 5 years from\n   the Effective Date.\n\n4. GOVERNING LAW\n   This Agreement shall be governed by and construed in accordance with\n   the laws of the State of California, without regard to its conflict\n   of law provisions.\n\n5. ENTIRE AGREEMENT\n   This Agreement constitutes the entire agreement between the Parties\n   concerning the subject matter hereof.\n\nIN WITNESS WHEREOF, the Parties have executed this Agreement as of the\nEffective Date.\n\n_____________________________          _____________________________\nAcme Corp                             Smith Inc\nAuthorized Signature                  Authorized Signature\n\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n                    [End of Document]\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\n\u2713 NDA successfully generated using your specifications\n\u2713 Ready for review and execution\n\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n                    EFFICIENCY METRICS DASHBOARD\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nPerformance Summary:\n  Total Turns:              13 turns\n  Time Elapsed:             ~4.3 minutes (estimated at 20sec/turn)\n  Success Rate:             100% (task completed successfully)\n\nEfficiency vs Manual Baseline:\n  Manual Process:           ~2 hours (lawyer drafting NDA)\n  IBDM System:              ~4.3 minutes\n  Time Saved:               ~116 minutes (96% reduction)\n  Cost Savings:             $464 (assuming $240/hour lawyer cost)\n\nDialogue Strategy Impact:\n  Strategy Used:            Incremental Questioning (IBiS-3)\n  Question Accommodation:   5 questions raised systematically\n  Information Gathering:    Complete via structured dialogue\n  Error Rate:               0% (systematic approach prevents gaps)\n\nROI Calculation:\n  Business Value Delivered: Professional NDA document\n  Estimated Value:          $500 (standard NDA drafting fee)\n  System Cost:              ~$0.30 (API calls + compute)\n  Net ROI:                  $499.70 (166,567% return)\n\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550",
+      "move_type": "present_document",
+      "business_explanation": "System generates complete NDA document using all collected information",
+      "larsson_rule": "Dialogue update rule",
+      "state_changes": {
+        "qud": "0",
+        "private.issues": "0",
+        "document_generated": "true"
+      },
+      "is_payoff": true
+    }
+  ],
+  "metrics": {
+    "dialogue_efficiency": "High - Systematic information gathering",
+    "information_completeness": "100% - All required fields gathered",
+    "user_experience": "Good - Clear, logical progression",
+    "system_transparency": "High - User always knows what's being asked and why"
+  }
+}

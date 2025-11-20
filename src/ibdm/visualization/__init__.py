@@ -12,7 +12,7 @@ Key Components:
 """
 
 from ibdm.visualization.diff_engine import DiffEngine, compute_diff
-from ibdm.visualization.rule_trace import RuleTrace, RuleEvaluation
+from ibdm.visualization.rule_trace import RuleEvaluation, RuleTrace
 from ibdm.visualization.state_diff import ChangedField, ChangeType, StateDiff
 from ibdm.visualization.state_snapshot import StateSnapshot
 from ibdm.visualization.terminal_renderer import TerminalRenderer

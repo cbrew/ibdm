@@ -1,4 +1,5 @@
 {
+  "scenario_id": "legal_rag_basic",
   "title": "Legal RAG Consultation - Basic Demo",
   "description": "Demonstrates Retrieval-Augmented Generation (RAG) for legal question answering. User asks about controlling law, system retrieves relevant legal documents, filters by relevance, and synthesizes an answer.",
   "domain": "legal_consultation",
