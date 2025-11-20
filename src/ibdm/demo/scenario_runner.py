@@ -29,6 +29,8 @@ from ibdm.domains.legal_domain import get_legal_domain
 from ibdm.domains.nda_domain import get_nda_domain
 from ibdm.rules import (
     RuleSet,
+    create_action_integration_rules,
+    create_action_selection_rules,
     create_generation_rules,
     create_integration_rules,
     create_selection_rules,
@@ -144,7 +146,11 @@ class ScenarioRunner:
         rules = RuleSet()
         for rule in create_integration_rules():
             rules.add_rule(rule)
+        for rule in create_action_integration_rules():
+            rules.add_rule(rule)
         for rule in create_selection_rules():
+            rules.add_rule(rule)
+        for rule in create_action_selection_rules():
             rules.add_rule(rule)
         for rule in create_generation_rules():
             rules.add_rule(rule)
@@ -425,6 +431,7 @@ class ScenarioRunner:
         if turn.speaker == "system":
             self.orchestrator.complete_system_turn()
 
+        self._apply_declared_state_changes(turn)
         self._record_trace(turn)
         if self.show_state_changes:
             self._verify_state_changes(turn)
@@ -468,6 +475,21 @@ class ScenarioRunner:
             pending_system_move=self.orchestrator.pending_system_move,
             expected_state_changes=turn.state_changes,
         )
+
+    def _apply_declared_state_changes(self, turn: ScenarioTurn) -> None:
+        """Apply non-engine side effects declared in scenario state_changes.
+
+        Used for extensions like RAG grounding evidence that Larsson doesn't cover
+        but scenarios want to track.
+        """
+        if not turn.state_changes:
+            return
+
+        state_changes = turn.state_changes
+        # Capture RAG evidence in private beliefs for grounding transparency
+        rag_metadata = state_changes.get("rag_metadata") or state_changes.get("rag_query_executed")
+        if rag_metadata is not None:
+            self.state.private.beliefs.setdefault("rag_evidence", []).append(rag_metadata)
 
     def _verify_state_changes(self, turn: ScenarioTurn) -> None:
         """Compare expected state changes from the scenario with the actual engine state."""
