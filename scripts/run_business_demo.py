@@ -28,7 +28,6 @@ import json
 import os
 import sys
 import time
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -36,10 +35,9 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 # Required imports - fail fast if not available
-from ibdm.core import Answer, DialogueMove, InformationState
-from ibdm.core.plans import Plan
-from ibdm.core.questions import Question
+from ibdm.core import DialogueMove, InformationState
 from ibdm.demo.orchestrator import DemoDialogueOrchestrator
+from ibdm.domains.legal_domain import get_legal_domain
 from ibdm.domains.nda_domain import get_nda_domain
 from ibdm.rules import (
     RuleSet,
@@ -75,8 +73,12 @@ class BusinessDemo:
         # Load scenario
         self.scenario = json.loads(scenario_path.read_text())
 
-        # Domain model
-        self.domain = get_nda_domain()
+        # Domain model - detect from scenario or default to NDA
+        domain_name = self.scenario.get("domain", "nda_drafting")
+        if domain_name == "legal_consultation":
+            self.domain = get_legal_domain()
+        else:
+            self.domain = get_nda_domain()
 
         # Initialize NLG engine conditionally (only if needed)
         self.nlg_engine = None
@@ -105,7 +107,7 @@ class BusinessDemo:
             rules.add_rule(rule)
         for rule in create_generation_rules():
             rules.add_rule(rule)
-        
+
         self.orchestrator = DemoDialogueOrchestrator(
             agent_id="system",
             rules=rules,
@@ -158,7 +160,7 @@ class BusinessDemo:
             user_moves = self._create_user_dialogue_move(turn_data)
             if not isinstance(user_moves, list):
                 user_moves = [user_moves]
-            
+
             if self.verbose and len(user_moves) > 1:
                 for move in user_moves:
                     print(f"   → Integrating sub-move: {move.move_type}")
@@ -170,10 +172,7 @@ class BusinessDemo:
             engine_move = self.orchestrator.ensure_system_move()
             if engine_move is None:
                 if self.verbose:
-                    print(
-                        "   ⚠️ No pending system move from engine; "
-                        "skipping scripted system turn"
-                    )
+                    print("   ⚠️ No pending system move from engine; skipping scripted system turn")
                 return
 
             if self.verbose:
@@ -252,7 +251,9 @@ class BusinessDemo:
                 print("[No response generated]")
 
         else:  # speaker == "system" and nlg_mode == "off"
-            print(f"{generated_system_text}" if generated_system_text else "[No response generated]")
+            print(
+                f"{generated_system_text}" if generated_system_text else "[No response generated]"
+            )
 
         # After presentation, integrate the system move so state reflects the turn
         if speaker == "system":
@@ -279,11 +280,14 @@ class BusinessDemo:
                 for comm in recent_comms:
                     print(f"     - {comm}")
             if self.state.private.plan:
-                 top_plan = self.state.private.plan[-1]
-                 print(f"   • Plan: {top_plan.plan_type}({top_plan.content}) (Agenda: {len(self.state.private.agenda)})")
+                top_plan = self.state.private.plan[-1]
+                agenda_len = len(self.state.private.agenda)
+                print(
+                    f"   • Plan: {top_plan.plan_type}({top_plan.content}) "
+                    f"(Agenda: {agenda_len})"
+                )
             else:
-                 print("   • Plan: None")
-
+                print("   • Plan: None")
 
     def run_scenario(self) -> dict[str, Any]:
         """Run the scenario and return metrics.
@@ -356,12 +360,14 @@ class BusinessDemo:
 
         print("\n" + "=" * 80 + "\n")
 
-    def _create_user_dialogue_move(self, turn_data: dict[str, Any]) -> DialogueMove | list[DialogueMove]:
+    def _create_user_dialogue_move(
+        self, turn_data: dict[str, Any]
+    ) -> DialogueMove | list[DialogueMove]:
         """Create DialogueMove(s) for USER turns (Mocked NLU)."""
-        from ibdm.core.moves import DialogueMove
-        from ibdm.core.answers import Answer
-        from ibdm.core.questions import Question, WhQuestion
         from ibdm.core.actions import Proposition
+        from ibdm.core.answers import Answer
+        from ibdm.core.moves import DialogueMove
+        from ibdm.core.questions import WhQuestion
 
         move_type_str = turn_data.get("move_type", "unknown")
         speaker = "user"
@@ -423,7 +429,9 @@ class BusinessDemo:
                     prop = Proposition(predicate=pred, arguments=args)
                     moves.append(DialogueMove(move_type="assert", content=prop, speaker=speaker))
                 else:
-                    moves.append(DialogueMove(move_type="assert", content=comm_str, speaker=speaker))
+                    moves.append(
+                        DialogueMove(move_type="assert", content=comm_str, speaker=speaker)
+                    )
 
         confidence = turn_data.get("confidence")
         if confidence is not None:
@@ -554,7 +562,7 @@ def main() -> int:
         default="nda_basic",
         help=(
             "Scenario to run (nda_basic, nda_volunteer, nda_complex, "
-            "nda_grounding, nda_comprehensive)"
+            "nda_grounding, nda_comprehensive, legal_rag_basic)"
         ),
     )
     parser.add_argument(

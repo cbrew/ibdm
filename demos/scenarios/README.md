@@ -42,7 +42,7 @@ Each scenario is a JSON file containing:
 - **Audience**: Product managers, quality assurance, risk-averse stakeholders
 - **Larsson Fidelity**: 95%
 
-### 5. **nda_comprehensive.json** - All Advanced Features Demo ⭐ NEW
+### 5. **nda_comprehensive.json** - All Advanced Features Demo ⭐
 - **Purpose**: Demonstrate all three advanced capabilities in a single realistic dialogue
 - **Duration**: 20 turns (includes volunteered info, clarifications, and non-provision recovery)
 - **Key Features**:
@@ -52,6 +52,20 @@ Each scenario is a JSON file containing:
 - **Audience**: Comprehensive demonstration for technical decision-makers, full capability showcase
 - **Larsson Fidelity**: 97%
 - **Special**: Shows all three features working together in real-world dialogue complexity
+
+### 6. **legal_rag_basic.json** - RAG Integration Demo ⭐ NEW
+- **Purpose**: Demonstrate Retrieval-Augmented Generation (RAG) for legal question answering
+- **Duration**: 10 turns (includes context gathering + RAG query execution)
+- **Key Features**:
+  - Query formulation from natural language questions
+  - Document retrieval (5 documents retrieved, 2 relevant)
+  - Relevance filtering (demonstrates realistic RAG behavior)
+  - Answer synthesis with source citations
+  - Transparency (shows which docs were retrieved and filtered)
+- **Audience**: Technical teams evaluating RAG integration, legal tech stakeholders
+- **Domain**: Legal consultation (different from NDA domain)
+- **Larsson Fidelity**: 95%
+- **Special**: Shows how IBDM integrates with RAG systems while maintaining dialogue state management
 
 ## Usage
 
@@ -92,7 +106,8 @@ for turn in scenario["turns"]:
 | Prove robustness | nda_complex | Shows handling of real-world messiness |
 | Address quality concerns | nda_grounding | Demonstrates error prevention and transparency |
 | Show all capabilities | **nda_comprehensive** ⭐ | All three advanced features in one realistic dialogue |
-| Technical deep-dive | All five | Complete picture of IBDM capabilities |
+| RAG/knowledge integration | **legal_rag_basic** ⭐ | Shows document retrieval and answer synthesis |
+| Technical deep-dive | All six | Complete picture of IBDM capabilities |
 
 ## Metrics Summary
 
@@ -103,6 +118,7 @@ for turn in scenario["turns"]:
 | Complex | 19 | 63% | 100% | 92% | 3 clarifications, QUD depth=2 |
 | Grounding | 16 | 75% | 100% | 95% | 4 ICM moves, 2 grounding interventions |
 | **Comprehensive** ⭐ | 20 | 85% | 100% | 97% | 3 volunteers + 2 clarifications + 2 non-provisions |
+| **Legal RAG** ⭐ | 10 | 100% | 100% | 95% | 5 docs retrieved, 2 relevant, RAG integration |
 
 ## Business Value Highlights
 

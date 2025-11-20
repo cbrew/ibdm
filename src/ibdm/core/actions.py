@@ -44,6 +44,9 @@ class ActionType(Enum):
     SEND = "send"
     """Send or transmit something"""
 
+    QUERY = "query"
+    """Query a knowledge base or retrieval system (RAG pattern)"""
+
 
 @dataclass
 class Action:
