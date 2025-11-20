@@ -28,6 +28,7 @@ import json
 import os
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -45,6 +46,7 @@ from ibdm.rules import (
     create_integration_rules,
     create_selection_rules,
 )
+from ibdm.services.nda_generator import NDAGenerator, NDAParameters
 
 
 class BusinessDemo:
@@ -282,10 +284,7 @@ class BusinessDemo:
             if self.state.private.plan:
                 top_plan = self.state.private.plan[-1]
                 agenda_len = len(self.state.private.agenda)
-                print(
-                    f"   • Plan: {top_plan.plan_type}({top_plan.content}) "
-                    f"(Agenda: {agenda_len})"
-                )
+                print(f"   • Plan: {top_plan.plan_type}({top_plan.content}) (Agenda: {agenda_len})")
             else:
                 print("   • Plan: None")
 
@@ -316,6 +315,10 @@ class BusinessDemo:
 
         # Final summary
         self.print_summary()
+
+        # Generate NDA if this is the comprehensive scenario
+        if self.scenario_path.stem == "nda_comprehensive":
+            self.generate_nda_document()
 
         # Return metrics
         return self.scenario.get("metrics", {})
@@ -359,6 +362,126 @@ class BusinessDemo:
             print(self.scenario["business_value"])
 
         print("\n" + "=" * 80 + "\n")
+
+    def generate_nda_document(self) -> None:
+        """Generate NDA document from gathered information.
+
+        This method is called automatically after nda_comprehensive scenario
+        to demonstrate the complete workflow: dialogue → document generation.
+        """
+        print("\n" + "=" * 80)
+        print("📝 NDA DOCUMENT GENERATION")
+        print("=" * 80)
+        print()
+
+        # Extract commitments from final state
+        commitments = self.state.shared.commitments
+
+        if not commitments:
+            print("⚠️  No commitments found in dialogue state. Skipping generation.")
+            return
+
+        print("📋 Extracting NDA parameters from dialogue state...")
+
+        # Parse commitments to extract NDA parameters
+        try:
+            params = NDAParameters.from_commitments(commitments)
+            print(f"   ✓ Parties: {', '.join(params.parties)}")
+            print(f"   ✓ Type: {params.nda_type}")
+            print(f"   ✓ Effective Date: {params.effective_date}")
+            print(f"   ✓ Duration: {params.duration}")
+            print(f"   ✓ Jurisdiction: {params.jurisdiction}")
+            print()
+        except Exception as e:
+            print(f"   ✗ Failed to extract parameters: {e}")
+            return
+
+        # Initialize generator
+        print("🤖 Initializing NDA Generator (Claude Sonnet 4.5)...")
+        try:
+            generator = NDAGenerator()
+            print("   ✓ Generator ready")
+            print()
+        except ValueError as e:
+            print(f"   ✗ Error: {e}")
+            print()
+            print("   ℹ️  Set IBDM_API_KEY to enable NDA generation")
+            print("   ℹ️  Skipping document generation")
+            return
+        except Exception as e:
+            print(f"   ✗ Unexpected error: {e}")
+            return
+
+        # Generate NDA
+        print("📄 Generating NDA document (this may take 10-30 seconds)...")
+        print()
+
+        try:
+            nda_text = generator.generate_nda(params)
+            print("   ✓ NDA generated successfully!")
+            print()
+        except Exception as e:
+            print(f"   ✗ Generation failed: {e}")
+            print()
+            print("   ℹ️  Continuing without document generation")
+            return
+
+        # Display preview
+        print("=" * 80)
+        print("GENERATED NDA PREVIEW")
+        print("=" * 80)
+        print()
+
+        # Show first 30 lines
+        lines = nda_text.split("\n")
+        preview_lines = lines[:30]
+        print("\n".join(preview_lines))
+
+        if len(lines) > 30:
+            print()
+            print(f"... ({len(lines) - 30} more lines)")
+        print()
+
+        # Save to file
+        output_dir = Path("demos/generated_documents")
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        scenario_name = self.scenario_path.stem
+        output_file = output_dir / f"nda_{scenario_name}_{timestamp}.md"
+
+        try:
+            with open(output_file, "w") as f:
+                f.write(f"# Generated NDA - {params.effective_date}\n\n")
+                f.write(f"**Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write("**Model**: Claude Sonnet 4.5\n")
+                f.write(f"**Source**: IBDM {scenario_name} scenario\n")
+                f.write(f"**Dialogue Turns**: {len(self.scenario['turns'])}\n")
+                f.write("\n---\n\n")
+                f.write(nda_text)
+
+            print("=" * 80)
+            print("DOCUMENT SAVED")
+            print("=" * 80)
+            print()
+            print(f"📄 Full NDA saved to: {output_file}")
+            print(f"📊 Document: {len(lines)} lines, {len(nda_text)} characters")
+            print()
+            print("=" * 80)
+            print()
+            print("✓ Complete workflow demonstrated:")
+            print("  1. Information gathering via IBDM dialogue")
+            print("  2. State management and commitment tracking")
+            print("  3. Parameter extraction from dialogue state")
+            print("  4. Professional document generation via LLM")
+            print()
+            print("⚠️  NOTE: AI-generated legal content. Always have a licensed")
+            print("   attorney review any legal documents before use.")
+            print()
+
+        except Exception as e:
+            print(f"⚠️  Failed to save document: {e}")
+            print()
 
     def _create_user_dialogue_move(
         self, turn_data: dict[str, Any]
