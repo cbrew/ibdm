@@ -4,6 +4,7 @@ Showcases IBiS3 question accommodation and IBiS2 grounding in action.
 """
 
 from ibdm.demo.interactive_demo import InteractiveDemo
+from ibdm.demo.orchestrator import DemoDialogueOrchestrator
 from ibdm.demo.scenarios import (
     DemoScenario,
     ScenarioStep,
@@ -16,6 +17,7 @@ from ibdm.demo.visualization import DialogueHistory, DialogueVisualizer, TurnRec
 
 __all__ = [
     "InteractiveDemo",
+    "DemoDialogueOrchestrator",
     "DemoScenario",
     "ScenarioStep",
     "get_scenario",
