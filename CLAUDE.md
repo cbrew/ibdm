@@ -2,6 +2,12 @@
 
 Quick reference for AI agents working on the Issue-Based Dialogue Management (IBDM) project.
 
+**⚠️ KEY INFORMATION FOR AI ASSISTANTS**:
+- **Beads** (`bd` command) is YOUR task tracking tool, automatically installed by SessionStart
+- YOU use beads commands like `.claude/beads-helpers.sh ready` to track YOUR work
+- The human user does NOT use beads - it's for AI assistants only
+- All beads commands in this guide are for YOU to execute, not the user
+
 ## Quick Start
 
 ```bash
@@ -179,6 +185,7 @@ Language (ZFC) → Dialogue Semantics (NOT ZFC) → Language (ZFC)
 - Installs the project in editable mode from `pyproject.toml`
 - Installs all runtime dependencies (burr, pydantic, litellm, rich, graphviz)
 - Installs all dev tools (pytest, pyright, ruff, ipython, jupyter)
+- Installs beads task tracker (`bd` command)
 - Makes `ibdm` package importable from anywhere
 - Verifies core imports and tools work
 - Checks API key configuration
@@ -319,6 +326,8 @@ pytest                                       # Run full suite
 
 ### 6. Document via Beads with Larsson Tracking
 
+**IMPORTANT FOR AI ASSISTANTS**: Beads is YOUR tool, not the user's tool. YOU (the AI assistant) use beads to track YOUR work. The human user does NOT use beads commands. When you see beads commands in this guide, they are instructions for YOU to execute, not suggestions for the user.
+
 **Policy**: Track design decisions and tasks in beads with automatic Larsson alignment measurement.
 
 **Larsson-Tracked Workflow** (PREFERRED):
@@ -428,13 +437,15 @@ Next: Week 3 tasks in NEXT-TASK.md (clarification questions + dependent issues)
 
 ## Workflow
 
+**NOTE**: The commands below are for YOU (the AI assistant) to execute during your work. These are not instructions for the user.
+
 ### Daily Session
 
 ```bash
 # 0. Setup environment (ALWAYS RUN FIRST - at start of every session)
 uv pip install --system -e .
 
-# 1. Check and start task (with Larsson tracking)
+# 1. Check and start task (with Larsson tracking) - YOU run these commands
 .claude/beads-helpers.sh ready
 .claude/beads-larsson.sh start <task-id>
 # → Generates baseline report, prompts for prediction
