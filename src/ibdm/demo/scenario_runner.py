@@ -33,6 +33,8 @@ from ibdm.rules import (
     create_action_selection_rules,
     create_generation_rules,
     create_integration_rules,
+    create_negotiation_rules,
+    create_negotiation_selection_rules,
     create_selection_rules,
 )
 
@@ -148,9 +150,13 @@ class ScenarioRunner:
             rules.add_rule(rule)
         for rule in create_action_integration_rules():
             rules.add_rule(rule)
+        for rule in create_negotiation_rules():
+            rules.add_rule(rule)
         for rule in create_selection_rules():
             rules.add_rule(rule)
         for rule in create_action_selection_rules():
+            rules.add_rule(rule)
+        for rule in create_negotiation_selection_rules():
             rules.add_rule(rule)
         for rule in create_generation_rules():
             rules.add_rule(rule)
