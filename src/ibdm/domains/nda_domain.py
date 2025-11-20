@@ -9,7 +9,7 @@ This domain model provides semantic grounding for:
 - Jurisdiction selection (governing law)
 """
 
-from typing import Any
+from typing import Any, cast
 
 from ibdm.core.actions import Action, Proposition
 from ibdm.core.domain import DomainModel
@@ -68,10 +68,26 @@ def create_nda_domain() -> DomainModel:
         arg_types=["us_state"],
         description="Governing law jurisdiction",
     )
+    domain.add_predicate(
+        "nda_guidance_query",
+        arity=1,
+        arg_types=["guidance_topic"],
+        description="Query for NDA best practices and standard terms (RAG)",
+    )
 
     # Define sorts (semantic types with valid values)
     domain.add_sort("nda_kind", ["mutual", "one-way", "unilateral"])
     domain.add_sort("us_state", ["California", "Delaware", "New York"])
+    domain.add_sort(
+        "guidance_topic",
+        [
+            "confidentiality_duration",
+            "nda_type_selection",
+            "jurisdiction_selection",
+            "standard_terms",
+            "exclusions",
+        ],
+    )
 
     # Register plan builder
     domain.register_plan_builder("nda_drafting", _build_nda_plan)
@@ -85,6 +101,10 @@ def create_nda_domain() -> DomainModel:
     domain.register_postcond_function("generate_draft", _generate_draft_postcond)
     domain.register_postcond_function("send_for_review", _send_for_review_postcond)
     domain.register_postcond_function("execute_agreement", _execute_agreement_postcond)
+
+    # Register RAG action functions for NDA guidance
+    domain.register_precond_function("query_nda_guidance", _check_query_nda_guidance_precond)
+    domain.register_postcond_function("query_nda_guidance", _query_nda_guidance_postcond)
 
     return domain
 
@@ -313,6 +333,220 @@ def _execute_agreement_postcond(action: Action) -> list[Proposition]:
             },
         ),
     ]
+
+
+# ============================================================================
+# RAG Functions for NDA Guidance
+# ============================================================================
+
+
+def _check_query_nda_guidance_precond(action: Action, commitments: set[str]) -> tuple[bool, str]:
+    """Check preconditions for querying NDA guidance database.
+
+    Requires:
+    - Guidance topic specified
+
+    Args:
+        action: query_nda_guidance action
+        commitments: Current commitments
+
+    Returns:
+        Tuple of (satisfied, error_message)
+    """
+    # Check if topic is specified in action parameters
+    if "topic" not in action.parameters or not action.parameters["topic"]:
+        return (False, "Missing guidance topic for query")
+
+    return (True, "")
+
+
+def _query_nda_guidance_postcond(action: Action) -> list[Proposition]:
+    """Generate postconditions for NDA guidance query.
+
+    Creates propositions indicating:
+    - Query executed
+    - Documents retrieved
+    - Guidance provided
+
+    Args:
+        action: query_nda_guidance action
+
+    Returns:
+        List of postcondition propositions
+    """
+    query_id = action.parameters.get("query_id", "NDA_GUIDANCE_001")
+    num_docs = action.parameters.get("num_docs_retrieved", 4)
+    num_relevant = action.parameters.get("num_docs_relevant", 3)
+
+    return [
+        Proposition(
+            predicate="guidance_query_executed",
+            arguments={
+                "query_id": query_id,
+                "docs_retrieved": num_docs,
+                "docs_relevant": num_relevant,
+            },
+        ),
+        Proposition(
+            predicate="guidance_provided",
+            arguments={
+                "query_id": query_id,
+                "status": "ready",
+            },
+        ),
+    ]
+
+
+def execute_nda_rag_query(action: Action, state: Any) -> dict[str, Any]:
+    """Execute RAG query for NDA guidance (MOCKED implementation).
+
+    Retrieves best practices, standard terms, and guidance for NDA drafting.
+
+    Args:
+        action: query_nda_guidance action with topic
+        state: Current information state
+
+    Returns:
+        Dictionary with retrieved documents and synthesized guidance
+    """
+    topic = action.parameters.get("topic", "unknown")
+
+    # Mock NDA guidance database
+    mock_nda_guidance_docs = [
+        {
+            "doc_id": "NDA_BP_001",
+            "title": "Standard Confidentiality Periods - Industry Survey 2024",
+            "content": (
+                "Based on a survey of 500 NDAs across tech, finance, and healthcare sectors: "
+                "• 2-3 years: 45% (most common for general business relationships) "
+                "• 5 years: 35% (common for strategic partnerships) "
+                "• 7-10 years: 15% (trade secrets and highly sensitive IP) "
+                "• Perpetual: 5% (rare, mainly for truly permanent secrets)"
+            ),
+            "source": "LegalTech Industry Report 2024",
+            "relevance_score": 0.95
+            if "duration" in topic.lower() or "period" in topic.lower()
+            else 0.2,
+            "tags": ["duration", "confidentiality_period", "best_practices"],
+        },
+        {
+            "doc_id": "NDA_BP_002",
+            "title": "Choosing Between Mutual and One-Way NDAs",
+            "content": (
+                "Mutual NDAs (both parties protect information): "
+                "• Use when: Both parties will share confidential information "
+                "• Common scenarios: Strategic partnerships, M&A discussions, joint ventures "
+                "One-Way NDAs (only one party protects): "
+                "• Use when: Only one party shares sensitive information "
+                "• Common scenarios: Vendor relationships, employment, consultants"
+            ),
+            "source": "Practical Law Company",
+            "relevance_score": 0.90
+            if "type" in topic.lower() or "mutual" in topic.lower()
+            else 0.15,
+            "tags": ["nda_type", "mutual_vs_oneway", "selection_criteria"],
+        },
+        {
+            "doc_id": "NDA_BP_003",
+            "title": "Jurisdiction Selection for NDAs",
+            "content": (
+                "Key considerations for choosing governing law: "
+                "• Delaware: Business-friendly, well-established corporate law "
+                "• California: Strong employee protections, limits on non-competes "
+                "• New York: Preferred for financial transactions "
+                "• General rule: Choose jurisdiction where primary business occurs "
+                "or where enforcement is most likely needed"
+            ),
+            "source": "American Bar Association Guide",
+            "relevance_score": 0.88
+            if "jurisdiction" in topic.lower() or "law" in topic.lower()
+            else 0.10,
+            "tags": ["jurisdiction", "governing_law", "enforcement"],
+        },
+        {
+            "doc_id": "NDA_BP_004",
+            "title": "Standard Exclusions in NDAs",
+            "content": (
+                "Information typically excluded from confidentiality obligations: "
+                "• Public domain information (at time of disclosure or later) "
+                "• Information independently developed "
+                "• Information lawfully received from third parties "
+                "• Information disclosed with written permission "
+                "• Information required by law to be disclosed"
+            ),
+            "source": "Model NDA Templates Collection",
+            "relevance_score": 0.85
+            if "exclusion" in topic.lower() or "standard" in topic.lower()
+            else 0.05,
+            "tags": ["exclusions", "standard_terms", "carve_outs"],
+        },
+    ]
+
+    # Filter and rank by relevance
+    relevant_threshold = 0.5
+    retrieved_docs = sorted(
+        mock_nda_guidance_docs,
+        key=lambda d: cast(float, d["relevance_score"]),
+        reverse=True,
+    )
+    relevant_docs = [
+        doc for doc in retrieved_docs if cast(float, doc["relevance_score"]) >= relevant_threshold
+    ]
+
+    # Synthesize guidance
+    if relevant_docs:
+        guidance = _synthesize_nda_guidance(relevant_docs, topic)
+    else:
+        guidance = (
+            f"I don't have specific guidance on {topic} in my knowledge base. "
+            f"I recommend consulting with a legal professional for this specific matter."
+        )
+
+    # Update action parameters
+    action.parameters["num_docs_retrieved"] = len(retrieved_docs)
+    action.parameters["num_docs_relevant"] = len(relevant_docs)
+    action.parameters["query_id"] = f"NDA_GUIDANCE_{topic.upper()}"
+
+    return {
+        "query": topic,
+        "retrieved_documents": retrieved_docs,
+        "relevant_documents": relevant_docs,
+        "synthesized_guidance": guidance,
+        "num_total": len(retrieved_docs),
+        "num_relevant": len(relevant_docs),
+    }
+
+
+def _synthesize_nda_guidance(docs: list[dict[str, Any]], topic: str) -> str:
+    """Synthesize NDA guidance from relevant documents.
+
+    Args:
+        docs: List of relevant document dictionaries
+        topic: Query topic
+
+    Returns:
+        Synthesized guidance string
+    """
+    if not docs:
+        return "No relevant guidance found."
+
+    top_doc = docs[0]
+
+    guidance_parts = [
+        f"Regarding {topic}, here's what industry best practices suggest:",
+        "",
+        f"{top_doc['content']}",
+        "",
+        f"(Source: {top_doc['source']})",
+    ]
+
+    if len(docs) > 1:
+        guidance_parts.append("")
+        guidance_parts.append("Additional resources:")
+        for doc in docs[1:]:
+            guidance_parts.append(f"• {doc['title']} ({doc['source']})")
+
+    return "\n".join(guidance_parts)
 
 
 # ============================================================================
