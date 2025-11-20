@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Quick test to verify Answer integration is working."""
 
+from ibdm.core.answers import Answer
 from ibdm.core.information_state import InformationState
 from ibdm.core.moves import DialogueMove
-from ibdm.core.answers import Answer
 from ibdm.core.questions import WhQuestion
 from ibdm.engine.dialogue_engine import DialogueMoveEngine
 from ibdm.rules import create_integration_rules, create_selection_rules
@@ -37,7 +37,7 @@ print(f"Answer content: {answer.content}")
 # Integrate the answer
 new_state = engine.integrate(answer_move, state)
 
-print(f"\nAfter integration:")
+print("\nAfter integration:")
 print(f"QUD: {new_state.shared.qud}")
 print(f"Commitments: {new_state.shared.commitments}")
 print(f"Top QUD: {new_state.shared.top_qud()}")

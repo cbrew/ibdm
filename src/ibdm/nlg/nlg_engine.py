@@ -529,8 +529,14 @@ class NLGEngine:
             return f"Generate a natural assertion statement: {content}"
 
         elif move_type == "clarify":
-            target = "" if not isinstance(content, dict) else content.get("clarification_target", "the last detail")
-            previous = "" if not isinstance(content, dict) else content.get("previous_utterance", "")
+            target = (
+                ""
+                if not isinstance(content, dict)
+                else content.get("clarification_target", "the last detail")
+            )
+            previous = (
+                "" if not isinstance(content, dict) else content.get("previous_utterance", "")
+            )
             return (
                 f"Generate a clarification question about {target or 'the last detail'}. "
                 f"Reference the user's previous wording ('{previous}') so they know what you're clarifying. "
@@ -547,7 +553,9 @@ class NLGEngine:
 
         elif move_type == "answer + redirect":
             redirect_question = (
-                "" if not isinstance(content, dict) else content.get("redirect_to_question", "the pending question")
+                ""
+                if not isinstance(content, dict)
+                else content.get("redirect_to_question", "the pending question")
             )
             return (
                 "Provide the brief meta-level answer, then smoothly steer the user back to the main question. "
@@ -556,10 +564,14 @@ class NLGEngine:
 
         elif move_type == "polite_redirect":
             acknowledged_request = (
-                "" if not isinstance(content, dict) else content.get("acknowledged_request", "the side request")
+                ""
+                if not isinstance(content, dict)
+                else content.get("acknowledged_request", "the side request")
             )
             redirect_question = (
-                "" if not isinstance(content, dict) else content.get("redirect_to_question", "the main question")
+                ""
+                if not isinstance(content, dict)
+                else content.get("redirect_to_question", "the main question")
             )
             return (
                 f"Acknowledge the user's side request about {acknowledged_request}, implicitly confirming you captured it, "

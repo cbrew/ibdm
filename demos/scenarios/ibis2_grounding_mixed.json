@@ -1,0 +1,197 @@
+{
+  "scenario_id": "ibis2_grounding_mixed",
+  "title": "Mixed Grounding Strategies",
+  "description": "Demonstrates adaptive grounding based on confidence",
+  "business_narrative": "This scenario demonstrates adaptive grounding. The system adjusts its confirmation strategy based on confidence levels: optimistic for clear answers, cautious for uncertain ones. Shows intelligent strategy selection.",
+  "larsson_algorithms": [
+    "Grounding strategies",
+    "ICM perception/understanding/acceptance",
+    "Confidence-based adaptation"
+  ],
+  "expected_outcomes": {
+    "turns": 15,
+    "qud_depth_max": 1,
+    "commitments_final": 7,
+    "plan_completion": "100%",
+    "larsson_fidelity": "95%"
+  },
+  "confidence_mode": "random",
+  "turns": [
+    {
+      "turn": 1,
+      "speaker": "user",
+      "utterance": "I need to draft an NDA",
+      "move_type": "request",
+      "business_explanation": "High confidence utterance",
+      "larsson_rule": "Dialogue update rule",
+      "state_changes": {
+        "grounding": "optimistic"
+      }
+    },
+    {
+      "turn": 2,
+      "speaker": "system",
+      "utterance": "What are the parties to the NDA?",
+      "move_type": "ask",
+      "business_explanation": "Accepted immediately, proceeds with question",
+      "larsson_rule": "Dialogue update rule",
+      "state_changes": {
+        "qud": "1 question"
+      }
+    },
+    {
+      "turn": 3,
+      "speaker": "user",
+      "utterance": "Acme and Smith",
+      "move_type": "answer",
+      "business_explanation": "Low/medium confidence answer (short)",
+      "larsson_rule": "Dialogue update rule",
+      "state_changes": {
+        "grounding": "cautious/pessimistic"
+      }
+    },
+    {
+      "turn": 4,
+      "speaker": "system",
+      "utterance": "[icm:und*int] Did you mean 'Acme Corp and Smith Inc'?",
+      "move_type": "ask",
+      "business_explanation": "System confirms understanding (medium confidence)",
+      "larsson_rule": "ICM Rule 3.20 - Confirmation request",
+      "state_changes": {
+        "grounding_status": "understood"
+      }
+    },
+    {
+      "turn": 5,
+      "speaker": "user",
+      "utterance": "Yes, exactly",
+      "move_type": "answer",
+      "business_explanation": "User confirms",
+      "larsson_rule": "ICM Rule 3.20 - Confirmation request",
+      "state_changes": {
+        "commitments": "+1",
+        "grounding_status": "grounded"
+      }
+    },
+    {
+      "turn": 6,
+      "speaker": "system",
+      "utterance": "What is the effective date?",
+      "move_type": "ask",
+      "business_explanation": "System continues with next question",
+      "larsson_rule": "Dialogue update rule",
+      "state_changes": {
+        "qud": "1 question"
+      }
+    },
+    {
+      "turn": 7,
+      "speaker": "user",
+      "utterance": "January 1, 2025",
+      "move_type": "answer",
+      "business_explanation": "User provides date (high confidence)",
+      "larsson_rule": "Dialogue update rule",
+      "state_changes": {
+        "commitments": "+1"
+      }
+    },
+    {
+      "turn": 8,
+      "speaker": "system",
+      "utterance": "Should this be a mutual or one-way NDA?",
+      "move_type": "ask",
+      "business_explanation": "System continues gathering information",
+      "larsson_rule": "Dialogue update rule",
+      "state_changes": {
+        "qud": "1 question"
+      }
+    },
+    {
+      "turn": 9,
+      "speaker": "user",
+      "utterance": "Mutual",
+      "move_type": "answer",
+      "business_explanation": "User provides NDA type",
+      "larsson_rule": "Dialogue update rule",
+      "state_changes": {
+        "commitments": "+1"
+      }
+    },
+    {
+      "turn": 10,
+      "speaker": "system",
+      "utterance": "What is the duration of confidentiality obligations?",
+      "move_type": "ask",
+      "business_explanation": "System asks for duration",
+      "larsson_rule": "Dialogue update rule",
+      "state_changes": {
+        "qud": "1 question"
+      }
+    },
+    {
+      "turn": 11,
+      "speaker": "user",
+      "utterance": "3 years",
+      "move_type": "answer",
+      "business_explanation": "User provides duration",
+      "larsson_rule": "Dialogue update rule",
+      "state_changes": {
+        "commitments": "+1"
+      }
+    },
+    {
+      "turn": 12,
+      "speaker": "system",
+      "utterance": "Which state law should govern this agreement?",
+      "move_type": "ask",
+      "business_explanation": "System asks final question",
+      "larsson_rule": "Rule 5.1 - Raise issue from private.issues to shared.qud",
+      "state_changes": {
+        "qud": "1 question"
+      }
+    },
+    {
+      "turn": 13,
+      "speaker": "user",
+      "utterance": "California",
+      "move_type": "answer",
+      "business_explanation": "User provides governing law - all info collected",
+      "larsson_rule": "Dialogue update rule",
+      "state_changes": {
+        "commitments": "+1",
+        "plan": "complete"
+      }
+    },
+    {
+      "turn": 14,
+      "speaker": "system",
+      "utterance": "\n\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557\n\u2551          ADAPTIVE GROUNDING ANALYSIS                         \u2551\n\u255a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255d\n\nGrounding Performance (8 inputs with strategy adaptation):\n  1. \"I need to draft an NDA\" \u2192 Confidence: 0.9 (HIGH)\n     Strategy: OPTIMISTIC \u2192 Immediate acceptance\n\n  2. \"Acme and Smith\" \u2192 Confidence: 0.6 (MEDIUM)\n     \u26a0 Informal/ambiguous \u2192 Strategy switch: CAUTIOUS\n     System: \"Did you mean 'Acme Corp and Smith Inc'?\"\n     User: \"Yes, exactly\" \u2192 \u2713 Misunderstanding prevented via adaptation\n\n  3-7. All remaining inputs \u2192 Confidence: 0.85-0.95 (HIGH)\n     Strategy: OPTIMISTIC \u2192 All immediately accepted\n\nStrategy Distribution:\n  - OPTIMISTIC: 6/7 inputs (86%)\n  - CAUTIOUS: 1/7 inputs (14%)\n  - PESSIMISTIC: 0/7 inputs (0%)\n\nAdaptation Events: 2\n  Turn 2: HIGH\u2192CAUTIOUS (confidence drop triggered safety check)\n  Turn 3: CAUTIOUS\u2192HIGH (confidence restored, returned to fast mode)\n\nResults: Optimal balance of speed and safety\n\u2713 Fast grounding when confidence permits\n\u2713 Safety checks only when needed\n\u2713 Dynamic adaptation to input quality",
+      "move_type": "ask",
+      "business_explanation": "System provides adaptive grounding analysis summary",
+      "larsson_rule": "Dialogue update rule",
+      "state_changes": {
+        "grounding_analysis": "complete"
+      }
+    },
+    {
+      "turn": 15,
+      "speaker": "system",
+      "utterance": "Here is your Non-Disclosure Agreement:\n\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n                    MUTUAL NON-DISCLOSURE AGREEMENT\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nThis Mutual Non-Disclosure Agreement (the \"Agreement\") is entered into\nas of January 1, 2025 (the \"Effective Date\") by and between:\n\n    Acme Corp (\"First Party\")\n    and\n    Smith Inc (\"Second Party\")\n\n(collectively, the \"Parties\")\n\nWHEREAS, the Parties wish to explore a business relationship and may\ndisclose certain confidential information to each other;\n\nNOW, THEREFORE, in consideration of the mutual covenants and agreements\ncontained herein, the Parties agree as follows:\n\n1. CONFIDENTIAL INFORMATION\n   Each Party agrees to hold in strict confidence any information marked\n   as confidential or that would reasonably be considered confidential.\n\n2. OBLIGATIONS\n   Each Party shall:\n   (a) Not disclose Confidential Information to third parties\n   (b) Use Confidential Information only for the intended purpose\n   (c) Protect such information with the same care as its own confidential\n       information\n\n3. TERM\n   This Agreement shall remain in effect for a period of 3 years from\n   the Effective Date.\n\n4. GOVERNING LAW\n   This Agreement shall be governed by and construed in accordance with\n   the laws of the State of California, without regard to its conflict\n   of law provisions.\n\n5. ENTIRE AGREEMENT\n   This Agreement constitutes the entire agreement between the Parties\n   concerning the subject matter hereof.\n\nIN WITNESS WHEREOF, the Parties have executed this Agreement as of the\nEffective Date.\n\n_____________________________          _____________________________\nAcme Corp                             Smith Inc\nAuthorized Signature                  Authorized Signature\n\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n                    [End of Document]\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\n\u2713 NDA successfully generated using adaptive grounding strategy\n\u2713 Strategy adapted dynamically based on confidence (1 safety check)\n\u2713 Optimal balance: Fast completion with targeted safety where needed\n\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n                    EFFICIENCY METRICS DASHBOARD\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nPerformance Summary:\n  Total Turns:              7 turns\n  Time Elapsed:             ~2.3 minutes (estimated at 20sec/turn)\n  Success Rate:             100% (task completed successfully)\n\nEfficiency vs Manual Baseline:\n  Manual Process:           ~2 hours (lawyer drafting NDA)\n  IBDM System:              ~2.3 minutes\n  Time Saved:               ~118 minutes (98% reduction)\n  Cost Savings:             $470 (assuming $240/hour lawyer cost)\n\nDialogue Strategy Impact:\n  Strategy Used:            Mixed/Adaptive Grounding\n  Adaptive Checks:          1 strategic check (confidence-driven)\n  Grounding Efficiency:     6/6 inputs grounded (5 optimistic, 1 cautious)\n  Error Rate:               0% (optimal balance of speed and safety)\n  Adaptivity Benefit:       Combined speed of optimistic + safety of cautious\n\nROI Calculation:\n  Business Value Delivered: Professional NDA document\n  Estimated Value:          $500 (standard NDA drafting fee)\n  System Cost:              ~$0.16 (API calls + compute)\n  Efficiency Gain:          Best of both worlds (speed + safety)\n  Net ROI:                  $499.84 (312,400% return)\n\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550",
+      "move_type": "present_document",
+      "business_explanation": "System generates complete NDA document - BUSINESS VALUE DELIVERED",
+      "larsson_rule": "Dialogue update rule",
+      "state_changes": {
+        "qud": "0",
+        "private.issues": "0",
+        "document_generated": "true"
+      },
+      "is_payoff": true
+    }
+  ],
+  "metrics": {
+    "dialogue_efficiency": "High - Systematic information gathering",
+    "information_completeness": "100% - All required fields gathered",
+    "user_experience": "Good - Clear, logical progression",
+    "system_transparency": "High - User always knows what's being asked and why"
+  }
+}

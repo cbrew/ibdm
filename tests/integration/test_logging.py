@@ -9,7 +9,7 @@ import os
 import pytest
 
 from ibdm.config import configure_logging, get_debug_info
-from ibdm.core import Answer, DialogueMove, InformationState, WhQuestion
+from ibdm.core import DialogueMove, InformationState, WhQuestion
 from ibdm.engine import DialogueMoveEngine
 from ibdm.rules import RuleSet, UpdateRule
 
@@ -142,7 +142,6 @@ def test_get_debug_info():
 
     importlib.reload(config.debug_config)
 
-    from ibdm.config import get_debug_info
 
     info = get_debug_info()
 
