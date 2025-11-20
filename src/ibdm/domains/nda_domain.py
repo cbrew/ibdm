@@ -11,7 +11,7 @@ This domain model provides semantic grounding for:
 
 from typing import Any, cast
 
-from ibdm.core.actions import Action, Proposition
+from ibdm.core.actions import Action, ActionType, Proposition
 from ibdm.core.domain import DomainModel
 from ibdm.core.plans import Plan
 from ibdm.core.questions import AltQuestion, WhQuestion
@@ -96,11 +96,19 @@ def create_nda_domain() -> DomainModel:
     domain.register_precond_function("generate_draft", _check_generate_draft_precond)
     domain.register_precond_function("send_for_review", _check_send_for_review_precond)
     domain.register_precond_function("execute_agreement", _check_execute_agreement_precond)
+    domain.register_precond_function("insert_clause", _check_revision_precond)
+    domain.register_precond_function("revise_clause", _check_revision_precond)
+    domain.register_precond_function("regenerate_doc", _check_revision_precond)
+    domain.register_precond_function("rollback_revision", _check_revision_precond)
 
     # Register action postcondition functions (IBiS4)
     domain.register_postcond_function("generate_draft", _generate_draft_postcond)
     domain.register_postcond_function("send_for_review", _send_for_review_postcond)
     domain.register_postcond_function("execute_agreement", _execute_agreement_postcond)
+    domain.register_postcond_function("insert_clause", _revision_postcond)
+    domain.register_postcond_function("revise_clause", _revision_postcond)
+    domain.register_postcond_function("regenerate_doc", _regenerate_doc_postcond)
+    domain.register_postcond_function("rollback_revision", _rollback_revision_postcond)
 
     # Register RAG action functions for NDA guidance
     domain.register_precond_function("query_nda_guidance", _check_query_nda_guidance_precond)
@@ -332,6 +340,42 @@ def _execute_agreement_postcond(action: Action) -> list[Proposition]:
                 "status": "in_effect",
             },
         ),
+    ]
+
+# Revision/state helpers for doc prep/revision
+
+
+def _check_revision_precond(action: Action, commitments: set[str]) -> tuple[bool, str]:
+    """Common precondition check for revision actions."""
+    if any(c.startswith("doc_state(draft_ready)") or c.startswith("doc_state(revision_pending)") for c in commitments):
+        return True, ""
+    return False, "Document must be in draft_ready or revision_pending state"
+
+
+def _revision_postcond(action: Action) -> list[Proposition]:
+    """Postconditions for insert/revise clause."""
+    clause_id = action.parameters.get("clause_id", "clause")
+    marker = "clause_added" if action.name == "insert_clause" else "clause_revised"
+    return [
+        Proposition(predicate=marker, arguments={"clause_id": clause_id}),
+        Proposition(predicate="doc_state", arguments={"status": "revision_pending"}),
+    ]
+
+
+def _regenerate_doc_postcond(action: Action) -> list[Proposition]:
+    """Postconditions for regenerating a document after revisions."""
+    version = action.parameters.get("version", "next")
+    return [
+        Proposition(predicate="doc_state", arguments={"status": "draft_ready"}),
+        Proposition(predicate="doc_version", arguments={"value": version}),
+    ]
+
+
+def _rollback_revision_postcond(action: Action) -> list[Proposition]:
+    """Rollback last revision."""
+    return [
+        Proposition(predicate="revision_rolled_back", arguments={}),
+        Proposition(predicate="doc_state", arguments={"status": "draft_ready"}),
     ]
 
 
