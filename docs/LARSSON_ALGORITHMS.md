@@ -302,6 +302,13 @@ dominates(price_100, price_200)         = true   // Cheaper
 
 ### IBiS1 Update Rules (Chapter 2, Section 2.8)
 
+**Field effects (engine/state terms):**
+- User ask → push Q onto `shared.qud`.
+- Resolving answer → add combined proposition to `shared.commitments`, pop QUD.
+- Non-resolving but relevant answer → keep QUD as-is.
+- Plan execution (findout/raise) → move Q from plan into `private.issues` or `shared.qud`, pop plan head.
+No grounding/ICM fields in IBiS1.
+
 #### Rule: GetLatestUtterance
 **Pre**: Latest move available from interpretation
 **Effect**: `shared.lu := latestMove`
@@ -418,6 +425,8 @@ dominates(price_100, price_200)         = true   // Cheaper
 
 ### IBiS2 Additional Update Rules (Chapter 3, Section 3.6)
 
+**Field effects:** add `shared.moves` history and `shared.next_moves` queue; ICM integration marks grounding status but does not alter QUD/commitments except reraising Q on failure.
+
 **Note**: IBiS2 extends IBiS1 with 27 named grounding rules (3.1-3.27). Key rules:
 
 #### Rule 3.1: IntegrateICM_Perception
@@ -450,6 +459,8 @@ dominates(price_100, price_200)         = true   // Cheaper
 ---
 
 ### IBiS3 Additional Update Rules (Chapter 4, Section 4.7)
+
+**Field effects:** introduce `private.issues`; accommodation moves questions from plan → issues → QUD; dependent questions push above current; clarification pushes CQ on QUD; reaccommodation re-pushes prior Q.
 
 #### Rule 4.1: IssueAccommodation (from Plan)
 **Pre**:
@@ -515,6 +526,8 @@ dominates(price_100, price_200)         = true   // Cheaper
 ---
 
 ### IBiS4 Additional Update Rules (Chapter 5, Section 5.6)
+
+**Field effects:** add `private.actions` and `private.iun`; action requests populate `private.actions`; execution pops action and adds `postcond` to commitments; alternatives go to `private.iun`.
 
 #### Rule 5.1: IntegrateRequest
 **Pre**:
