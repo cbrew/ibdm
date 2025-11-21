@@ -195,22 +195,31 @@ def _execute_action(state: InformationState) -> InformationState:
 
     # Get device interface from beliefs (injected by engine)
     device: DeviceInterface | None = new_state.private.beliefs.get("device_interface")
-
-    if device is None:
-        # No device interface available - store error
-        from ibdm.interfaces.device import ActionResult, ActionStatus
-
-        result = ActionResult(
-            status=ActionStatus.FAILURE,
-            action=action,
-            error_message="No device interface available",
-        )
-        new_state.private.beliefs["action_result"] = result
-        return new_state
+    domain = new_state.private.beliefs.get("domain_model")
 
     # Execute action
     try:
-        result = device.execute_action(action, new_state)
+        if device is not None:
+            result = device.execute_action(action, new_state)
+        elif domain is not None:
+            # Simulate execution using domain postconditions
+            from ibdm.interfaces.device import ActionResult, ActionStatus
+
+            postconds = [str(p) for p in domain.postcond(action)]
+            result = ActionResult(
+                status=ActionStatus.SUCCESS,
+                action=action,
+                return_value=None,
+                postconditions=postconds,
+            )
+        else:
+            from ibdm.interfaces.device import ActionResult, ActionStatus
+
+            result = ActionResult(
+                status=ActionStatus.FAILURE,
+                action=action,
+                error_message="No device interface available",
+            )
         new_state.private.beliefs["action_result"] = result
     except Exception as e:
         # Handle execution errors

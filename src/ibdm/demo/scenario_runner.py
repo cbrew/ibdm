@@ -21,12 +21,13 @@ from rich.table import Table
 from rich.text import Text
 
 from ibdm.core import DialogueMove, InformationState
+from ibdm.core.actions import Action
 from ibdm.demo.execution_controller import ExecutionController, ExecutionMode
 from ibdm.demo.orchestrator import DemoDialogueOrchestrator
 from ibdm.demo.scenario_loader import Scenario, ScenarioTurn, load_scenario
 from ibdm.demo.state_trace import StateTraceRecorder
 from ibdm.domains.legal_domain import get_legal_domain
-from ibdm.domains.nda_domain import get_nda_domain
+from ibdm.domains.nda_domain import get_nda_domain, get_doc_actions
 from ibdm.rules import (
     RuleSet,
     create_action_integration_rules,
@@ -166,6 +167,8 @@ class ScenarioRunner:
             rules=rules,
             nlg_engine=self.nlg_engine,
         )
+        # Make domain available for action execution fallback
+        self.orchestrator.information_state.private.beliefs["domain_model"] = self.domain
 
     @property
     def state(self) -> InformationState:
@@ -496,6 +499,26 @@ class ScenarioRunner:
         rag_metadata = state_changes.get("rag_metadata") or state_changes.get("rag_query_executed")
         if rag_metadata is not None:
             self.state.private.beliefs.setdefault("rag_evidence", []).append(rag_metadata)
+
+        # Enqueue referenced actions for execution (doc prep/revision)
+        enqueue_actions = state_changes.get("enqueue_actions")
+        if enqueue_actions:
+            domain_actions = get_doc_actions()
+            for action_spec in enqueue_actions:
+                name = action_spec.get("name")
+                if not name or name not in domain_actions:
+                    continue
+                template = domain_actions[name]
+                action_instance = Action(
+                    action_type=template.action_type,
+                    name=template.name,
+                    parameters={**template.parameters, **action_spec.get("parameters", {})},
+                    preconditions=template.preconditions,
+                    postconditions=template.postconditions,
+                    requires_confirmation=template.requires_confirmation,
+                    metadata=action_spec.get("metadata", {}),
+                )
+                self.state.private.actions.append(action_instance)
 
     def _verify_state_changes(self, turn: ScenarioTurn) -> None:
         """Compare expected state changes from the scenario with the actual engine state."""

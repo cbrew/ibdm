@@ -117,6 +117,64 @@ def create_nda_domain() -> DomainModel:
     return domain
 
 
+def get_doc_actions() -> dict[str, Action]:
+    """Return document prep/revision actions for reuse (contracts/SOW/NCA)."""
+
+    return {
+        "draft_contract": Action(
+            action_type=ActionType.GENERATE,
+            name="draft_contract",
+            preconditions=["doc_type_requested(contract)"],
+            postconditions=["doc_state(draft_ready)", "doc_type(contract)"],
+            requires_confirmation=False,
+        ),
+        "draft_sow": Action(
+            action_type=ActionType.GENERATE,
+            name="draft_sow",
+            preconditions=["doc_type_requested(sow)"],
+            postconditions=["doc_state(draft_ready)", "doc_type(sow)"],
+            requires_confirmation=False,
+        ),
+        "draft_nca": Action(
+            action_type=ActionType.GENERATE,
+            name="draft_nca",
+            preconditions=["doc_type_requested(nca)"],
+            postconditions=["doc_state(draft_ready)", "doc_type(nca)"],
+            requires_confirmation=False,
+        ),
+        "insert_clause": Action(
+            action_type=ActionType.SET,
+            name="insert_clause",
+            parameters={"clause_id": None},
+            preconditions=["doc_state(draft_ready)"],
+            postconditions=["clause_added({clause_id})", "doc_state(revision_pending)"],
+            requires_confirmation=True,
+        ),
+        "revise_clause": Action(
+            action_type=ActionType.SET,
+            name="revise_clause",
+            parameters={"clause_id": None},
+            preconditions=["doc_state(draft_ready)"],
+            postconditions=["clause_revised({clause_id})", "doc_state(revision_pending)"],
+            requires_confirmation=True,
+        ),
+        "regenerate_doc": Action(
+            action_type=ActionType.GENERATE,
+            name="regenerate_doc",
+            preconditions=["doc_state(revision_pending)"],
+            postconditions=["doc_state(draft_ready)", "doc_version(incremented)"],
+            requires_confirmation=False,
+        ),
+        "rollback_revision": Action(
+            action_type=ActionType.CANCEL,
+            name="rollback_revision",
+            preconditions=["doc_state(revision_pending)"],
+            postconditions=["revision_rolled_back", "doc_state(draft_ready)"],
+            requires_confirmation=True,
+        ),
+    }
+
+
 def _build_nda_plan(context: dict[str, Any]) -> Plan:
     """Build NDA drafting plan.
 
