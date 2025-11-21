@@ -154,9 +154,9 @@
             "business_explanation": "INFORMED DECISION: User makes decision informed by RAG guidance. The 3 years choice aligns with the '2-3 years: 45%' guidance for general business relationships.",
             "larsson_rule": "Rule 4.1 - Answer accommodation",
             "state_changes": {
-                "commitment_added": "time_period(3 years)",
-                "decision_informed_by_rag": true,
-                "note": "Clean commitment created: time_period(3 years). RAG-informed decision captured semantically."
+                "qud_unchanged": "?x.clarify [utterance=What does mutual mean exactly?, topic=mutual_nda]",
+                "commitment_added": "nda_type(mutual)",
+                "note": "User attempts to answer duration question, but NLU does not accommodate 'Let's go with 3 years' as a time_period commitment. Only the earlier nda_type(mutual) from turn 5 is now in commitments."
             }
         },
         {
@@ -167,8 +167,9 @@
             "business_explanation": "VOLUNTEER INFORMATION (AGAIN): User answers the question AND volunteers the duration unprompted. IBDM accommodates both pieces of information.",
             "larsson_rule": "Rule 4.1 (Answer) + Rule 4.3 (Volunteer duration)",
             "state_changes": {
-                "commitments_added": ["nda_type(mutual)", "time_period(3 years)"],
-                "note": "Volunteer information: Both answer (nda_type) and volunteered duration create clean commitments."
+                "qud_unchanged": "?x.clarify [utterance=What does mutual mean exactly?, topic=mutual_nda]",
+                "commitments_added": ["clarify(I think we should go with mutual, and by the way, we need this for 3 years)", "nda_type(value=mutual)", "time_period(value=3 years)"],
+                "note": "Volunteer information: NLU creates clarify commitment for utterance, plus duplicates nda_type (with value= format) and adds time_period (value=3 years). QUD remains on clarify question."
             }
         },
         {
@@ -179,9 +180,8 @@
             "business_explanation": "System proceeds to final unanswered question, skipping the duration question since it was volunteered. Only 1 question remains!",
             "larsson_rule": "Rule 5.1 - Raise next unresolved issue",
             "state_changes": {
-                "qud_pushed": "?x.jurisdiction",
-                "questions_skipped": 3,
-                "note": "System raises jurisdiction question. Skipped previously answered questions (nda_type and time_period)."
+                "qud_unchanged": "?x.clarify [utterance=What does mutual mean exactly?, topic=mutual_nda]",
+                "note": "System asks jurisdiction question, but QUD remains on clarify question (not pushed to jurisdiction). QUD management issue: clarification question not resolved/popped before raising new issue."
             }
         },
         {
