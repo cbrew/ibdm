@@ -76,6 +76,7 @@ class Question(ABC):
         elif question_type == "alt":
             return AltQuestion(
                 alternatives=data.get("alternatives", []),
+                predicate=data.get("predicate", ""),
                 required=data.get("required", True),
             )
         else:
@@ -175,9 +176,13 @@ class AltQuestion(Question):
     Examples:
         - "Tea or coffee?" → AltQuestion(alternatives=["tea", "coffee"])
         - "Red, green, or blue?" → AltQuestion(alternatives=["red", "green", "blue"])
+        - "Mutual or one-way NDA?" → AltQuestion(
+            alternatives=["mutual", "one-way"], predicate="nda_type"
+        )
     """
 
     alternatives: list[str] = field(default_factory=lambda: [])
+    predicate: str = ""  # Semantic predicate name (e.g., "nda_type", "jurisdiction")
     required: bool = True  # Moved after other fields to satisfy dataclass ordering
 
     def resolves_with(self, answer: "Answer") -> bool:
@@ -190,14 +195,19 @@ class AltQuestion(Question):
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to JSON-serializable dict."""
-        return {
+        result = {
             "type": "alt",
             "alternatives": self.alternatives.copy(),
             "required": self.required,
         }
+        if self.predicate:
+            result["predicate"] = self.predicate
+        return result
 
     def __str__(self) -> str:
         """Return string representation."""
+        if self.predicate:
+            return f"?{self.predicate}{{{', '.join(self.alternatives)}}}"
         return f"?{{{', '.join(self.alternatives)}}}"
 
 

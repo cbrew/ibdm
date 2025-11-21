@@ -10,10 +10,14 @@ Larsson (2002).
 Based on Larsson (2002) Issue-based Dialogue Management.
 """
 
+import logging
+
 from ibdm.core import Answer, DialogueMove, InformationState, Question
 from ibdm.rules.icm_integration_rules import create_icm_integration_rules
 from ibdm.rules.update_rules import UpdateRule
 from ibdm.utils.skip_detection import is_skip_request
+
+logger = logging.getLogger(__name__)
 
 
 def create_integration_rules() -> list[UpdateRule]:
@@ -875,6 +879,62 @@ def _integrate_question(state: InformationState) -> InformationState:
     return new_state
 
 
+def _extract_semantic_value(answer: Answer, question: Question) -> str | None:
+    """Extract semantic value from natural language answer.
+
+    Strategy:
+    1. For AltQuestion: Check which alternative appears in answer
+    2. For WhQuestion: Return answer content as-is (already semantic)
+    3. For YNQuestion: Return "yes" or "no"
+
+    Args:
+        answer: Answer object with natural language content
+        question: Question being answered
+
+    Returns:
+        Extracted semantic value, or None if can't extract
+
+    Examples:
+        >>> answer = Answer(content="I think mutual makes sense")
+        >>> question = AltQuestion(alternatives=["mutual", "one-way"])
+        >>> _extract_semantic_value(answer, question)
+        "mutual"
+
+        >>> answer = Answer(content="Let's go with Delaware")
+        >>> question = AltQuestion(alternatives=["California", "Delaware", "New York"])
+        >>> _extract_semantic_value(answer, question)
+        "Delaware"
+    """
+    from ibdm.core.questions import AltQuestion, WhQuestion, YNQuestion
+
+    content = str(answer.content).lower().strip()
+
+    if isinstance(question, AltQuestion):
+        # Check which alternative appears in answer (case-insensitive)
+        for alt in question.alternatives:
+            if alt.lower() in content:
+                return alt
+        # No alternative found
+        return None
+
+    elif isinstance(question, WhQuestion):
+        # For Wh-questions, content is already semantic
+        # (or needs NLU extraction, handled separately)
+        return str(answer.content).strip()
+
+    elif isinstance(question, YNQuestion):
+        # Extract yes/no from answer
+        if any(word in content for word in ["yes", "correct", "right", "sure", "ok", "yeah"]):
+            return "yes"
+        elif "no" in content:
+            return "no"
+        return None
+
+    else:
+        # Unknown question type
+        return None
+
+
 def _integrate_answer(state: InformationState) -> InformationState:
     """Integrate an 'answer' move by resolving QUD and updating commitments.
 
@@ -916,8 +976,31 @@ def _integrate_answer(state: InformationState) -> InformationState:
                 # User volunteered answer to unasked question!
                 new_state.private.issues.remove(issue)
 
-                # Add commitment
-                commitment = f"{issue}: {answer.content}"
+                # Add commitment (using clean semantic format)
+                # Extract semantic value from answer
+                semantic_value = _extract_semantic_value(answer, issue)
+
+                if semantic_value is None:
+                    # Could not extract - fallback to old behavior
+                    logger.warning(
+                        f"Could not extract semantic value from answer: {answer.content}"
+                    )
+                    commitment = f"{issue}: {answer.content}"
+                else:
+                    # Get predicate name from question and create clean proposition
+                    from ibdm.core.questions import AltQuestion, WhQuestion
+
+                    if isinstance(issue, AltQuestion) and issue.predicate:
+                        # AltQuestion with predicate - use it
+                        commitment = domain.create_proposition(issue.predicate, semantic_value)
+                    elif isinstance(issue, WhQuestion):
+                        # WhQuestion has predicate directly
+                        commitment = domain.create_proposition(issue.predicate, semantic_value)
+                    else:
+                        # No predicate - fallback to old format
+                        logger.warning(f"Question missing predicate: {issue}")
+                        commitment = f"{issue}: {answer.content}"
+
                 new_state.shared.commitments.add(commitment)
 
                 # Mark corresponding subplan as completed
@@ -951,7 +1034,34 @@ def _integrate_answer(state: InformationState) -> InformationState:
                         new_state.shared.pop_qud()
 
                         # Add commitment for the SUSPENDED question (not clarification)
-                        commitment = f"{suspended_question}: {answer.content}"
+                        # Use clean semantic format
+                        semantic_value = _extract_semantic_value(answer, suspended_question)
+
+                        if semantic_value is None:
+                            # Could not extract - fallback
+                            logger.warning(
+                                f"Could not extract semantic value from answer: {answer.content}"
+                            )
+                            commitment = f"{suspended_question}: {answer.content}"
+                        else:
+                            # Get predicate and create clean proposition
+                            from ibdm.core.questions import AltQuestion, WhQuestion
+
+                            if (
+                                isinstance(suspended_question, AltQuestion)
+                                and suspended_question.predicate
+                            ):
+                                commitment = domain.create_proposition(
+                                    suspended_question.predicate, semantic_value
+                                )
+                            elif isinstance(suspended_question, WhQuestion):
+                                commitment = domain.create_proposition(
+                                    suspended_question.predicate, semantic_value
+                                )
+                            else:
+                                logger.warning(f"Question missing predicate: {suspended_question}")
+                                commitment = f"{suspended_question}: {answer.content}"
+
                         new_state.shared.commitments.add(commitment)
 
                         # Mark corresponding subplan as completed
@@ -975,8 +1085,31 @@ def _integrate_answer(state: InformationState) -> InformationState:
                     # Pop the resolved question
                     new_state.shared.pop_qud()
 
-                    # Add answer as a commitment (convert to string for simplicity)
-                    commitment = f"{top_question}: {answer.content}"
+                    # Add answer as a commitment (use clean semantic format)
+                    semantic_value = _extract_semantic_value(answer, top_question)
+
+                    if semantic_value is None:
+                        # Could not extract - fallback
+                        logger.warning(
+                            f"Could not extract semantic value from answer: {answer.content}"
+                        )
+                        commitment = f"{top_question}: {answer.content}"
+                    else:
+                        # Get predicate and create clean proposition
+                        from ibdm.core.questions import AltQuestion, WhQuestion
+
+                        if isinstance(top_question, AltQuestion) and top_question.predicate:
+                            commitment = domain.create_proposition(
+                                top_question.predicate, semantic_value
+                            )
+                        elif isinstance(top_question, WhQuestion):
+                            commitment = domain.create_proposition(
+                                top_question.predicate, semantic_value
+                            )
+                        else:
+                            logger.warning(f"Question missing predicate: {top_question}")
+                            commitment = f"{top_question}: {answer.content}"
+
                     new_state.shared.commitments.add(commitment)
 
                     # Mark corresponding subplan as completed (Larsson Section 2.6)

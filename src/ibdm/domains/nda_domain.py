@@ -199,7 +199,10 @@ def _build_nda_plan(context: dict[str, Any]) -> Plan:
         ),
         Plan(
             plan_type="findout",
-            content=AltQuestion(alternatives=["mutual", "one-way"]),
+            content=AltQuestion(
+                alternatives=["mutual", "one-way"],
+                predicate="nda_type",  # Add predicate for clean commitments
+            ),
             status="active",
         ),
         Plan(
@@ -214,7 +217,10 @@ def _build_nda_plan(context: dict[str, Any]) -> Plan:
         ),
         Plan(
             plan_type="findout",
-            content=AltQuestion(alternatives=["California", "Delaware", "New York"]),
+            content=AltQuestion(
+                alternatives=["California", "Delaware", "New York"],
+                predicate="jurisdiction",  # Add predicate for clean commitments
+            ),
             status="active",
         ),
     ]
