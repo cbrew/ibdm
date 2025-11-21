@@ -5,6 +5,8 @@
 
 This document explains how to work with scenarios in IBDM. Scenarios are demonstration scripts that show dialogue system behavior. The state changes documented in scenarios reflect what the implementation actually does, not what we initially guessed it would do.
 
+**🔧 RECOMMENDED**: For aligning scenarios incrementally to avoid API errors, use the **Scenario Alignment Skill** (`.claude/skills/scenario-alignment.md`). It breaks the work into small, trackable steps.
+
 ---
 
 ## Philosophy: Scenarios Follow Implementation

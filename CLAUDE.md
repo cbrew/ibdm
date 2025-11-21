@@ -407,15 +407,18 @@ git commit -m "docs(scenarios): update for fix"
 
 📖 **Details**: [`docs/SCENARIO_ALIGNMENT.md`](docs/SCENARIO_ALIGNMENT.md)
 
+🔧 **Skill**: [`.claude/skills/scenario-alignment.md`](.claude/skills/scenario-alignment.md) - Use this skill to align scenarios incrementally in small, trackable steps (avoids API errors)
+
 **Why**: Ensures scenarios accurately document system behavior and remain useful as demonstrations after implementation evolves.
 
 **⚠️ CRITICAL INSTRUCTION FOR AI ASSISTANTS**:
 **BEFORE working on ANY scenario-related task, you MUST:**
-1. **READ** `docs/SCENARIO_ALIGNMENT.md` in full
-2. **FOLLOW** the step-by-step procedures for your task type (A, B, C, or D)
-3. **NEVER** guess state changes - always observe with `IBDM_DEBUG=all`
-4. **VERIFY** implementation correctness per Larsson (2002) before updating scenarios
-5. **COMMIT** implementation fixes and scenario updates separately
+1. **USE** the Scenario Alignment Skill (`.claude/skills/scenario-alignment.md`) for incremental work
+2. **READ** `docs/SCENARIO_ALIGNMENT.md` in full for philosophy and procedures
+3. **FOLLOW** the step-by-step procedures for your task type (A, B, C, or D)
+4. **NEVER** guess state changes - always observe with `IBDM_DEBUG=all`
+5. **VERIFY** implementation correctness per Larsson (2002) before updating scenarios
+6. **COMMIT** implementation fixes and scenario updates separately
 
 **This is NOT optional.** Failure to follow SCENARIO_ALIGNMENT.md leads to incorrect documentation and wasted debugging time.
 
