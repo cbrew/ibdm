@@ -51,9 +51,9 @@ class DialogueActResult(BaseModel):
         """
         try:
             return DialogueActType(self.act)
-        except ValueError:
-            logger.warning(f"Unknown dialogue act type: {self.act}, defaulting to OTHER")
-            return DialogueActType.OTHER
+        except ValueError as e:
+            logger.error(f"CRITICAL: Invalid dialogue act type: {self.act!r}")
+            raise ValueError(f"Cannot proceed with invalid dialogue act: {self.act!r}") from e
 
 
 @dataclass

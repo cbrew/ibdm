@@ -55,13 +55,14 @@ class TestAnswerAnalysis:
         assert analysis.get_type() == AnswerType.PARTIAL
 
     def test_get_type_unknown(self):
-        """Test unknown type defaults to DIRECT."""
+        """Test unknown type raises ValueError (no silent fallback)."""
         analysis = AnswerAnalysis(
             addresses_question=True,
             answer_type="unknown_type",
             propositional_content="test",
         )
-        assert analysis.get_type() == AnswerType.DIRECT
+        with pytest.raises(ValueError, match="Cannot proceed with invalid answer type"):
+            analysis.get_type()
 
 
 class TestAnswerParserConfig:

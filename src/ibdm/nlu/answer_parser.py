@@ -49,12 +49,17 @@ class AnswerAnalysis(BaseModel):
 
         Returns:
             AnswerType enum value
+
+        Raises:
+            ValueError: If answer_type is not a valid AnswerType
         """
         try:
             return AnswerType(self.answer_type)
-        except ValueError:
-            logger.warning(f"Unknown answer type: {self.answer_type}, defaulting to DIRECT")
-            return AnswerType.DIRECT
+        except ValueError as e:
+            logger.error(f"CRITICAL: Invalid answer type: {self.answer_type!r}")
+            raise ValueError(
+                f"Cannot proceed with invalid answer type: {self.answer_type!r}"
+            ) from e
 
 
 @dataclass
