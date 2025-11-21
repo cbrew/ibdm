@@ -1,6 +1,5 @@
 """Tests for unified scenario loader."""
 
-
 import pytest
 
 from ibdm.demo.scenario_loader import (

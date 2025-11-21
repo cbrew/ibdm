@@ -45,7 +45,7 @@ class TraceRecord:
         move_type: str,
         state: InformationState,
         pending_system_move: Any | None,
-    ) -> "TraceRecord":
+    ) -> TraceRecord:
         """Build a snapshot from the current InformationState."""
 
         qud_stack = _stringify_sequence(state.shared.qud)

@@ -64,6 +64,9 @@ dmypy.json
 # Generated demo reports
 demos/reports/
 
+# Larsson fidelity reports
+reports/
+
 # Logs
 *.log
 

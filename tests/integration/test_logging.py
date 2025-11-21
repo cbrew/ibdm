@@ -142,7 +142,6 @@ def test_get_debug_info():
 
     importlib.reload(config.debug_config)
 
-
     info = get_debug_info()
 
     assert info["enabled"] is True
