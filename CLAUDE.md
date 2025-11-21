@@ -422,37 +422,59 @@ git commit -m "docs(scenarios): update for fix"
 
 **This is NOT optional.** Failure to follow SCENARIO_ALIGNMENT.md leads to incorrect documentation and wasted debugging time.
 
-### 17. Always Verify Before Claiming Fixes
+### 17. Always Verify Before Claiming Fixes (ZERO TOLERANCE)
 
-**Policy**: Always run scenarios and verify compliance before claiming they are fixed. If tests fail or compliance is not met, report the actual status instead of claiming success.
+**Policy**: NEVER claim scenarios are fixed without actually running them and verifying they work. This is non-negotiable.
 
-**Requirements**:
-- NEVER claim a scenario is fixed without running it first
-- ALWAYS use `python scripts/run_scenario.py <scenario>` to verify
-- If compliance fails, investigate and fix the real issues
-- Report actual test results, not assumptions
-- If you cannot verify (e.g., due to errors), explicitly state that
+**MANDATORY Requirements** (NO EXCEPTIONS):
+- ❌ FORBIDDEN: Claiming "I've fixed the issues" without verification
+- ❌ FORBIDDEN: Saying "the scenario should now work" without testing
+- ❌ FORBIDDEN: Making edits and assuming they're correct
+- ✅ REQUIRED: Run `python scripts/run_scenario.py <scenario>` BEFORE claiming success
+- ✅ REQUIRED: Check for JSON syntax errors with the scenario runner
+- ✅ REQUIRED: Verify compliance passes (or report actual failures)
+- ✅ REQUIRED: Report actual test results, not assumptions
 
-**Why**: Claiming fixes without verification wastes user time and erodes trust. The user relies on your verification to know when work is actually complete.
+**Why This Matters**:
+- Unverified claims waste user time
+- Users discover errors you should have caught
+- Erodes trust when you claim fixes that don't work
+- Shows you didn't actually test your work
+- JSON syntax errors are caught instantly by the scenario runner
 
-**Workflow for scenario fixes**:
+**Correct Workflow** (MANDATORY):
 ```bash
 # 1. Make changes to implementation or scenario
 vim src/ibdm/rules/update_rules.py
 vim demos/scenarios/nda_comprehensive.json
 
-# 2. ALWAYS verify before claiming fix
+# 2. ALWAYS verify IMMEDIATELY after editing
 python scripts/run_scenario.py nda_comprehensive
 
-# 3. If compliance passes, commit
-git commit -m "fix(scenarios): resolve state mismatches in nda_comprehensive"
+# 3a. If scenario runner fails with JSON error, fix it immediately
+# Example: "Error loading scenario: Invalid JSON... Expecting value: line 14"
+# → Fix the JSON syntax error at line 14
+# → Re-run to verify: python scripts/run_scenario.py nda_comprehensive
 
-# 4. If compliance FAILS, investigate and report
+# 3b. If compliance fails, investigate and fix the real issues
 # Report: "I ran the scenario and found mismatches on turns X, Y, Z. Investigating..."
+
+# 3c. ONLY if verification succeeds, then commit
+git commit -m "fix(scenarios): resolve state mismatches in nda_comprehensive"
 ```
 
-**Never say**: "I've fixed the issues" without verification
-**Always say**: "Let me verify the fix" → run scenario → report actual results
+**Communication Rules**:
+- ❌ NEVER: "I've fixed the issues" (without verification)
+- ✅ ALWAYS: "Let me verify the fix" → run scenario → report actual results
+- ❌ NEVER: "This should work now" (assumption)
+- ✅ ALWAYS: "I've verified it works: [paste actual results]"
+- ❌ NEVER: Skip verification because "it's just a small change"
+- ✅ ALWAYS: Test even trivial changes (JSON syntax errors count as failures)
+
+**Special Case - JSON Syntax Errors**:
+JSON syntax errors (trailing commas, missing brackets, etc.) are caught IMMEDIATELY by the scenario runner. There is NO EXCUSE for not catching these before claiming a fix. Always run the scenario after editing JSON files.
+
+**Zero Tolerance**: If you claim a fix without verification, you have failed the task regardless of whether the fix was correct.
 
 ### 15. Update NEXT-TASK.md After Completing Tasks
 
