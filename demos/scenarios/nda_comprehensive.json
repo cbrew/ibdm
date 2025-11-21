@@ -35,7 +35,13 @@
             "larsson_rule": "Task Accommodation + Belief Accommodation (Rule 4.3)",
             "state_changes": {
                 "plan_created": "nda_drafting with 5 questions",
-                "issues_accommodated": ["parties.legal_entities", "nda_type", "time_period", "jurisdiction", "date"],
+                "issues_accommodated": [
+                    "parties.legal_entities",
+                    "nda_type",
+                    "time_period",
+                    "jurisdiction",
+                    "date"
+                ],
                 "commitments_added": [
                     "date(2025-02-01)",
                     "legal_entities(current_company, Global Industries)"
@@ -78,9 +84,9 @@
             "larsson_rule": "Answer to local question + re-raise issue",
             "state_changes": {
                 "qud_unchanged": "?x.clarify [utterance=What does mutual mean exactly?, topic=mutual_nda]",
-                "qud_depth": 3,
+                "qud_depth": 2,
                 "clarification_provided": true,
-                "note": "System provides clarification but QUD not popped yet"
+                "note": "System provides clarification. Clarification and original question remain on QUD, awaiting user's answer."
             }
         },
         {
@@ -91,10 +97,10 @@
             "business_explanation": "RAG INTEGRATION: User answers the NDA type question, then proactively asks for guidance on duration. This triggers a RAG query to retrieve best practices.",
             "larsson_rule": "Rule 4.1 (Answer) + RAG Query Request",
             "state_changes": {
-                "qud_unchanged": "?x.clarify [utterance=What does mutual mean exactly?, topic=mutual_nda]",
+                "qud_popped": "Both clarification and nda_type questions resolved",
                 "commitment_added": "nda_type(mutual)",
                 "guidance_requested": "confidentiality_duration",
-                "note": "Clean commitment created: nda_type(mutual). System extracts 'mutual' from natural language answer."
+                "note": "Clean commitment created: nda_type(mutual). Answer resolves suspended question, popping both clarification and original question from QUD."
             }
         },
         {
@@ -105,10 +111,9 @@
             "business_explanation": "RAG EXECUTION: System executes RAG query, retrieves 4 documents (3 relevant), synthesizes guidance from industry data, and asks follow-up question. Notice transparency: shows number of documents retrieved and sources cited.",
             "larsson_rule": "Rule 5.2 - Action Execution (RAG query) + Information provision",
             "state_changes": {
-                "qud_unchanged": "?x.clarify [utterance=What does mutual mean exactly?, topic=mutual_nda]",
                 "rag_query_executed": "simulated",
                 "guidance_provided": true,
-                "note": "RAG guidance provided, but qud not changed"
+                "note": "RAG guidance provided. User's guidance question accommodated without pushing to QUD."
             },
             "rag_metadata": {
                 "query_type": "nda_guidance",
@@ -149,7 +154,6 @@
             "business_explanation": "INFORMED DECISION: User makes decision informed by RAG guidance. The 3 years choice aligns with the '2-3 years: 45%' guidance for general business relationships.",
             "larsson_rule": "Rule 4.1 - Answer accommodation",
             "state_changes": {
-                "qud_unchanged": "?x.clarify [utterance=What does mutual mean exactly?, topic=mutual_nda]",
                 "commitment_added": "time_period(3 years)",
                 "decision_informed_by_rag": true,
                 "note": "Clean commitment created: time_period(3 years). RAG-informed decision captured semantically."
@@ -163,10 +167,7 @@
             "business_explanation": "VOLUNTEER INFORMATION (AGAIN): User answers the question AND volunteers the duration unprompted. IBDM accommodates both pieces of information.",
             "larsson_rule": "Rule 4.1 (Answer) + Rule 4.3 (Volunteer duration)",
             "state_changes": {
-                "commitments_added": [
-                    "nda_type(mutual)",
-                    "time_period(3 years)"
-                ],
+                "commitments_added": ["nda_type(mutual)", "time_period(3 years)"],
                 "note": "Volunteer information: Both answer (nda_type) and volunteered duration create clean commitments."
             }
         },
@@ -178,9 +179,9 @@
             "business_explanation": "System proceeds to final unanswered question, skipping the duration question since it was volunteered. Only 1 question remains!",
             "larsson_rule": "Rule 5.1 - Raise next unresolved issue",
             "state_changes": {
-                "qud_unchanged": "?x.clarify [utterance=What does mutual mean exactly?, topic=mutual_nda]",
+                "qud_pushed": "?x.jurisdiction",
                 "questions_skipped": 3,
-                "note": "System asks about jurisdiction but QUD not pushed yet"
+                "note": "System raises jurisdiction question. Skipped previously answered questions (nda_type and time_period)."
             }
         },
         {
@@ -194,7 +195,7 @@
                 "non_provision_detected": true,
                 "user_intent": "new_question",
                 "qud_pushed": "?x.non_compete_clause",
-                "qud_depth": 3
+                "note": "User goes off-topic instead of answering jurisdiction question. Non-compete question noted but deferred."
             }
         },
         {
@@ -219,7 +220,7 @@
             "larsson_rule": "Rule 4.2 - Local Question Accommodation",
             "state_changes": {
                 "qud_pushed": "?x.clarify [utterance=I'm not sure. What are our options?, topic=jurisdiction_options]",
-                "qud_depth": 5
+                "note": "User asks for clarification about jurisdiction options. Clarification question pushed to QUD."
             }
         },
         {
@@ -230,9 +231,8 @@
             "business_explanation": "System provides guidance with examples, then re-raises the original question in the same turn to stay within the Larsson cycle.",
             "larsson_rule": "Answer clarification question + re-raise issue",
             "state_changes": {
-                "qud_unchanged": "?x.clarify [utterance=I'm not sure. What are our options?, topic=jurisdiction_options]",
-                "qud_depth": 6,
-                "note": "Clarification provided but QUD keeps growing"
+                "clarification_provided": true,
+                "note": "System provides clarification options for jurisdiction. Clarification and jurisdiction questions remain on QUD, awaiting user's answer."
             }
         },
         {
@@ -247,7 +247,7 @@
                 "non_provision_count": 2,
                 "user_intent": "meta_question",
                 "qud_pushed": "?x.timeline",
-                "qud_depth": 7
+                "note": "User goes off-topic again with meta-question about timeline. Second non-provision instance."
             }
         },
         {
@@ -261,8 +261,7 @@
                 "meta_question_answered": true,
                 "re_raised_question": "jurisdiction",
                 "question_attempt": 3,
-                "qud_unchanged": "?x.timeline",
-                "qud_depth": 8
+                "note": "System briefly answers timeline question then redirects to jurisdiction. Third attempt at getting jurisdiction answer."
             }
         },
         {
@@ -273,10 +272,9 @@
             "business_explanation": "User finally provides the answer after two redirects. Persistence paid off!",
             "larsson_rule": "Rule 4.1 - Answer integrates successfully",
             "state_changes": {
-                "qud_unchanged": "?x.timeline",
-                "qud_depth": 8,
                 "commitment_added": "jurisdiction(Delaware)",
-                "note": "Clean commitment created: jurisdiction(Delaware). Extracted from 'Let's go with Delaware'."
+                "qud_popped": "Clarification and jurisdiction questions resolved",
+                "note": "Clean commitment created: jurisdiction(Delaware). Extracted from 'Let's go with Delaware'. Answer resolves suspended question, popping both clarification and original question."
             }
         },
         {
@@ -300,7 +298,6 @@
             "business_explanation": "User confirms. Ready to proceed with document generation.",
             "larsson_rule": "Positive confirmation",
             "state_changes": {
-                "qud_depth": 7,
                 "all_commitments_confirmed": true,
                 "ready_for_action": true,
                 "note": "Confirmation acknowledged. All required commitments collected for NDA generation."
