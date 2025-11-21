@@ -42,6 +42,7 @@ Clean, focused documentation for the Issue-Based Dialogue Management system.
 | Document | Purpose |
 |----------|---------|
 | [UNIFIED_SCENARIO_SYSTEM.md](UNIFIED_SCENARIO_SYSTEM.md) | **Complete guide** - JSON format, loading, running, creating scenarios |
+| [demos/scenarios/contract_revision_flow.json](../demos/scenarios/contract_revision_flow.json) | Contract revision demo (draft, clause insertion, regenerate, rollback) |
 
 ### Quick Start
 

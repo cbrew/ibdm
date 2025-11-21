@@ -1,0 +1,140 @@
+{
+  "scenario_id": "contract_revision_flow",
+  "title": "Contract Revision with Regenerate/Rollback",
+  "description": "Demonstrates doc prep with clause insertion and regeneration, with optional rollback.",
+  "business_narrative": "Show action-oriented doc workflows: draft contract, insert clause, regenerate, rollback.",
+  "larsson_algorithms": [
+    "IBiS4 Action Execution",
+    "Negotiation (IUN) optional",
+    "Grounding (ICM optional)"
+  ],
+  "expected_outcomes": {
+    "turns": 8,
+    "commitments_final": 3
+  },
+  "turns": [
+    {
+      "turn": 1,
+      "speaker": "user",
+      "utterance": "I need a contract drafted for Acme and Beta",
+      "move_type": "request",
+      "business_explanation": "User requests contract draft",
+      "larsson_rule": "IntegrateRequest",
+      "state_changes": {
+        "enqueue_actions": [
+          {
+            "name": "draft_contract"
+          }
+        ],
+        "commitments_added": [
+          "doc_type_requested(contract)"
+        ]
+      }
+    },
+    {
+      "turn": 2,
+      "speaker": "system",
+      "utterance": "Drafting the contract now.",
+      "move_type": "inform",
+      "business_explanation": "Queue draft action",
+      "larsson_rule": "ExecuteAction",
+      "state_changes": {
+        "commitments_added": [
+          "doc_state(draft_ready)",
+          "doc_type(contract)"
+        ]
+      }
+    },
+    {
+      "turn": 3,
+      "speaker": "user",
+      "utterance": "Please add a non-compete clause",
+      "move_type": "request",
+      "business_explanation": "User requests clause insertion",
+      "larsson_rule": "IntegrateRequest",
+      "state_changes": {
+        "enqueue_actions": [
+          {
+            "name": "insert_clause",
+            "parameters": {
+              "clause_id": "non_compete"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "turn": 4,
+      "speaker": "system",
+      "utterance": "Inserted the non-compete clause. Anything else?",
+      "move_type": "inform",
+      "business_explanation": "Clause inserted",
+      "larsson_rule": "ExecuteAction",
+      "state_changes": {
+        "commitments_added": [
+          "clause_added(non_compete)",
+          "doc_state(revision_pending)"
+        ]
+      }
+    },
+    {
+      "turn": 5,
+      "speaker": "user",
+      "utterance": "Regenerate the document",
+      "move_type": "request",
+      "business_explanation": "User asks to regenerate",
+      "larsson_rule": "IntegrateRequest",
+      "state_changes": {
+        "enqueue_actions": [
+          {
+            "name": "regenerate_doc"
+          }
+        ]
+      }
+    },
+    {
+      "turn": 6,
+      "speaker": "system",
+      "utterance": "Regenerated the draft with the new clause.",
+      "move_type": "inform",
+      "business_explanation": "Doc regenerated",
+      "larsson_rule": "ExecuteAction",
+      "state_changes": {
+        "commitments_added": [
+          "doc_state(draft_ready)",
+          "doc_version(incremented)"
+        ]
+      }
+    },
+    {
+      "turn": 7,
+      "speaker": "user",
+      "utterance": "Actually rollback that revision",
+      "move_type": "request",
+      "business_explanation": "User requests rollback",
+      "larsson_rule": "IntegrateRequest",
+      "state_changes": {
+        "enqueue_actions": [
+          {
+            "name": "rollback_revision"
+          }
+        ]
+      }
+    },
+    {
+      "turn": 8,
+      "speaker": "system",
+      "utterance": "Reverted the last revision. Draft is ready.",
+      "move_type": "inform",
+      "business_explanation": "Rollback applied",
+      "larsson_rule": "ExecuteAction",
+      "state_changes": {
+        "commitments_added": [
+          "revision_rolled_back",
+          "doc_state(draft_ready)"
+        ]
+      },
+      "is_payoff": true
+    }
+  ]
+}
