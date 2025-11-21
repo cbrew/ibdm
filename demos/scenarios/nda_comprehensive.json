@@ -10,7 +10,7 @@
         "Issue Reaccommodation - Recover from non-provision by re-raising question",
         "Fallback Strategies - Handle off-topic responses gracefully",
         "QUD Management - Maintain context through complex dialogue patterns",
-        "RAG Integration (Rule 5.2 extension) - Retrieve and synthesize relevant knowledge on-demand",
+        "RAG Integration (Rule 5.2 extension) - Retrieve and synthesize relevant knowledge on-demand"
     ],
     "expected_outcomes": {
         "turns": 21,
@@ -23,7 +23,7 @@
         "larsson_fidelity": "97%",
         "rag_queries": 1,
         "rag_docs_retrieved": 4,
-        "rag_docs_relevant": 3,
+        "rag_docs_relevant": 3
     },
     "turns": [
         {
@@ -38,12 +38,12 @@
                 "qud_pushed": "?parties.legal_entities",
                 "commitments_added": [
                     "date(value=value=value=2025-02-01)",
-                    "legal_entities(value=value=value=current_company, Global Industries)",
+                    "legal_entities(value=value=value=current_company, Global Industries)"
                 ],
                 "issues_remaining": ["nda_type", "time_period", "jurisdiction"],
                 "volunteer_facts": 2,
-                "note": "Commitment format has triple 'value=value=value=' prefix (implementation bug)",
-            },
+                "note": "Commitment format has triple 'value=value=value=' prefix (implementation bug)"
+            }
         },
         {
             "turn": 2,
@@ -55,8 +55,8 @@
             "state_changes": {
                 "qud_unchanged": "?parties.legal_entities",
                 "acknowledged": ["legal_entities", "date"],
-                "questions_skipped": 2,
-            },
+                "questions_skipped": 2
+            }
         },
         {
             "turn": 3,
@@ -68,8 +68,8 @@
             "state_changes": {
                 "qud_pushed": "?x.clarify [utterance=What does mutual mean exactly?, topic=mutual_nda]",
                 "qud_depth": 2,
-                "sub_dialogue": "clarification",
-            },
+                "sub_dialogue": "clarification"
+            }
         },
         {
             "turn": 4,
@@ -82,8 +82,8 @@
                 "qud_unchanged": "?x.clarify [utterance=What does mutual mean exactly?, topic=mutual_nda]",
                 "qud_depth": 3,
                 "clarification_provided": true,
-                "note": "System provides clarification but QUD not popped yet",
-            },
+                "note": "System provides clarification but QUD not popped yet"
+            }
         },
         {
             "turn": 5,
@@ -96,8 +96,8 @@
                 "qud_unchanged": "?x.clarify [utterance=What does mutual mean exactly?, topic=mutual_nda]",
                 "commitment_added": "?{mutual, one-way}: I think mutual makes sense. Before I decide on the duration, what's typical for confidentiality periods?",
                 "guidance_requested": "confidentiality_duration",
-                "note": "Answer creates question+answer commitment, not clean nda_type(mutual)",
-            },
+                "note": "Answer creates question+answer commitment, not clean nda_type(mutual)"
+            }
         },
         {
             "turn": 6,
@@ -110,7 +110,7 @@
                 "qud_unchanged": "?x.clarify [utterance=What does mutual mean exactly?, topic=mutual_nda]",
                 "rag_query_executed": "simulated",
                 "guidance_provided": true,
-                "note": "RAG guidance provided, but qud not changed",
+                "note": "RAG guidance provided, but qud not changed"
             },
             "rag_metadata": {
                 "query_type": "nda_guidance",
@@ -119,29 +119,29 @@
                     {
                         "doc_id": "NDA_BP_001",
                         "title": "Standard Confidentiality Periods - Industry Survey 2024",
-                        "relevance_score": 0.95,
+                        "relevance_score": 0.95
                     },
                     {
                         "doc_id": "NDA_BP_002",
                         "title": "Choosing Between Mutual and One-Way NDAs",
-                        "relevance_score": 0.9,
+                        "relevance_score": 0.9
                     },
                     {
                         "doc_id": "NDA_BP_003",
                         "title": "Jurisdiction Selection for NDAs",
-                        "relevance_score": 0.88,
-                    },
+                        "relevance_score": 0.88
+                    }
                 ],
                 "documents_filtered": [
                     {
                         "doc_id": "NDA_BP_004",
                         "title": "Standard Exclusions in NDAs",
                         "relevance_score": 0.05,
-                        "reason": "Not relevant to duration question",
+                        "reason": "Not relevant to duration question"
                     }
                 ],
-                "relevance_threshold": 0.5,
-            },
+                "relevance_threshold": 0.5
+            }
         },
         {
             "turn": 7,
@@ -154,8 +154,8 @@
                 "qud_unchanged": "?x.clarify [utterance=What does mutual mean exactly?, topic=mutual_nda]",
                 "no_commitment_added": true,
                 "decision_informed_by_rag": true,
-                "note": "Answer acknowledged but no clean commitment created yet",
-            },
+                "note": "Answer acknowledged but no clean commitment created yet"
+            }
         },
         {
             "turn": 8,
@@ -170,12 +170,12 @@
                 "commitments_added": [
                     "?x.clarify [utterance=What does mutual mean exactly?, topic=mutual_nda]: I think we should go with mutual, and by the way, we need this for 3 years",
                     "nda_type(value=value=value=mutual)",
-                    "time_period(value=value=value=3 years)",
+                    "time_period(value=value=value=3 years)"
                 ],
                 "issues_remaining": ["jurisdiction"],
                 "volunteer_facts": 3,
-                "note": "Creates answer commitment + structured commitments with triple 'value=value=value=' prefix (implementation bug)",
-            },
+                "note": "Creates answer commitment + structured commitments with triple 'value=value=value=' prefix (implementation bug)"
+            }
         },
         {
             "turn": 9,
@@ -187,8 +187,8 @@
             "state_changes": {
                 "qud_unchanged": "?x.clarify [utterance=What does mutual mean exactly?, topic=mutual_nda]",
                 "questions_skipped": 3,
-                "note": "System asks about jurisdiction but QUD not pushed yet",
-            },
+                "note": "System asks about jurisdiction but QUD not pushed yet"
+            }
         },
         {
             "turn": 10,
@@ -201,8 +201,8 @@
                 "non_provision_detected": true,
                 "user_intent": "new_question",
                 "qud_pushed": "?x.non_compete_clause",
-                "qud_depth": 3,
-            },
+                "qud_depth": 3
+            }
         },
         {
             "turn": 11,
@@ -214,8 +214,8 @@
             "state_changes": {
                 "acknowledged_side_request": "non_compete_clause",
                 "re_raised_question": "jurisdiction",
-                "recovery_strategy": "polite_redirect",
-            },
+                "recovery_strategy": "polite_redirect"
+            }
         },
         {
             "turn": 12,
@@ -226,8 +226,8 @@
             "larsson_rule": "Rule 4.2 - Local Question Accommodation",
             "state_changes": {
                 "qud_pushed": "?x.clarify [utterance=I'm not sure. What are our options?, topic=jurisdiction_options]",
-                "qud_depth": 5,
-            },
+                "qud_depth": 5
+            }
         },
         {
             "turn": 13,
@@ -239,8 +239,8 @@
             "state_changes": {
                 "qud_unchanged": "?x.clarify [utterance=I'm not sure. What are our options?, topic=jurisdiction_options]",
                 "qud_depth": 6,
-                "note": "Clarification provided but QUD keeps growing",
-            },
+                "note": "Clarification provided but QUD keeps growing"
+            }
         },
         {
             "turn": 14,
@@ -254,8 +254,8 @@
                 "non_provision_count": 2,
                 "user_intent": "meta_question",
                 "qud_pushed": "?x.timeline",
-                "qud_depth": 7,
-            },
+                "qud_depth": 7
+            }
         },
         {
             "turn": 15,
@@ -269,8 +269,8 @@
                 "re_raised_question": "jurisdiction",
                 "question_attempt": 3,
                 "qud_unchanged": "?x.timeline",
-                "qud_depth": 8,
-            },
+                "qud_depth": 8
+            }
         },
         {
             "turn": 16,
@@ -283,8 +283,8 @@
                 "qud_unchanged": "?x.timeline",
                 "qud_depth": 8,
                 "commitment_added": "?{California, Delaware, New York}: Let's go with Delaware",
-                "note": "Direct answer creates question+answer commitment, not clean jurisdiction(Delaware)",
-            },
+                "note": "Direct answer creates question+answer commitment, not clean jurisdiction(Delaware)"
+            }
         },
         {
             "turn": 17,
@@ -296,8 +296,8 @@
             "state_changes": {
                 "summary_provided": true,
                 "awaiting_final_confirmation": true,
-                "dialogue_complexity": "high",
-            },
+                "dialogue_complexity": "high"
+            }
         },
         {
             "turn": 18,
@@ -311,8 +311,8 @@
                 "qud_depth": 7,
                 "all_commitments_confirmed": true,
                 "ready_for_action": true,
-                "note": "Confirmation creates answer commitment",
-            },
+                "note": "Confirmation creates answer commitment"
+            }
         },
         {
             "turn": 19,
@@ -323,8 +323,8 @@
             "larsson_rule": "Address deferred user concern",
             "state_changes": {
                 "deferred_issue_addressed": "non_compete_clause",
-                "complete_memory_demonstrated": true,
-            },
+                "complete_memory_demonstrated": true
+            }
         },
         {
             "turn": 20,
@@ -333,7 +333,7 @@
             "move_type": "acknowledge",
             "business_explanation": "User appreciates that the system remembered their earlier question.",
             "larsson_rule": "Acknowledgment",
-            "state_changes": {"follow_up_scheduled": "non_compete_discussion"},
+            "state_changes": {"follow_up_scheduled": "non_compete_discussion"}
         },
         {
             "turn": 21,
@@ -343,8 +343,8 @@
             "business_explanation": "Task complete! Despite the complex dialogue with volunteered info, clarifications, and non-provisions, IBDM successfully gathered all required information and maintained context throughout.",
             "larsson_rule": "Task completion",
             "state_changes": {"task_complete": true, "dialogue_status": "successfully_completed"},
-            "is_payoff": true,
-        },
+            "is_payoff": true
+        }
     ],
     "metrics": {
         "dialogue_efficiency": "85% - Completed despite 2 non-provisions and 2 clarifications",
@@ -360,25 +360,25 @@
         "total_turns": 21,
         "rag_query_instances": "1 guidance query (confidentiality duration)",
         "rag_docs_retrieved": "4 documents",
-        "rag_docs_relevant": "3 documents (75% precision)",
+        "rag_docs_relevant": "3 documents (75% precision)"
     },
     "business_value": "This comprehensive scenario demonstrates IBDM's superiority over traditional chatbots in four critical areas:\n\n1. EFFICIENCY: Accommodates volunteered information, reducing dialogue length by 40%\n2. ROBUSTNESS: Handles clarification questions through nested dialogues without losing context\n3. PERSISTENCE: Recovers from non-provision gracefully with polite redirects while tracking deferred concerns\n4. KNOWLEDGE INTEGRATION (RAG): Provides data-driven guidance from knowledge base with source citations\n\nTraditional chatbots fail at any one of these. Slot-filling systems ignore volunteered information. Simple FSMs break on clarification questions. Rigid scripts can't handle non-provision. Standard chatbots can't retrieve and synthesize relevant knowledge on-demand. IBDM handles all four simultaneously while maintaining natural dialogue flow and transparency. This is what makes IBDM production-ready for real-world deployment.",
     "feature_demonstration": {
         "volunteer_information": {
             "turns": [1, 8],
             "description": "User provides information before being asked (parties, date, duration)",
-            "system_response": "Acknowledges and accommodates, skips redundant questions",
+            "system_response": "Acknowledges and accommodates, skips redundant questions"
         },
         "clarification_questions": {
             "turns": [3, 12],
             "description": "User asks for clarification about system questions",
-            "system_response": "Nested dialogue: answer clarification, return to main question",
+            "system_response": "Nested dialogue: answer clarification, return to main question"
         },
         "non_provision_recovery": {
             "turns": [10, 14],
             "description": "User doesn't answer question, goes off-topic instead",
-            "system_response": "Polite redirect: acknowledge concern, persist with original question",
-        },
+            "system_response": "Polite redirect: acknowledge concern, persist with original question"
+        }
     },
     "dialogue_complexity_metrics": {
         "total_turns": 21,
@@ -387,10 +387,10 @@
             "3 volunteered facts",
             "2 clarification sub-dialogues",
             "2 non-provision recoveries",
-            "1 deferred concern tracked",
+            "1 deferred concern tracked"
         ],
         "qud_operations": {"pushes": 5, "pops": 4, "re_raises": 2},
-        "commitment_operations": {"additions": 5, "from_volunteered": 3, "from_direct_answers": 2},
+        "commitment_operations": {"additions": 5, "from_volunteered": 3, "from_direct_answers": 2}
     },
     "larsson_fidelity_analysis": {
         "rule_coverage": [
@@ -399,9 +399,9 @@
             "Rule 4.3 - BeliefAccommodation (volunteered info)",
             "Rule 4.5 - QuestionReaccommodation (skip answered)",
             "Rule 5.1 - RaiseIssue",
-            "Fallback - Non-provision recovery",
+            "Fallback - Non-provision recovery"
         ],
         "fidelity_score": "97%",
-        "deviations": "Added politeness layer and deferred concern tracking (production enhancements beyond Larsson spec)",
-    },
+        "deviations": "Added politeness layer and deferred concern tracking (production enhancements beyond Larsson spec)"
+    }
 }
