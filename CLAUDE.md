@@ -28,7 +28,7 @@ git commit -m "feat(scope): description"
 
 - [Architecture](#architecture) - Policies 0, 10, 11, 12, 14
 - [Tooling](#tooling) - Policies 1, 2, 3, 9
-- [Process](#process) - Policies 4, 5, 6, 7, 8, 13, 15
+- [Process](#process) - Policies 4, 5, 6, 7, 8, 13, 15, 16
 - [Workflow](#workflow) - Daily tasks, commits, pushing
 
 ---
@@ -369,6 +369,46 @@ All reports tagged with timestamp and git hash in `reports/` directory.
 3. Refactor code quality
 4. Commit each step
 
+### 16. Scenario Alignment: Documentation Not Specification
+
+**Policy**: Scenarios document actual implementation behavior, not prescriptive specifications.
+
+**Key Principles**:
+- Scenarios demonstrate working dialogue system behavior
+- State changes in scenarios reflect observed runtime behavior
+- We are NOT committed to guessed state changes in existing scenarios
+- Implementation correctness per Larsson (2002) comes first
+- Scenarios are updated to match correct implementation
+
+**When working with scenarios**:
+
+1. **Creating new scenarios**: Run with `IBDM_DEBUG=all`, observe actual behavior, document what happens
+2. **Updating scenarios**: Verify implementation is correct per Larsson, then update scenario to match
+3. **Fixing bugs**: Fix implementation first, then update scenarios to reflect fix
+4. **Finding mismatches**: Check if implementation or scenario is wrong; fix implementation if needed
+
+**Quick workflow**:
+```bash
+# Debug and observe behavior
+export IBDM_DEBUG=all
+python scripts/run_scenario.py <scenario> --step
+
+# Implementation correct but scenario wrong?
+vim demos/scenarios/<scenario>.json           # Update state_changes
+git commit -m "docs(scenarios): align with implementation"
+
+# Implementation wrong?
+vim src/ibdm/rules/update_rules.py           # Fix implementation
+pytest                                        # Verify fix
+vim demos/scenarios/<scenario>.json           # Update scenario
+git commit -m "fix(rules): correct behavior"
+git commit -m "docs(scenarios): update for fix"
+```
+
+📖 **Details**: [`docs/SCENARIO_ALIGNMENT.md`](docs/SCENARIO_ALIGNMENT.md)
+
+**Why**: Ensures scenarios accurately document system behavior and remain useful as demonstrations after implementation evolves.
+
 ### 15. Update NEXT-TASK.md After Completing Tasks
 
 **Policy**: When you complete tasks from NEXT-TASK.md, update the file and communicate the plan.
@@ -494,6 +534,8 @@ git push
 - [`docs/environment_setup.md`](docs/environment_setup.md) - Environment and API keys
 - [`docs/llm_configuration.md`](docs/llm_configuration.md) - LLM integration guide
 - [`docs/LARSSON_ALGORITHMS.md`](docs/LARSSON_ALGORITHMS.md) - Larsson compliance
+- [`docs/SCENARIO_ALIGNMENT.md`](docs/SCENARIO_ALIGNMENT.md) - Policy #16 details (scenarios follow implementation)
+- [`docs/UNIFIED_SCENARIO_SYSTEM.md`](docs/UNIFIED_SCENARIO_SYSTEM.md) - Scenario system usage
 - [`docs/burr_state_refactoring.md`](docs/burr_state_refactoring.md) - State design
 
 ### External Links
