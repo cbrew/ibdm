@@ -12,10 +12,12 @@ from ibdm.demo.scenario_loader import (
     ScenarioMetadata,
     ScenarioTurn,
     get_loader,
-    list_scenarios as list_json_scenarios,
     list_scenarios_by_category,
     load_scenario,
     search_scenarios,
+)
+from ibdm.demo.scenario_loader import (
+    list_scenarios as list_json_scenarios,
 )
 from ibdm.demo.scenario_runner import ScenarioRunner, run_scenario
 from ibdm.demo.scenarios import (

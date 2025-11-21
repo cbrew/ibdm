@@ -27,7 +27,7 @@ from ibdm.demo.orchestrator import DemoDialogueOrchestrator
 from ibdm.demo.scenario_loader import Scenario, ScenarioTurn, load_scenario
 from ibdm.demo.state_trace import StateTraceRecorder
 from ibdm.domains.legal_domain import get_legal_domain
-from ibdm.domains.nda_domain import get_nda_domain, get_doc_actions
+from ibdm.domains.nda_domain import get_doc_actions, get_nda_domain
 from ibdm.rules import (
     RuleSet,
     create_action_integration_rules,
@@ -123,9 +123,7 @@ class ScenarioRunner:
         self.trace_recorder = trace_recorder
 
         # Detect domain from scenario metadata
-        domain_name: str = (
-            getattr(self.scenario.metadata, "domain", "nda_drafting")
-        )
+        domain_name: str = getattr(self.scenario.metadata, "domain", "nda_drafting")
         if domain_name == "legal_consultation":
             self.domain = get_legal_domain()
         else:
@@ -540,7 +538,9 @@ class ScenarioRunner:
 
         qud_pushed = expected.get("qud_pushed")
         if qud_pushed and (not qud_stack or qud_stack[-1] != qud_pushed):
-            warnings.append(f"Expected QUD top '{qud_pushed}', found '{qud_stack[-1] if qud_stack else 'None'}'")
+            warnings.append(
+                f"Expected QUD top '{qud_pushed}', found '{qud_stack[-1] if qud_stack else 'None'}'"
+            )
 
         qud_popped = expected.get("qud_popped")
         if qud_popped and qud_popped in qud_stack:

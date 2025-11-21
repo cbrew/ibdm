@@ -400,12 +400,16 @@ def _execute_agreement_postcond(action: Action) -> list[Proposition]:
         ),
     ]
 
+
 # Revision/state helpers for doc prep/revision
 
 
 def _check_revision_precond(action: Action, commitments: set[str]) -> tuple[bool, str]:
     """Common precondition check for revision actions."""
-    if any(c.startswith("doc_state(draft_ready)") or c.startswith("doc_state(revision_pending)") for c in commitments):
+    if any(
+        c.startswith("doc_state(draft_ready)") or c.startswith("doc_state(revision_pending)")
+        for c in commitments
+    ):
         return True, ""
     return False, "Document must be in draft_ready or revision_pending state"
 

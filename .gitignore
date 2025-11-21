@@ -64,6 +64,12 @@ dmypy.json
 # Generated demo reports
 demos/reports/
 
+# Task tracking (beads)
+.beads/
+
+# Larsson fidelity reports
+reports/
+
 # Logs
 *.log
 
