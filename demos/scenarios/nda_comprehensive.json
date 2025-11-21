@@ -35,14 +35,8 @@
             "larsson_rule": "Task Accommodation + Belief Accommodation (Rule 4.3)",
             "state_changes": {
                 "plan_created": "nda_drafting with 5 questions",
-                "qud_pushed": "?parties.legal_entities",
-                "commitments_added": [
-                    "date(value=value=value=2025-02-01)",
-                    "legal_entities(value=value=value=current_company, Global Industries)"
-                ],
-                "issues_remaining": ["nda_type", "time_period", "jurisdiction"],
-                "volunteer_facts": 2,
-                "note": "Commitment format has triple 'value=value=value=' prefix (implementation bug)"
+                "issues_accommodated": ["parties.legal_entities", "nda_type", "time_period", "jurisdiction", "date"],
+                "note": "Entity extraction not yet implemented - volunteered info (Global Industries, February 1st) not extracted into structured commitments. NLU creates single 'request' move without extracting entities."
             }
         },
         {
@@ -165,16 +159,7 @@
             "business_explanation": "VOLUNTEER INFORMATION (AGAIN): User answers the question AND volunteers the duration unprompted. IBDM accommodates both pieces of information.",
             "larsson_rule": "Rule 4.1 (Answer) + Rule 4.3 (Volunteer duration)",
             "state_changes": {
-                "qud_popped": "?x.clarify [utterance=What does mutual mean exactly?, topic=mutual_nda]",
-                "qud_depth": 2,
-                "commitments_added": [
-                    "?x.clarify [utterance=What does mutual mean exactly?, topic=mutual_nda]: I think we should go with mutual, and by the way, we need this for 3 years",
-                    "nda_type(value=value=value=mutual)",
-                    "time_period(value=value=value=3 years)"
-                ],
-                "issues_remaining": ["jurisdiction"],
-                "volunteer_facts": 3,
-                "note": "Creates answer commitment + structured commitments with triple 'value=value=value=' prefix (implementation bug)"
+                "note": "Entity extraction not yet implemented - cannot create structured commitments for nda_type(mutual) or time_period(3 years). Clarification QUD not popped because NLU doesn't track that this utterance answers the clarification question. These are implementation gaps, not Larsson violations."
             }
         },
         {
