@@ -156,6 +156,33 @@ class DomainModel:
         """
         self._plan_builders[task] = builder
 
+    def create_proposition(self, predicate: str, value: Any) -> str:
+        """Create semantic proposition from predicate and value.
+
+        Implements Larsson (2002) Section 2.3 - commitments as propositions.
+        Creates clean predicate notation: "predicate(value)"
+
+        Args:
+            predicate: Predicate name (e.g., "nda_type", "jurisdiction")
+            value: Semantic value (e.g., "mutual", "Delaware")
+
+        Returns:
+            Proposition string in format "predicate(value)"
+
+        Example:
+            >>> domain.create_proposition("nda_type", "mutual")
+            "nda_type(mutual)"
+            >>> domain.create_proposition("jurisdiction", "Delaware")
+            "jurisdiction(Delaware)"
+            >>> domain.create_proposition("time_period", "3 years")
+            "time_period(3 years)"
+        """
+        # Normalize value (strip quotes, whitespace)
+        normalized_value = str(value).strip().strip('"').strip("'")
+
+        # Return predicate notation
+        return f"{predicate}({normalized_value})"
+
     def resolves(self, answer: Answer, question: Question) -> bool:
         """Check if answer resolves question (with type checking).
 
