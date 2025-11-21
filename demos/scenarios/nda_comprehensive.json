@@ -37,10 +37,10 @@
                 "plan_created": "nda_drafting with 5 questions",
                 "issues_accommodated": ["parties.legal_entities", "nda_type", "time_period", "jurisdiction", "date"],
                 "commitments_added": [
-                    "date(value=2025-02-01)",
-                    "legal_entities(value=current_company, Global Industries)"
+                    "date(2025-02-01)",
+                    "legal_entities(current_company, Global Industries)"
                 ],
-                "note": "Mocked NLU extracts entities and creates assert moves. Real NLU doesn't have entity extraction yet."
+                "note": "Volunteer information: NLU extracts entities and creates clean semantic commitments."
             }
         },
         {
@@ -92,9 +92,9 @@
             "larsson_rule": "Rule 4.1 (Answer) + RAG Query Request",
             "state_changes": {
                 "qud_unchanged": "?x.clarify [utterance=What does mutual mean exactly?, topic=mutual_nda]",
-                "commitment_added": "?{mutual, one-way}: I think mutual makes sense. Before I decide on the duration, what's typical for confidentiality periods?",
+                "commitment_added": "nda_type(mutual)",
                 "guidance_requested": "confidentiality_duration",
-                "note": "Answer creates question+answer commitment, not clean nda_type(mutual)"
+                "note": "Clean commitment created: nda_type(mutual). System extracts 'mutual' from natural language answer."
             }
         },
         {
@@ -150,9 +150,9 @@
             "larsson_rule": "Rule 4.1 - Answer accommodation",
             "state_changes": {
                 "qud_unchanged": "?x.clarify [utterance=What does mutual mean exactly?, topic=mutual_nda]",
-                "no_commitment_added": true,
+                "commitment_added": "time_period(3 years)",
                 "decision_informed_by_rag": true,
-                "note": "Answer acknowledged but no clean commitment created yet"
+                "note": "Clean commitment created: time_period(3 years). RAG-informed decision captured semantically."
             }
         },
         {
@@ -164,10 +164,10 @@
             "larsson_rule": "Rule 4.1 (Answer) + Rule 4.3 (Volunteer duration)",
             "state_changes": {
                 "commitments_added": [
-                    "nda_type(value=mutual)",
-                    "time_period(value=3 years)"
+                    "nda_type(mutual)",
+                    "time_period(3 years)"
                 ],
-                "note": "Mocked NLU extracts entities and creates assert moves for volunteered duration. Real NLU doesn't have entity extraction yet."
+                "note": "Volunteer information: Both answer (nda_type) and volunteered duration create clean commitments."
             }
         },
         {
@@ -275,8 +275,8 @@
             "state_changes": {
                 "qud_unchanged": "?x.timeline",
                 "qud_depth": 8,
-                "commitment_added": "?{California, Delaware, New York}: Let's go with Delaware",
-                "note": "Direct answer creates question+answer commitment, not clean jurisdiction(Delaware)"
+                "commitment_added": "jurisdiction(Delaware)",
+                "note": "Clean commitment created: jurisdiction(Delaware). Extracted from 'Let's go with Delaware'."
             }
         },
         {
@@ -300,11 +300,10 @@
             "business_explanation": "User confirms. Ready to proceed with document generation.",
             "larsson_rule": "Positive confirmation",
             "state_changes": {
-                "commitment_added": "?x.timeline: yes",
                 "qud_depth": 7,
                 "all_commitments_confirmed": true,
                 "ready_for_action": true,
-                "note": "Confirmation creates answer commitment"
+                "note": "Confirmation acknowledged. All required commitments collected for NDA generation."
             }
         },
         {
