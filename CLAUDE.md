@@ -409,6 +409,16 @@ git commit -m "docs(scenarios): update for fix"
 
 **Why**: Ensures scenarios accurately document system behavior and remain useful as demonstrations after implementation evolves.
 
+**⚠️ CRITICAL INSTRUCTION FOR AI ASSISTANTS**:
+**BEFORE working on ANY scenario-related task, you MUST:**
+1. **READ** `docs/SCENARIO_ALIGNMENT.md` in full
+2. **FOLLOW** the step-by-step procedures for your task type (A, B, C, or D)
+3. **NEVER** guess state changes - always observe with `IBDM_DEBUG=all`
+4. **VERIFY** implementation correctness per Larsson (2002) before updating scenarios
+5. **COMMIT** implementation fixes and scenario updates separately
+
+**This is NOT optional.** Failure to follow SCENARIO_ALIGNMENT.md leads to incorrect documentation and wasted debugging time.
+
 ### 15. Update NEXT-TASK.md After Completing Tasks
 
 **Policy**: When you complete tasks from NEXT-TASK.md, update the file and communicate the plan.
