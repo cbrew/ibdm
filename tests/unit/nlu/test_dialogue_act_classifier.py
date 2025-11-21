@@ -30,9 +30,10 @@ class TestDialogueActResult:
         assert result.to_enum() == DialogueActType.ANSWER
 
     def test_to_enum_unknown(self):
-        """Test converting unknown act to enum defaults to OTHER."""
+        """Test converting unknown act to enum raises ValueError (no silent fallback)."""
         result = DialogueActResult(act="unknown_type", confidence=0.5)
-        assert result.to_enum() == DialogueActType.OTHER
+        with pytest.raises(ValueError, match="Cannot proceed with invalid dialogue act"):
+            result.to_enum()
 
     def test_confidence_validation(self):
         """Test confidence score validation."""
