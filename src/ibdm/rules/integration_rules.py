@@ -313,6 +313,23 @@ def _is_skip_request_move(state: InformationState) -> bool:
     return True
 
 
+def _is_clarification_question(question: Question) -> bool:
+    """Check if a question is a clarification question.
+
+    Clarification questions are marked with is_clarification=True in their
+    constraints dict (for WhQuestion) or similar attributes for other types.
+
+    Args:
+        question: The question to check
+
+    Returns:
+        True if the question is a clarification question, False otherwise
+    """
+    # WhQuestion has constraints dict
+    constraints = getattr(question, "constraints", {})
+    return bool(constraints.get("is_clarification", False))
+
+
 def _needs_clarification_question(state: InformationState) -> bool:
     """Check if clarification question should be accommodated to QUD.
 
@@ -871,6 +888,12 @@ def _integrate_answer(state: InformationState) -> InformationState:
     - If valid: pop the question from QUD, add commitment, progress plan
     - If invalid: mark as needing clarification (Larsson Section 3.4 accommodation)
 
+    Enhanced for ibdm-203 (QUD stack management):
+    - When top QUD is a clarification question, also check if answer resolves
+      the suspended question beneath it (Larsson Section 4.2)
+    - If answer resolves suspended question, pop both clarification (implicitly
+      resolved) and original question (explicitly answered)
+
     Note:
         Uses domain.resolves() for semantic validation (Larsson Section 2.4.3)
         instead of just Question.resolves_with() to enable domain-level
@@ -909,9 +932,45 @@ def _integrate_answer(state: InformationState) -> InformationState:
             # No volunteer info - check QUD as normal (original behavior)
             top_question = new_state.shared.top_qud()
             if top_question:
-                # Use domain.resolves() for type checking and validation
-                # This implements Larsson (2002) Section 2.4.3 semantic operation
-                if domain.resolves(answer, top_question):
+                # ibdm-203: Special handling for clarification questions
+                # When a clarification question is on top, check suspended question FIRST
+                # This handles the case where user answers the original question after
+                # receiving clarification (Larsson Section 4.2)
+                if _is_clarification_question(top_question) and len(new_state.shared.qud) > 1:
+                    suspended_question = new_state.shared.qud[-2]
+
+                    # Check if answer resolves the SUSPENDED question
+                    if domain.resolves(answer, suspended_question):
+                        # Answer resolves the suspended question!
+                        # This means: clarification was understood (implicit)
+                        # AND original question is being answered (explicit)
+
+                        # Pop clarification question (implicitly resolved)
+                        new_state.shared.pop_qud()
+                        # Pop original question (explicitly answered)
+                        new_state.shared.pop_qud()
+
+                        # Add commitment for the SUSPENDED question (not clarification)
+                        commitment = f"{suspended_question}: {answer.content}"
+                        new_state.shared.commitments.add(commitment)
+
+                        # Mark corresponding subplan as completed
+                        _complete_subplan_for_question(new_state, suspended_question)
+                    else:
+                        # Answer doesn't resolve the suspended question
+                        # Treat as invalid - needs clarification
+                        # Note: We don't check if answer resolves clarification itself
+                        # because clarification questions are meta-questions about
+                        # understanding, not content questions. They're resolved by
+                        # answering the suspended question.
+                        new_state.private.beliefs["_needs_clarification"] = True
+                        new_state.private.beliefs["_invalid_answer"] = answer.content
+                        new_state.private.beliefs["_clarification_question"] = suspended_question
+                elif domain.resolves(answer, top_question):
+                    # No clarification on stack - standard answer integration
+                    # Use domain.resolves() for type checking and validation
+                    # This implements Larsson (2002) Section 2.4.3 semantic operation
+
                     # Valid answer - integrate normally
                     # Pop the resolved question
                     new_state.shared.pop_qud()
