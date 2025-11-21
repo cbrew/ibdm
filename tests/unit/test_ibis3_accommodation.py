@@ -393,6 +393,101 @@ class TestRule43IssueClarification:
         # Flag should be cleared
         assert not new_state.private.beliefs.get("_needs_clarification", False)
 
+    def test_answer_resolves_suspended_question(self):
+        """Test ibdm-203: Answer to suspended question pops both clarification and original.
+
+        When a clarification question is on top of QUD and the user provides an answer
+        to the suspended (original) question beneath it, both questions should be popped.
+        This implements proper nested dialogue management per Larsson Section 4.2.
+        """
+        from ibdm.core import Answer, DialogueMove, DomainModel
+        from ibdm.rules.integration_rules import _integrate_answer
+
+        state = InformationState()
+
+        # Setup domain with nda_type validation
+        domain = DomainModel("nda")
+        domain.add_predicate("nda_type", arity=1)
+
+        # Register domain
+        state.private.beliefs["_active_domain"] = domain
+
+        # Setup: Original question on QUD
+        original_q = WhQuestion(variable="x", predicate="nda_type")
+        state.shared.push_qud(original_q)
+
+        # Clarification question pushed on top (suspends original)
+        clarification_q = WhQuestion(
+            variable="X",
+            predicate="clarification_for_nda_type",
+            constraints={"is_clarification": True, "for_question": str(original_q)},
+        )
+        state.shared.push_qud(clarification_q)
+
+        # QUD depth should be 2
+        assert len(state.shared.qud) == 2
+
+        # User provides answer to ORIGINAL question (not clarification)
+        answer = Answer(content="mutual")
+        move = DialogueMove(speaker="user", move_type="answer", content=answer)
+        state.private.beliefs["_temp_move"] = move
+
+        # Apply integration
+        new_state = _integrate_answer(state)
+
+        # Assertions
+        # Both questions should be popped
+        assert len(new_state.shared.qud) == 0
+        # Answer should be committed
+        assert len(new_state.shared.commitments) > 0
+        # Commitment should reference the ORIGINAL question, not clarification
+        commitment_str = list(new_state.shared.commitments)[0]
+        assert "nda_type" in commitment_str
+        assert "mutual" in commitment_str
+
+    def test_answer_does_not_resolve_suspended_keeps_qud(self):
+        """Test that invalid answer to neither question keeps QUD intact.
+
+        If answer doesn't resolve top question or suspended question,
+        clarification flag should be set but QUD should remain unchanged.
+        """
+        from ibdm.core import AltQuestion, Answer, DialogueMove, DomainModel
+        from ibdm.rules.integration_rules import _integrate_answer
+
+        state = InformationState()
+
+        # Setup domain
+        domain = DomainModel("nda")
+        domain.add_predicate("nda_type", arity=1)
+        state.private.beliefs["_active_domain"] = domain
+
+        # Setup: Original question (ALT question with specific alternatives) + clarification on QUD
+        # Using AltQuestion so we can test strict validation
+        original_q = AltQuestion(alternatives=["mutual", "one-way"])
+        state.shared.push_qud(original_q)
+        clarification_q = WhQuestion(
+            variable="X",
+            predicate="clarification_for_nda_type",
+            constraints={"is_clarification": True},
+        )
+        state.shared.push_qud(clarification_q)
+
+        # User provides invalid answer (not in alternatives)
+        answer = Answer(content="invalid_value")
+        move = DialogueMove(speaker="user", move_type="answer", content=answer)
+        state.private.beliefs["_temp_move"] = move
+
+        # Apply integration
+        new_state = _integrate_answer(state)
+
+        # Assertions
+        # QUD should remain unchanged
+        assert len(new_state.shared.qud) == 2
+        # Clarification flag should be set
+        assert new_state.private.beliefs.get("_needs_clarification", False)
+        # No commitment added
+        assert len(new_state.shared.commitments) == 0
+
 
 class TestRule44DependentIssueAccommodation:
     """Test Rule 4.4: DependentIssueAccommodation for prerequisite questions."""
