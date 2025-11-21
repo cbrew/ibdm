@@ -625,7 +625,15 @@ class ScenarioRunner:
                 if "(" in comm_str and ")" in comm_str:
                     pred = comm_str.split("(")[0]
                     args_str = comm_str.split("(")[1].rstrip(")")
-                    args = {"value": args_str}
+                    # Parse arguments: "key=val" or "key=val1, val2, val3"
+                    # Check if it's a simple key=value format
+                    if "=" in args_str and args_str.count("=") == 1:
+                        # Single key=value pair (value might contain commas)
+                        key, val = args_str.split("=", 1)
+                        args = {key.strip(): val.strip()}
+                    else:
+                        # More complex format or just a value - wrap it
+                        args = {"value": args_str}
                     prop = Proposition(predicate=pred, arguments=args)
                     moves.append(DialogueMove(move_type="assert", content=prop, speaker=speaker))
                 else:
