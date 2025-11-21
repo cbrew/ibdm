@@ -28,7 +28,7 @@ git commit -m "feat(scope): description"
 
 - [Architecture](#architecture) - Policies 0, 10, 11, 12, 14
 - [Tooling](#tooling) - Policies 1, 2, 3, 9
-- [Process](#process) - Policies 4, 5, 6, 7, 8, 13, 15, 16
+- [Process](#process) - Policies 4, 5, 6, 7, 8, 13, 15, 16, 17
 - [Workflow](#workflow) - Daily tasks, commits, pushing
 
 ---
@@ -421,6 +421,38 @@ git commit -m "docs(scenarios): update for fix"
 6. **COMMIT** implementation fixes and scenario updates separately
 
 **This is NOT optional.** Failure to follow SCENARIO_ALIGNMENT.md leads to incorrect documentation and wasted debugging time.
+
+### 17. Always Verify Before Claiming Fixes
+
+**Policy**: Always run scenarios and verify compliance before claiming they are fixed. If tests fail or compliance is not met, report the actual status instead of claiming success.
+
+**Requirements**:
+- NEVER claim a scenario is fixed without running it first
+- ALWAYS use `python scripts/run_scenario.py <scenario>` to verify
+- If compliance fails, investigate and fix the real issues
+- Report actual test results, not assumptions
+- If you cannot verify (e.g., due to errors), explicitly state that
+
+**Why**: Claiming fixes without verification wastes user time and erodes trust. The user relies on your verification to know when work is actually complete.
+
+**Workflow for scenario fixes**:
+```bash
+# 1. Make changes to implementation or scenario
+vim src/ibdm/rules/update_rules.py
+vim demos/scenarios/nda_comprehensive.json
+
+# 2. ALWAYS verify before claiming fix
+python scripts/run_scenario.py nda_comprehensive
+
+# 3. If compliance passes, commit
+git commit -m "fix(scenarios): resolve state mismatches in nda_comprehensive"
+
+# 4. If compliance FAILS, investigate and report
+# Report: "I ran the scenario and found mismatches on turns X, Y, Z. Investigating..."
+```
+
+**Never say**: "I've fixed the issues" without verification
+**Always say**: "Let me verify the fix" → run scenario → report actual results
 
 ### 15. Update NEXT-TASK.md After Completing Tasks
 
