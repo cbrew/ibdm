@@ -80,6 +80,12 @@
       "speaker": "user",
       "utterance": "Yes, exactly",
       "move_type": "answer",
+      "move": {
+        "move_type": "answer",
+        "content": true,
+        "speaker": "user",
+        "polarity": "pos"
+      },
       "business_explanation": "User confirms",
       "larsson_rule": "ICM Rule 3.20 - Confirmation request",
       "state_changes": {

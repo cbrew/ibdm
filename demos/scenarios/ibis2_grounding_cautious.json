@@ -57,6 +57,12 @@
       "speaker": "user",
       "utterance": "Yes",
       "move_type": "answer",
+      "move": {
+        "move_type": "answer",
+        "content": true,
+        "speaker": "user",
+        "polarity": "pos"
+      },
       "business_explanation": "User confirms understanding",
       "larsson_rule": "ICM Rule 3.20 - Confirmation request",
       "state_changes": {
