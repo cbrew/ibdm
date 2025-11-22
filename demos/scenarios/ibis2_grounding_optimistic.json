@@ -3,7 +3,7 @@
   "title": "Optimistic Grounding",
   "description": "Demonstrates immediate acceptance of high-confidence utterances",
   "scenario_type": "demonstration",
-  "implementation_status": "TODO: Implement live grounding per Policy #18. Currently pre-scripted. See beads task ibdm-227.",
+  "implementation_status": "Complete: Live grounding with optimistic strategy implemented. System accepts high-confidence utterances (confidence >= 0.7) immediately without explicit confirmation.",
   "business_narrative": "This scenario demonstrates optimistic grounding strategy. The system assumes high confidence in perception and understanding, proceeding without explicit confirmations. This is efficient for clear communication.",
   "larsson_algorithms": [
     "Grounding strategies",
@@ -27,7 +27,8 @@
       "larsson_rule": "Dialogue update rule",
       "state_changes": {
         "grounding": "optimistic strategy"
-      }
+      },
+      "confidence": 0.9
     },
     {
       "turn": 2,
@@ -51,7 +52,8 @@
       "state_changes": {
         "commitments": "+1",
         "grounding": "optimistic"
-      }
+      },
+      "confidence": 0.9
     },
     {
       "turn": 4,
@@ -73,7 +75,8 @@
       "larsson_rule": "Dialogue update rule",
       "state_changes": {
         "commitments": "+1"
-      }
+      },
+      "confidence": 0.9
     },
     {
       "turn": 6,
@@ -96,7 +99,8 @@
       "state_changes": {
         "commitments": "+1",
         "grounding": "optimistic"
-      }
+      },
+      "confidence": 0.95
     },
     {
       "turn": 8,
@@ -118,7 +122,8 @@
       "larsson_rule": "Dialogue update rule",
       "state_changes": {
         "commitments": "+1"
-      }
+      },
+      "confidence": 0.9
     },
     {
       "turn": 10,
@@ -141,7 +146,8 @@
       "state_changes": {
         "commitments": "+1",
         "plan": "complete"
-      }
+      },
+      "confidence": 0.9
     },
     {
       "turn": 12,

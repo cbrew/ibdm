@@ -31,6 +31,7 @@ class ScenarioTurn:
         state_changes: Expected state changes
         is_payoff: Whether this turn produces high-value output
         move: Optional structured DialogueMove object (overrides text-based recognition)
+        confidence: Optional confidence score for grounding strategies (0.0-1.0)
     """
 
     turn: int
@@ -42,6 +43,7 @@ class ScenarioTurn:
     state_changes: dict[str, Any]
     is_payoff: bool = False
     move: DialogueMove | None = None
+    confidence: float | None = None
 
 
 @dataclass
@@ -186,12 +188,27 @@ def build_dialogue_move_from_json(
         # Use raw content if provided
         content = move_spec.get("content")
 
-    # Build base move
-    move = DialogueMove(
-        move_type=move_type,
-        content=content,
-        speaker=speaker_id,
-    )
+    # Build base move with metadata
+    metadata = {}
+
+    # Extract confidence if specified (for grounding strategies)
+    if "confidence" in move_spec:
+        metadata["confidence"] = move_spec["confidence"]
+
+    # Build move with metadata only if non-empty
+    if metadata:
+        move = DialogueMove(
+            move_type=move_type,
+            content=content,
+            speaker=speaker_id,
+            metadata=metadata,
+        )
+    else:
+        move = DialogueMove(
+            move_type=move_type,
+            content=content,
+            speaker=speaker_id,
+        )
 
     # Add ICM-specific fields if this is an ICM move
     if move_type == "icm":
@@ -356,6 +373,7 @@ class ScenarioLoader:
                 state_changes=turn_data.get("state_changes", {}),
                 is_payoff=turn_data.get("is_payoff", False),
                 move=structured_move,
+                confidence=turn_data.get("confidence"),
             )
             turns.append(turn)
 

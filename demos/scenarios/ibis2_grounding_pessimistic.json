@@ -3,7 +3,7 @@
   "title": "Pessimistic Grounding",
   "description": "Demonstrates perception check for low-confidence utterances",
   "scenario_type": "demonstration",
-  "implementation_status": "TODO: Implement live grounding per Policy #18. Currently pre-scripted. See beads task ibdm-228.",
+  "implementation_status": "Complete: Live grounding with pessimistic strategy implemented. System requests perception check (icm:per*neg) for low-confidence utterances (confidence < 0.5).",
   "business_narrative": "This scenario demonstrates pessimistic grounding strategy. The system uses re-utterance and extensive confirmation to ensure perfect accuracy. Prioritizes correctness over efficiency for high-stakes situations.",
   "larsson_algorithms": [
     "Grounding strategies",
@@ -23,6 +23,7 @@
       "speaker": "user",
       "utterance": "NDA",
       "move_type": "request",
+      "confidence": 0.4,
       "business_explanation": "User utterance with LOW confidence (0.4)",
       "larsson_rule": "Dialogue update rule",
       "state_changes": {
@@ -45,7 +46,8 @@
       "speaker": "user",
       "utterance": "I need to draft a Non-Disclosure Agreement",
       "move_type": "request",
-      "business_explanation": "User provides clearer utterance",
+      "confidence": 0.85,
+      "business_explanation": "User provides clearer utterance (high confidence after repetition)",
       "larsson_rule": "Dialogue update rule",
       "state_changes": {
         "grounding_status": "perceived"
@@ -71,7 +73,8 @@
       "larsson_rule": "Dialogue update rule",
       "state_changes": {
         "commitments": "+1"
-      }
+      },
+      "confidence": 0.9
     },
     {
       "turn": 6,
@@ -93,7 +96,8 @@
       "larsson_rule": "Dialogue update rule",
       "state_changes": {
         "commitments": "+1"
-      }
+      },
+      "confidence": 0.9
     },
     {
       "turn": 8,
@@ -115,7 +119,8 @@
       "larsson_rule": "Dialogue update rule",
       "state_changes": {
         "commitments": "+1"
-      }
+      },
+      "confidence": 0.9
     },
     {
       "turn": 10,
@@ -137,7 +142,8 @@
       "larsson_rule": "Dialogue update rule",
       "state_changes": {
         "commitments": "+1"
-      }
+      },
+      "confidence": 0.9
     },
     {
       "turn": 12,
@@ -160,7 +166,8 @@
       "state_changes": {
         "commitments": "+1",
         "plan": "complete"
-      }
+      },
+      "confidence": 0.9
     },
     {
       "turn": 14,
