@@ -780,7 +780,13 @@ def _needs_understanding_confirmation(state: InformationState) -> bool:
     needs_confirm = requires_confirmation(last_move.move_type, confidence)
     strategy = select_grounding_strategy(last_move.move_type, confidence)
 
-    return needs_confirm or strategy == GroundingStrategy.CAUTIOUS
+    if strategy == GroundingStrategy.PESSIMISTIC and not needs_confirm:
+        return False
+
+    if strategy == GroundingStrategy.OPTIMISTIC and not needs_confirm:
+        return False
+
+    return strategy == GroundingStrategy.CAUTIOUS or needs_confirm
 
 
 def _should_give_acceptance(state: InformationState) -> bool:
@@ -1004,8 +1010,9 @@ def _needs_understanding_confirmation_for_ask(state: InformationState) -> bool:
 
     # Check confidence (if available)
     confidence = last_move.metadata.get("confidence", 0.8)  # Default medium-high
-    # Request confirmation if confidence is low/medium (< 0.7)
-    return confidence < 0.7
+    strategy = select_grounding_strategy(last_move.move_type, confidence)
+
+    return strategy == GroundingStrategy.CAUTIOUS
 
 
 def _select_understanding_confirmation_ask(state: InformationState) -> InformationState:
@@ -1068,8 +1075,9 @@ def _needs_understanding_confirmation_for_answer(state: InformationState) -> boo
 
     # Check confidence (if available)
     confidence = last_move.metadata.get("confidence", 0.8)  # Default medium-high
-    # Request confirmation if confidence is low/medium (< 0.7)
-    return confidence < 0.7
+    strategy = select_grounding_strategy(last_move.move_type, confidence)
+
+    return strategy == GroundingStrategy.CAUTIOUS
 
 
 def _select_understanding_confirmation_answer(state: InformationState) -> InformationState:

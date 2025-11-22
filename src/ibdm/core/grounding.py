@@ -113,7 +113,7 @@ DEFAULT_EVIDENCE_REQUIREMENTS = {
     "answer": EvidenceRequirement(
         move_type="answer",
         min_confidence=0.7,
-        requires_confirmation=True,  # Answers often need confirmation for critical info
+        requires_confirmation=False,
         action_level=ActionLevel.UNDERSTANDING,
     ),
     "assert": EvidenceRequirement(

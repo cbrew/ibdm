@@ -7,7 +7,7 @@ understanding, and acceptance feedback.
 Based on Larsson (2002) Section 3.6 - ICM Update Rules.
 """
 
-from ibdm.core import Answer, InformationState, WhQuestion
+from ibdm.core import Answer, DialogueMove, InformationState, WhQuestion
 from ibdm.core.grounding import ActionLevel
 from ibdm.core.moves import Polarity
 from ibdm.rules.update_rules import UpdateRule
@@ -490,10 +490,17 @@ def _has_unprocessed_input(state: InformationState) -> bool:
     Returns:
         True if last_moves has content not yet in moves
     """
-    # This is typically handled by the dialogue engine before rules run
-    # For most cases, this will be False as moves are already recorded
-    # This is a placeholder for Rule 3.16 infrastructure
-    return False
+    temp_move = state.private.beliefs.get("_temp_move")
+
+    if not isinstance(temp_move, DialogueMove):
+        return False
+
+    # Only handle ICM moves here; other move types are recorded by their own rules
+    if not temp_move.is_icm():
+        return False
+
+    # Record when the current temp move hasn't been captured in last_moves yet
+    return not state.shared.last_moves or state.shared.last_moves[-1] is not temp_move
 
 
 def _is_system_ask_move(state: InformationState) -> bool:
@@ -741,7 +748,7 @@ def _integrate_understanding_interrogative(state: InformationState) -> Informati
         # Format: "und_<content>" meaning "did you mean <content>?"
         und_question = WhQuestion(variable="x", predicate=f"und_{last_move.content}")
         new_state.shared.qud.append(und_question)
-    elif isinstance(last_move.content, (WhQuestion, Answer)):
+    elif isinstance(last_move.content, WhQuestion | Answer):
         # If content is already a question or answer, create understanding question about it
         content_str = str(last_move.content)
         und_question = WhQuestion(variable="x", predicate=f"und_{content_str}")
@@ -940,9 +947,15 @@ def _record_latest_moves(state: InformationState) -> InformationState:
     Returns:
         Updated information state with moves recorded
     """
-    # This is typically handled by the dialogue engine
-    # Placeholder implementation
-    return state.clone()
+    temp_move = state.private.beliefs.get("_temp_move")
+
+    if not isinstance(temp_move, DialogueMove) or not temp_move.is_icm():
+        return state.clone()
+
+    new_state = state.clone()
+    new_state.shared.last_moves.append(temp_move)
+
+    return new_state
 
 
 def _integrate_system_ask(state: InformationState) -> InformationState:
