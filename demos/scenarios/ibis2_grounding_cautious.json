@@ -37,8 +37,13 @@
       "move": {
         "move_type": "icm",
         "content": {
-          "type": "yn",
-          "proposition": "want_to_draft_nda",
+          "type": "wh",
+          "variable": "task",
+          "predicate": "task(x)",
+          "constraints": {
+            "action": "draft",
+            "document_type": "NDA"
+          },
           "required": true
         },
         "speaker": "system",

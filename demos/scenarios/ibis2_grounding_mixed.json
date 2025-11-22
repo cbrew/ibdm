@@ -60,8 +60,13 @@
       "move": {
         "move_type": "icm",
         "content": {
-          "type": "yn",
-          "proposition": "parties_are(Acme Corp, Smith Inc)",
+          "type": "wh",
+          "variable": "parties",
+          "predicate": "parties(x)",
+          "constraints": {
+            "party1": "Acme Corp",
+            "party2": "Smith Inc"
+          },
           "required": true
         },
         "speaker": "system",
