@@ -2,6 +2,8 @@
   "scenario_id": "ibis2_grounding_optimistic",
   "title": "Optimistic Grounding",
   "description": "Demonstrates immediate acceptance of high-confidence utterances",
+  "scenario_type": "demonstration",
+  "implementation_status": "TODO: Implement live grounding per Policy #18. Currently pre-scripted. See beads task ibdm-227.",
   "business_narrative": "This scenario demonstrates optimistic grounding strategy. The system assumes high confidence in perception and understanding, proceeding without explicit confirmations. This is efficient for clear communication.",
   "larsson_algorithms": [
     "Grounding strategies",

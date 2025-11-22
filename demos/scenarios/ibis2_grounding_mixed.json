@@ -2,6 +2,8 @@
   "scenario_id": "ibis2_grounding_mixed",
   "title": "Mixed Grounding Strategies",
   "description": "Demonstrates adaptive grounding based on confidence",
+  "scenario_type": "demonstration",
+  "implementation_status": "TODO: Implement live grounding per Policy #18. Currently pre-scripted. See beads task ibdm-229.",
   "business_narrative": "This scenario demonstrates adaptive grounding. The system adjusts its confirmation strategy based on confidence levels: optimistic for clear answers, cautious for uncertain ones. Shows intelligent strategy selection.",
   "larsson_algorithms": [
     "Grounding strategies",
