@@ -369,16 +369,23 @@ All reports tagged with timestamp and git hash in `reports/` directory.
 3. Refactor code quality
 4. Commit each step
 
-### 16. Scenario Alignment: Documentation Not Specification
+### 16. Scenario Alignment: Implementation Demonstrates Larsson, Scenarios Document Implementation
 
-**Policy**: Scenarios document actual implementation behavior, not prescriptive specifications.
+**Policy**: Implementation must properly demonstrate Larsson's algorithms. Scenarios then document that correct implementation.
 
 **Key Principles**:
-- Scenarios demonstrate working dialogue system behavior
-- State changes in scenarios reflect observed runtime behavior
-- We are NOT committed to guessed state changes in existing scenarios
-- Implementation correctness per Larsson (2002) comes first
-- Scenarios are updated to match correct implementation
+- **Implementation first**: Code must correctly implement Larsson (2002) algorithms before scenarios document it
+- **Scenarios second**: Scenarios demonstrate what the working implementation actually does
+- **Fix incomplete implementations**: If implementation doesn't properly demonstrate a Larsson rule, fix the implementation first
+- **Then align scenarios**: Update scenarios to match the corrected implementation
+- **Not prescriptive**: We are NOT committed to guessed state changes in existing scenarios
+
+**Priority Order**:
+1. Ensure implementation correctly demonstrates Larsson algorithms
+2. If implementation is incomplete/incorrect, fix it
+3. Run implementation with `IBDM_DEBUG=all` to observe behavior
+4. Document observed behavior in scenario state_changes
+5. Scenarios now accurately demonstrate the Larsson algorithm
 
 **When working with scenarios**:
 
