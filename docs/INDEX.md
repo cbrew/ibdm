@@ -1,6 +1,6 @@
 # IBDM Documentation Index
 
-**Last Updated**: 2025-11-20
+**Last Updated**: 2025-11-22
 
 Clean, focused documentation for the Issue-Based Dialogue Management system.
 
@@ -42,6 +42,8 @@ Clean, focused documentation for the Issue-Based Dialogue Management system.
 | Document | Purpose |
 |----------|---------|
 | [UNIFIED_SCENARIO_SYSTEM.md](UNIFIED_SCENARIO_SYSTEM.md) | **Complete guide** - JSON format, loading, running, creating scenarios |
+| [SCENARIO_ALIGNMENT.md](SCENARIO_ALIGNMENT.md) | **Policy #16** - Implementation first, scenarios document behavior |
+| [SCENARIO_VALIDATION_POLICIES.md](SCENARIO_VALIDATION_POLICIES.md) | **Policy #17** - Validation workflow, verification requirements |
 | [demos/scenarios/contract_revision_flow.json](../demos/scenarios/contract_revision_flow.json) | Contract revision demo (draft, clause insertion, regenerate, rollback) |
 
 ### Quick Start
@@ -97,6 +99,7 @@ Historical and superseded documentation: [archive/README.md](archive/README.md)
 |------|------------|
 | Start development | [CLAUDE.md](../CLAUDE.md) |
 | Run a demo | `python scripts/run_scenario.py --list` |
+| Create/validate scenarios | [SCENARIO_VALIDATION_POLICIES.md](SCENARIO_VALIDATION_POLICIES.md) |
 | Understand architecture | [architecture_principles.md](architecture_principles.md) |
 | Set up environment | [environment_setup.md](environment_setup.md) |
 | Learn IBDM concepts | [GETTING_STARTED.md](../GETTING_STARTED.md) |
