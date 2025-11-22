@@ -278,8 +278,8 @@ def _is_positive_answer_to_understanding_question(state: InformationState) -> bo
     if not isinstance(top_question, WhQuestion):
         return False
 
-    # Understanding questions have predicate starting with "und_"
-    return top_question.predicate.startswith("und_")
+    # Understanding questions have predicate "understanding_check"
+    return top_question.predicate == "understanding_check"
 
 
 def _is_negative_answer_to_understanding_question(state: InformationState) -> bool:
@@ -304,8 +304,8 @@ def _is_negative_answer_to_understanding_question(state: InformationState) -> bo
     if not isinstance(top_question, WhQuestion):
         return False
 
-    # Understanding questions have predicate starting with "und_"
-    return top_question.predicate.startswith("und_")
+    # Understanding questions have predicate "understanding_check"
+    return top_question.predicate == "understanding_check"
 
 
 def _is_unhandled_icm(state: InformationState) -> bool:
@@ -506,7 +506,11 @@ def _track_icm_move(state: InformationState) -> InformationState:
 
 
 def _integrate_understanding_interrogative(state: InformationState) -> InformationState:
-    """Integrate interrogative understanding feedback (icm:und*int)."""
+    """Integrate interrogative understanding feedback (icm:und*int).
+
+    Stores the content being confirmed as structured data in WhQuestion.constraints,
+    not as text that requires parsing.
+    """
     new_state = state.clone()
     last_move = _get_temp_move(new_state)
     if not last_move:
@@ -515,24 +519,23 @@ def _integrate_understanding_interrogative(state: InformationState) -> Informati
     # Add ICM move to move history
     new_state.shared.moves.append(last_move)
 
-    # Extract the content being confirmed from the ICM move
-    # The content should describe what we're asking about
-    if isinstance(last_move.content, str):
-        # Create an understanding question based on the content
-        # Format: "und_<content>" meaning "did you mean <content>?"
-        und_question = WhQuestion(variable="x", predicate=f"und_{last_move.content}")
-        new_state.shared.qud.append(und_question)
-    elif isinstance(last_move.content, WhQuestion | Answer):
-        # If content is already a question or answer, create understanding question about it
-        content_str = str(last_move.content)
-        und_question = WhQuestion(variable="x", predicate=f"und_{content_str}")
-        new_state.shared.qud.append(und_question)
+    # Create understanding question with structured content stored in constraints
+    # Don't convert content to string - store the actual object
+    und_question = WhQuestion(
+        variable="x",
+        predicate="understanding_check",
+        constraints={"confirmed_content": last_move.content},
+    )
+    new_state.shared.qud.append(und_question)
 
     return new_state
 
 
 def _integrate_positive_icm_answer(state: InformationState) -> InformationState:
-    """Integrate positive answer to understanding question."""
+    """Integrate positive answer to understanding question.
+
+    Uses structured content from constraints instead of parsing predicate text.
+    """
     new_state = state.clone()
     last_move = _get_temp_move(new_state)
     if not last_move:
@@ -545,33 +548,22 @@ def _integrate_positive_icm_answer(state: InformationState) -> InformationState:
     if new_state.shared.qud:
         und_question = new_state.shared.qud.pop()
 
-        # Extract the original content from the understanding question
-        # Format was: "und_<content>"
-        if isinstance(und_question, WhQuestion) and und_question.predicate.startswith("und_"):
-            confirmed_content: str = und_question.predicate[4:]  # Remove "und_" prefix
+        # Get the confirmed content from constraints (stored as structured object)
+        if isinstance(und_question, WhQuestion):
+            confirmed_content = und_question.constraints.get("confirmed_content")
 
-            # Clean up common suffixes to recover original content
-            suffixes = [
-                ", is that correct?",
-                ", correct?",
-                ", right?",
-                ", is that what you're asking?",
-            ]
-            for suffix in suffixes:
-                if confirmed_content.endswith(suffix):
-                    confirmed_content = confirmed_content[: -len(suffix)]
-                    break
+            if confirmed_content is None:
+                # No structured content stored, nothing to do
+                return new_state
 
-            # If the confirmed content looks like a question (issue), add it to QUD
-            if "?" in confirmed_content or confirmed_content.startswith("?"):
+            # Use type checking instead of text parsing
+            if isinstance(confirmed_content, WhQuestion):
                 # This was confirming a question - push it to QUD
-                try:
-                    question = WhQuestion(variable="x", predicate=confirmed_content.strip("?"))
-                    new_state.shared.qud.append(question)
-                except Exception:
-                    # If we can't parse it as a question, just note acceptance
-                    pass
-            else:
+                new_state.shared.qud.append(confirmed_content)
+            elif isinstance(confirmed_content, Answer):
+                # This was confirming an answer - add to commitments
+                new_state.shared.commitments.add(str(confirmed_content.content))
+            elif isinstance(confirmed_content, str):
                 # This was confirming a proposition - add to commitments
                 new_state.shared.commitments.add(confirmed_content)
 
@@ -579,7 +571,10 @@ def _integrate_positive_icm_answer(state: InformationState) -> InformationState:
 
 
 def _integrate_negative_icm_answer(state: InformationState) -> InformationState:
-    """Integrate negative answer to understanding question."""
+    """Integrate negative answer to understanding question.
+
+    Uses structured content from constraints instead of parsing predicate text.
+    """
     new_state = state.clone()
     last_move = _get_temp_move(new_state)
     if not last_move:
@@ -592,16 +587,16 @@ def _integrate_negative_icm_answer(state: InformationState) -> InformationState:
     if new_state.shared.qud:
         und_question = new_state.shared.qud.pop()
 
-        # Extract the original content that was rejected
-        # Format was: "und_<content>"
-        if isinstance(und_question, WhQuestion) and und_question.predicate.startswith("und_"):
-            rejected_content: str = und_question.predicate[4:]  # Remove "und_" prefix
+        # Get the rejected content from constraints (stored as structured object)
+        if isinstance(und_question, WhQuestion):
+            rejected_content = und_question.constraints.get("confirmed_content")
 
-            # Mark the interpretation as incorrect
-            # The system should request clarification or re-ask
-            # Store in beliefs so selection rules can handle it
-            new_state.private.beliefs["rejected_interpretation"] = rejected_content
-            new_state.private.beliefs["needs_reutterance"] = True
+            if rejected_content is not None:
+                # Mark the interpretation as incorrect
+                # The system should request clarification or re-ask
+                # Store the structured object in beliefs so selection rules can handle it
+                new_state.private.beliefs["rejected_interpretation"] = rejected_content
+                new_state.private.beliefs["needs_reutterance"] = True
 
     return new_state
 
