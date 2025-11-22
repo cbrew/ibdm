@@ -49,6 +49,46 @@ def create_selection_rules() -> list[UpdateRule]:
             priority=25,  # Highest - must handle invalid input first
             rule_type="selection",
         ),
+        # IBiS2 Rule 3.6: SelectPerceptionCheck
+        # Pre: User utterance has very low confidence (pessimistic grounding)
+        # Effect: add(shared.next_moves, icm:per*neg) - request repetition
+        UpdateRule(
+            name="select_perception_check",
+            preconditions=_needs_perception_check,
+            effects=_select_perception_check,
+            priority=24,  # High - perception check before dependencies/raising
+            rule_type="selection",
+        ),
+        # IBiS2 Rule 3.7: SelectUnderstandingConfirmation
+        # Pre: User utterance has medium confidence (cautious grounding)
+        # Effect: add(shared.next_moves, icm:und*int) - request confirmation
+        UpdateRule(
+            name="select_understanding_confirmation",
+            preconditions=_needs_understanding_confirmation,
+            effects=_select_understanding_confirmation,
+            priority=23,  # High - confirmation before dependencies/raising
+            rule_type="selection",
+        ),
+        # IBiS2 Rule 3.3: SelectIcmUndIntAsk
+        # Pre: User ask-move with low confidence on last_moves
+        # Effect: Select interrogative understanding feedback (icm:und*int)
+        UpdateRule(
+            name="select_icm_und_int_ask",
+            preconditions=_needs_understanding_confirmation_for_ask,
+            effects=_select_understanding_confirmation_ask,
+            priority=23,  # High - confirm before processing
+            rule_type="selection",
+        ),
+        # IBiS2 Rule 3.5: SelectIcmUndIntAnswer
+        # Pre: User answer-move with low confidence on last_moves
+        # Effect: Select interrogative understanding feedback (icm:und*int)
+        UpdateRule(
+            name="select_icm_und_int_answer",
+            preconditions=_needs_understanding_confirmation_for_answer,
+            effects=_select_understanding_confirmation_answer,
+            priority=23,  # High - confirm before processing
+            rule_type="selection",
+        ),
         # IBiS3 Rule 4.4: DependentIssueAccommodation - push prerequisite questions
         # Pre: top(QUD) depends on unanswered question
         # Effect: push prerequisite question to QUD
@@ -79,6 +119,16 @@ def create_selection_rules() -> list[UpdateRule]:
             priority=20,
             rule_type="selection",
         ),
+        # IBiS2 Rule 3.2: SelectIcmOther
+        # Pre: ICM move on agenda
+        # Effect: Move ICM from agenda to next_moves
+        UpdateRule(
+            name="select_icm_other",
+            preconditions=_has_icm_on_agenda,
+            effects=_select_icm_from_agenda,
+            priority=16,  # High - ICM should be selected promptly
+            rule_type="selection",
+        ),
         # Rule: SelectAnswer (Section 2.9.4)
         # Pre: top(shared.qud) == Q AND system can answer Q
         # Effect: add(shared.next_moves, answer(answer))
@@ -87,6 +137,26 @@ def create_selection_rules() -> list[UpdateRule]:
             preconditions=_can_answer_qud,
             effects=_select_answer_to_qud,
             priority=15,
+            rule_type="selection",
+        ),
+        # IBiS2 Rule 3.25: ReraiseIssue
+        # Pre: Communication failure, need to re-ask question
+        # Effect: Re-raise question to QUD after failure
+        UpdateRule(
+            name="reraise_issue",
+            preconditions=_needs_issue_reraised,
+            effects=_reraise_failed_issue,
+            priority=13,  # Medium-high - handle failures
+            rule_type="selection",
+        ),
+        # IBiS2 Rule 3.8: SelectAcceptance
+        # Pre: User utterance has high confidence (optimistic grounding)
+        # Effect: add(shared.next_moves, icm:acc*pos) - acknowledge acceptance
+        UpdateRule(
+            name="select_acceptance",
+            preconditions=_should_give_acceptance,
+            effects=_select_acceptance,
+            priority=12,  # Medium - acceptance after processing content
             rule_type="selection",
         ),
         # Rule: SelectAsk (Section 2.9.2)
@@ -107,76 +177,6 @@ def create_selection_rules() -> list[UpdateRule]:
             preconditions=_should_greet,
             effects=_select_greeting,
             priority=5,
-            rule_type="selection",
-        ),
-        # IBiS2 Rule 3.6: SelectPerceptionCheck
-        # Pre: User utterance has very low confidence (pessimistic grounding)
-        # Effect: add(shared.next_moves, icm:per*neg) - request repetition
-        UpdateRule(
-            name="select_perception_check",
-            preconditions=_needs_perception_check,
-            effects=_select_perception_check,
-            priority=18,  # High - perception check before other moves
-            rule_type="selection",
-        ),
-        # IBiS2 Rule 3.7: SelectUnderstandingConfirmation
-        # Pre: User utterance has medium confidence (cautious grounding)
-        # Effect: add(shared.next_moves, icm:und*int) - request confirmation
-        UpdateRule(
-            name="select_understanding_confirmation",
-            preconditions=_needs_understanding_confirmation,
-            effects=_select_understanding_confirmation,
-            priority=17,  # High - confirmation before processing answer
-            rule_type="selection",
-        ),
-        # IBiS2 Rule 3.8: SelectAcceptance
-        # Pre: User utterance has high confidence (optimistic grounding)
-        # Effect: add(shared.next_moves, icm:acc*pos) - acknowledge acceptance
-        UpdateRule(
-            name="select_acceptance",
-            preconditions=_should_give_acceptance,
-            effects=_select_acceptance,
-            priority=12,  # Medium - acceptance after processing content
-            rule_type="selection",
-        ),
-        # IBiS2 Rule 3.2: SelectIcmOther
-        # Pre: ICM move on agenda
-        # Effect: Move ICM from agenda to next_moves
-        UpdateRule(
-            name="select_icm_other",
-            preconditions=_has_icm_on_agenda,
-            effects=_select_icm_from_agenda,
-            priority=16,  # High - ICM should be selected promptly
-            rule_type="selection",
-        ),
-        # IBiS2 Rule 3.3: SelectIcmUndIntAsk
-        # Pre: User ask-move with low confidence on last_moves
-        # Effect: Select interrogative understanding feedback (icm:und*int)
-        UpdateRule(
-            name="select_icm_und_int_ask",
-            preconditions=_needs_understanding_confirmation_for_ask,
-            effects=_select_understanding_confirmation_ask,
-            priority=19,  # Very high - confirm before processing
-            rule_type="selection",
-        ),
-        # IBiS2 Rule 3.5: SelectIcmUndIntAnswer
-        # Pre: User answer-move with low confidence on last_moves
-        # Effect: Select interrogative understanding feedback (icm:und*int)
-        UpdateRule(
-            name="select_icm_und_int_answer",
-            preconditions=_needs_understanding_confirmation_for_answer,
-            effects=_select_understanding_confirmation_answer,
-            priority=19,  # Very high - confirm before processing
-            rule_type="selection",
-        ),
-        # IBiS2 Rule 3.25: ReraiseIssue
-        # Pre: Communication failure, need to re-ask question
-        # Effect: Re-raise question to QUD after failure
-        UpdateRule(
-            name="reraise_issue",
-            preconditions=_needs_issue_reraised,
-            effects=_reraise_failed_issue,
-            priority=13,  # Medium-high - handle failures
             rule_type="selection",
         ),
         # Fallback: Generic response if nothing else applies
@@ -270,7 +270,7 @@ def _needs_clarification(state: InformationState) -> bool:
     """Check if clarification is needed for invalid answer.
 
     IBiS2 Rule: SelectClarification (Section 3.4 - Accommodation)
-    Pre: Invalid answer received, needs clarification
+    Pre: Invalid answer received, clarification needed
 
     Note: If Rule 4.3 (IssueClarification) has already pushed a clarification
     question to QUD, don't use this ICM-based clarification. Let SelectAsk

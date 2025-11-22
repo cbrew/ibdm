@@ -43,6 +43,8 @@ class TestICMIntegrationRules:
         # Add perception positive ICM to last_moves
         icm_move = create_icm_perception_positive("I heard 'Paris'", "system", target_move_index=0)
         state.shared.last_moves = [icm_move]
+        # Set _temp_move as expected by updated rules
+        state.private.beliefs["_temp_move"] = icm_move
 
         # Apply integration rules
         rules = create_icm_integration_rules()
@@ -72,6 +74,7 @@ class TestICMIntegrationRules:
         # Add understanding positive ICM
         icm_move = create_icm_understanding_positive("Paris", "system", target_move_index=0)
         state.shared.last_moves = [icm_move]
+        state.private.beliefs["_temp_move"] = icm_move
 
         # Apply rule
         rules = create_icm_integration_rules()
@@ -96,6 +99,7 @@ class TestICMIntegrationRules:
         # Add acceptance positive ICM
         icm_move = create_icm_acceptance_positive("Okay", "system", target_move_index=0)
         state.shared.last_moves = [icm_move]
+        state.private.beliefs["_temp_move"] = icm_move
 
         # Apply rule
         rules = create_icm_integration_rules()
@@ -118,6 +122,7 @@ class TestICMIntegrationRules:
         # Add perception negative ICM
         icm_move = create_icm_perception_negative("Pardon?", "system", target_move_index=0)
         state.shared.last_moves = [icm_move]
+        state.private.beliefs["_temp_move"] = icm_move
 
         # Apply rule
         rules = create_icm_integration_rules()
@@ -145,6 +150,7 @@ class TestICMIntegrationRules:
             "I don't understand", "system", target_move_index=0
         )
         state.shared.last_moves = [icm_move]
+        state.private.beliefs["_temp_move"] = icm_move
 
         # Apply rule
         rules = create_icm_integration_rules()
@@ -166,6 +172,7 @@ class TestICMIntegrationRules:
         # Add any ICM move (e.g., interrogative)
         icm_move = create_icm_understanding_interrogative("Paris?", "system")
         state.shared.last_moves = [icm_move]
+        state.private.beliefs["_temp_move"] = icm_move
 
         # Apply generic tracking rule
         rules = create_icm_integration_rules()
@@ -184,6 +191,9 @@ class TestICMIntegrationRules:
 
         # Empty state - no rules should apply
         empty_state = create_test_state()
+        # Ensure _temp_move is None
+        empty_state.private.beliefs.pop("_temp_move", None)
+
         for rule in rules:
             assert not rule.applies(empty_state), (
                 f"Rule {rule.name} should not apply to empty state"
@@ -191,9 +201,10 @@ class TestICMIntegrationRules:
 
         # Non-ICM move - no ICM rules should apply
         non_icm_state = create_test_state()
-        non_icm_state.shared.last_moves = [
-            DialogueMove(move_type="greet", content="Hello", speaker="user")
-        ]
+        move = DialogueMove(move_type="greet", content="Hello", speaker="user")
+        non_icm_state.shared.last_moves = [move]
+        non_icm_state.private.beliefs["_temp_move"] = move
+
         for rule in rules:
             if rule.name != "track_icm_move":  # Generic tracking doesn't apply to non-ICM
                 assert not rule.applies(non_icm_state), (
@@ -467,6 +478,8 @@ class TestICMIntegrationFlow:
         # Step 1: Perception positive → perceived
         icm_per = create_icm_perception_positive("I heard 'Paris'", "system", target_move_index=0)
         state.shared.last_moves = [icm_per]
+        state.private.beliefs["_temp_move"] = icm_per
+
         per_rule = next(
             r for r in integration_rules if r.name == "integrate_icm_perception_positive"
         )
@@ -476,6 +489,8 @@ class TestICMIntegrationFlow:
         # Step 2: Understanding positive → understood
         icm_und = create_icm_understanding_positive("Paris", "system", target_move_index=0)
         state.shared.last_moves = [icm_und]
+        state.private.beliefs["_temp_move"] = icm_und
+
         und_rule = next(
             r for r in integration_rules if r.name == "integrate_icm_understanding_positive"
         )
@@ -485,6 +500,8 @@ class TestICMIntegrationFlow:
         # Step 3: Acceptance positive → grounded
         icm_acc = create_icm_acceptance_positive("Okay", "system", target_move_index=0)
         state.shared.last_moves = [icm_acc]
+        state.private.beliefs["_temp_move"] = icm_acc
+
         acc_rule = next(
             r for r in integration_rules if r.name == "integrate_icm_acceptance_positive"
         )
