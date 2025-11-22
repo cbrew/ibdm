@@ -34,6 +34,14 @@
       "speaker": "system",
       "utterance": "[icm:per*neg] Sorry, I didn't catch that. Could you repeat?",
       "move_type": "ask",
+      "move": {
+        "move_type": "icm",
+        "content": "Sorry, I didn't catch that. Could you repeat?",
+        "speaker": "system",
+        "feedback_level": "per",
+        "polarity": "neg",
+        "target_move_index": 0
+      },
       "business_explanation": "System requests repetition (perception failure)",
       "larsson_rule": "ICM Rules 3.1/3.5 - Perception/Understanding check",
       "state_changes": {

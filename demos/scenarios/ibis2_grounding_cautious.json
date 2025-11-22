@@ -34,6 +34,18 @@
       "speaker": "system",
       "utterance": "[icm:und*int] Do you want to draft an NDA?",
       "move_type": "ask",
+      "move": {
+        "move_type": "icm",
+        "content": {
+          "type": "yn",
+          "proposition": "want_to_draft_nda",
+          "required": true
+        },
+        "speaker": "system",
+        "feedback_level": "und",
+        "polarity": "int",
+        "target_move_index": 0
+      },
       "business_explanation": "System requests confirmation (understanding check)",
       "larsson_rule": "ICM Rule 3.20 - Confirmation request",
       "state_changes": {

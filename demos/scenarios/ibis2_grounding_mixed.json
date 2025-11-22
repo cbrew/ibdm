@@ -57,6 +57,18 @@
       "speaker": "system",
       "utterance": "[icm:und*int] Did you mean 'Acme Corp and Smith Inc'?",
       "move_type": "ask",
+      "move": {
+        "move_type": "icm",
+        "content": {
+          "type": "yn",
+          "proposition": "parties_are(Acme Corp, Smith Inc)",
+          "required": true
+        },
+        "speaker": "system",
+        "feedback_level": "und",
+        "polarity": "int",
+        "target_move_index": 2
+      },
       "business_explanation": "System confirms understanding (medium confidence)",
       "larsson_rule": "ICM Rule 3.20 - Confirmation request",
       "state_changes": {

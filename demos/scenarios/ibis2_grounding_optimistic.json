@@ -34,6 +34,14 @@
       "speaker": "system",
       "utterance": "[icm:acc*pos] Okay What are the parties to the NDA?",
       "move_type": "inform + ask",
+      "move": {
+        "move_type": "icm",
+        "content": "Okay",
+        "speaker": "system",
+        "feedback_level": "acc",
+        "polarity": "pos",
+        "target_move_index": 0
+      },
       "business_explanation": "System accepts immediately (no confirmation needed)",
       "larsson_rule": "ICM Rule 3.20 - Confirmation request",
       "state_changes": {
