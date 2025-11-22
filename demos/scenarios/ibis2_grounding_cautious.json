@@ -3,7 +3,7 @@
   "title": "Cautious Grounding",
   "description": "Demonstrates confirmation for medium-confidence utterances",
   "scenario_type": "demonstration",
-  "implementation_status": "Partial: Summary revised to be truthful. NLU improvements applied (domain validation), but QUD stack issue persists (stuck on parties).",
+  "implementation_status": "Complete: Fixed QUD stack issue by adjusting rule priorities and move integration. System correctly manages QUD stack during confirmation.",
   "business_narrative": "This scenario demonstrates cautious grounding strategy. The system requests explicit confirmations for critical information, ensuring accuracy at the cost of a few extra turns. Balances efficiency and safety.",
   "larsson_algorithms": [
     "Grounding strategies",
@@ -170,8 +170,7 @@
       "business_explanation": "System completes the task (acknowledgement).",
       "larsson_rule": "Dialogue update rule",
       "state_changes": {
-        "qud": "?parties.legal_entities",
-        "note": "System stuck on parties due to stack issue. Date/Duration answered via volunteer/mapping issues."
+        "qud": "empty"
       }
     }
   ],

@@ -291,8 +291,17 @@ class DomainModel:
 
             # Check if answer is one of the alternatives
             if answer_text not in alternatives_lower:
-                # Not a valid alternative - needs clarification
-                return False
+                # Try fuzzy matching: is any alternative contained in the answer?
+                # This supports NLU answers like "I think mutual makes sense"
+                found = False
+                for alt in alternatives_lower:
+                    if alt in answer_text:
+                        found = True
+                        break
+
+                if not found:
+                    # Not a valid alternative - needs clarification
+                    return False
 
         # Second check: Predicate-specific semantic validation
         if not hasattr(question, "predicate"):

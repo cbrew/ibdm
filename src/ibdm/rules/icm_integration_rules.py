@@ -182,174 +182,91 @@ def create_icm_integration_rules() -> list[UpdateRule]:
     ]
 
 
+# Helper
+def _get_temp_move(state: InformationState) -> DialogueMove | None:
+    """Get the temporary move currently being processed."""
+    move = state.private.beliefs.get("_temp_move")
+    if isinstance(move, DialogueMove):
+        return move
+    return None
+
+
 # Precondition functions
 
 
 def _is_perception_positive_icm(state: InformationState) -> bool:
-    """Check if last move is icm:per*pos.
-
-    Args:
-        state: Current information state
-
-    Returns:
-        True if last move is positive perception ICM
-    """
-    if not state.shared.last_moves:
+    """Check if last move is icm:per*pos."""
+    move = _get_temp_move(state)
+    if not move or not move.is_icm():
         return False
 
-    last_move = state.shared.last_moves[-1]
-    if not last_move.is_icm():
-        return False
-
-    return (
-        last_move.feedback_level == ActionLevel.PERCEPTION
-        and last_move.polarity == Polarity.POSITIVE
-    )
+    return move.feedback_level == ActionLevel.PERCEPTION and move.polarity == Polarity.POSITIVE
 
 
 def _is_understanding_positive_icm(state: InformationState) -> bool:
-    """Check if last move is icm:und*pos.
-
-    Args:
-        state: Current information state
-
-    Returns:
-        True if last move is positive understanding ICM
-    """
-    if not state.shared.last_moves:
+    """Check if last move is icm:und*pos."""
+    move = _get_temp_move(state)
+    if not move or not move.is_icm():
         return False
 
-    last_move = state.shared.last_moves[-1]
-    if not last_move.is_icm():
-        return False
-
-    return (
-        last_move.feedback_level == ActionLevel.UNDERSTANDING
-        and last_move.polarity == Polarity.POSITIVE
-    )
+    return move.feedback_level == ActionLevel.UNDERSTANDING and move.polarity == Polarity.POSITIVE
 
 
 def _is_acceptance_positive_icm(state: InformationState) -> bool:
-    """Check if last move is icm:acc*pos.
-
-    Args:
-        state: Current information state
-
-    Returns:
-        True if last move is positive acceptance ICM
-    """
-    if not state.shared.last_moves:
+    """Check if last move is icm:acc*pos."""
+    move = _get_temp_move(state)
+    if not move or not move.is_icm():
         return False
 
-    last_move = state.shared.last_moves[-1]
-    if not last_move.is_icm():
-        return False
-
-    return (
-        last_move.feedback_level == ActionLevel.ACCEPTANCE
-        and last_move.polarity == Polarity.POSITIVE
-    )
+    return move.feedback_level == ActionLevel.ACCEPTANCE and move.polarity == Polarity.POSITIVE
 
 
 def _is_perception_negative_icm(state: InformationState) -> bool:
-    """Check if last move is icm:per*neg.
-
-    Args:
-        state: Current information state
-
-    Returns:
-        True if last move is negative perception ICM
-    """
-    if not state.shared.last_moves:
+    """Check if last move is icm:per*neg."""
+    move = _get_temp_move(state)
+    if not move or not move.is_icm():
         return False
 
-    last_move = state.shared.last_moves[-1]
-    if not last_move.is_icm():
-        return False
-
-    return (
-        last_move.feedback_level == ActionLevel.PERCEPTION
-        and last_move.polarity == Polarity.NEGATIVE
-    )
+    return move.feedback_level == ActionLevel.PERCEPTION and move.polarity == Polarity.NEGATIVE
 
 
 def _is_understanding_negative_icm(state: InformationState) -> bool:
-    """Check if last move is icm:und*neg.
-
-    Args:
-        state: Current information state
-
-    Returns:
-        True if last move is negative understanding ICM
-    """
-    if not state.shared.last_moves:
+    """Check if last move is icm:und*neg."""
+    move = _get_temp_move(state)
+    if not move or not move.is_icm():
         return False
 
-    last_move = state.shared.last_moves[-1]
-    if not last_move.is_icm():
-        return False
-
-    return (
-        last_move.feedback_level == ActionLevel.UNDERSTANDING
-        and last_move.polarity == Polarity.NEGATIVE
-    )
+    return move.feedback_level == ActionLevel.UNDERSTANDING and move.polarity == Polarity.NEGATIVE
 
 
 def _is_any_icm_move(state: InformationState) -> bool:
-    """Check if last move is any ICM move.
-
-    Args:
-        state: Current information state
-
-    Returns:
-        True if last move is an ICM move
-    """
-    if not state.shared.last_moves:
-        return False
-
-    return state.shared.last_moves[-1].is_icm()
+    """Check if last move is any ICM move."""
+    move = _get_temp_move(state)
+    return bool(move and move.is_icm())
 
 
 def _is_understanding_interrogative_icm(state: InformationState) -> bool:
-    """Check if last move is icm:und*int.
-
-    Args:
-        state: Current information state
-
-    Returns:
-        True if last move is interrogative understanding ICM
-    """
-    if not state.shared.last_moves:
-        return False
-
-    last_move = state.shared.last_moves[-1]
-    if not last_move.is_icm():
+    """Check if last move is icm:und*int."""
+    move = _get_temp_move(state)
+    if not move or not move.is_icm():
         return False
 
     return (
-        last_move.feedback_level == ActionLevel.UNDERSTANDING
-        and last_move.polarity == Polarity.INTERROGATIVE
+        move.feedback_level == ActionLevel.UNDERSTANDING and move.polarity == Polarity.INTERROGATIVE
     )
 
 
 def _is_positive_answer_to_understanding_question(state: InformationState) -> bool:
-    """Check if last move is answer(yes) to an understanding question.
-
-    Args:
-        state: Current information state
-
-    Returns:
-        True if last move is yes/positive answer to understanding question
-    """
-    if not state.shared.last_moves or not state.shared.qud:
+    """Check if last move is answer(yes) to an understanding question."""
+    if not state.shared.qud:
         return False
 
-    last_move = state.shared.last_moves[-1]
-    if last_move.move_type != "answer" or not isinstance(last_move.content, Answer):
+    move = _get_temp_move(state)
+    if not move or move.move_type != "answer" or not isinstance(move.content, Answer):
         return False
 
     # Check if answer is affirmative
-    answer_content = last_move.content.content.lower()
+    answer_content = move.content.content.lower()
     if answer_content not in ["yes", "yeah", "yep", "correct", "right", "true"]:
         return False
 
@@ -363,23 +280,16 @@ def _is_positive_answer_to_understanding_question(state: InformationState) -> bo
 
 
 def _is_negative_answer_to_understanding_question(state: InformationState) -> bool:
-    """Check if last move is answer(no) to an understanding question.
-
-    Args:
-        state: Current information state
-
-    Returns:
-        True if last move is no/negative answer to understanding question
-    """
-    if not state.shared.last_moves or not state.shared.qud:
+    """Check if last move is answer(no) to an understanding question."""
+    if not state.shared.qud:
         return False
 
-    last_move = state.shared.last_moves[-1]
-    if last_move.move_type != "answer" or not isinstance(last_move.content, Answer):
+    move = _get_temp_move(state)
+    if not move or move.move_type != "answer" or not isinstance(move.content, Answer):
         return False
 
     # Check if answer is negative
-    answer_content = last_move.content.content.lower()
+    answer_content = move.content.content.lower()
     if answer_content not in ["no", "nope", "incorrect", "wrong", "false"]:
         return False
 
@@ -393,52 +303,28 @@ def _is_negative_answer_to_understanding_question(state: InformationState) -> bo
 
 
 def _is_unhandled_icm(state: InformationState) -> bool:
-    """Check if last move is an ICM move not handled by other rules.
-
-    Args:
-        state: Current information state
-
-    Returns:
-        True if last move is unhandled ICM
-    """
-    if not state.shared.last_moves:
-        return False
-
-    last_move = state.shared.last_moves[-1]
-    # This will catch any ICM moves not matched by higher-priority rules
-    return last_move.is_icm()
+    """Check if last move is an ICM move not handled by other rules."""
+    move = _get_temp_move(state)
+    return bool(move and move.is_icm())
 
 
 def _is_user_perception_negative(state: InformationState) -> bool:
-    """Check if user is giving negative perception feedback.
-
-    User saying "what?", "pardon?", "I didn't hear that", etc.
-
-    Args:
-        state: Current information state
-
-    Returns:
-        True if user is indicating perception failure
-    """
-    if not state.shared.last_moves:
+    """Check if user is giving negative perception feedback."""
+    move = _get_temp_move(state)
+    if not move:
         return False
 
-    last_move = state.shared.last_moves[-1]
-
     # Check if it's from user
-    if last_move.speaker == state.agent_id:
+    if move.speaker == state.agent_id:
         return False
 
     # Check if it's perception negative ICM or similar utterance
-    if last_move.is_icm():
-        return (
-            last_move.feedback_level == ActionLevel.PERCEPTION
-            and last_move.polarity == Polarity.NEGATIVE
-        )
+    if move.is_icm():
+        return move.feedback_level == ActionLevel.PERCEPTION and move.polarity == Polarity.NEGATIVE
 
     # Check for perception-related phrases
-    if isinstance(last_move.content, str):
-        content = last_move.content.lower()
+    if isinstance(move.content, str):
+        content = move.content.lower()
         perception_phrases = ["what", "pardon", "sorry", "didn't hear", "come again"]
         return any(phrase in content for phrase in perception_phrases)
 
@@ -446,35 +332,22 @@ def _is_user_perception_negative(state: InformationState) -> bool:
 
 
 def _is_user_acceptance_negative(state: InformationState) -> bool:
-    """Check if user is rejecting/correcting system's interpretation.
-
-    User saying "no, that's wrong", "that's incorrect", etc.
-
-    Args:
-        state: Current information state
-
-    Returns:
-        True if user is rejecting system's content
-    """
-    if not state.shared.last_moves:
+    """Check if user is rejecting/correcting system's interpretation."""
+    move = _get_temp_move(state)
+    if not move:
         return False
 
-    last_move = state.shared.last_moves[-1]
-
     # Check if it's from user
-    if last_move.speaker == state.agent_id:
+    if move.speaker == state.agent_id:
         return False
 
     # Check if it's acceptance negative ICM
-    if last_move.is_icm():
-        return (
-            last_move.feedback_level == ActionLevel.ACCEPTANCE
-            and last_move.polarity == Polarity.NEGATIVE
-        )
+    if move.is_icm():
+        return move.feedback_level == ActionLevel.ACCEPTANCE and move.polarity == Polarity.NEGATIVE
 
     # Check for rejection phrases
-    if isinstance(last_move.content, str):
-        content = last_move.content.lower()
+    if isinstance(move.content, str):
+        content = move.content.lower()
         rejection_phrases = ["wrong", "incorrect", "that's not right", "no that's"]
         return any(phrase in content for phrase in rejection_phrases)
 
@@ -482,14 +355,7 @@ def _is_user_acceptance_negative(state: InformationState) -> bool:
 
 
 def _has_unprocessed_input(state: InformationState) -> bool:
-    """Check if there's unprocessed input that needs recording.
-
-    Args:
-        state: Current information state
-
-    Returns:
-        True if last_moves has content not yet in moves
-    """
+    """Check if there's unprocessed input that needs recording."""
     temp_move = state.private.beliefs.get("_temp_move")
 
     if not isinstance(temp_move, DialogueMove):
@@ -504,55 +370,26 @@ def _has_unprocessed_input(state: InformationState) -> bool:
 
 
 def _is_system_ask_move(state: InformationState) -> bool:
-    """Check if last move is system's own ask-move.
-
-    Args:
-        state: Current information state
-
-    Returns:
-        True if last move is from system and is ask
-    """
-    if not state.shared.last_moves:
-        return False
-
-    last_move = state.shared.last_moves[-1]
-    return last_move.speaker == state.agent_id and last_move.move_type == "ask"
+    """Check if last move is system's own ask-move."""
+    move = _get_temp_move(state)
+    return bool(move and move.speaker == state.agent_id and move.move_type == "ask")
 
 
 def _is_system_answer_move(state: InformationState) -> bool:
-    """Check if last move is system's own answer-move.
-
-    Args:
-        state: Current information state
-
-    Returns:
-        True if last move is from system and is answer
-    """
-    if not state.shared.last_moves:
-        return False
-
-    last_move = state.shared.last_moves[-1]
-    return last_move.speaker == state.agent_id and last_move.move_type == "answer"
+    """Check if last move is system's own answer-move."""
+    move = _get_temp_move(state)
+    return bool(move and move.speaker == state.agent_id and move.move_type == "answer")
 
 
 # Effect functions
 
 
 def _integrate_perception_positive(state: InformationState) -> InformationState:
-    """Integrate positive perception feedback (icm:per*pos).
-
-    Marks the target utterance as perceived. This is the first level of grounding.
-
-    Based on Larsson (2002) Section 3.6, Rule 3.1.
-
-    Args:
-        state: Current information state
-
-    Returns:
-        Updated information state with perception marked
-    """
+    """Integrate positive perception feedback (icm:per*pos)."""
     new_state = state.clone()
-    last_move = new_state.shared.last_moves[-1]
+    last_move = _get_temp_move(new_state)
+    if not last_move:
+        return new_state
 
     # Add ICM move to move history
     new_state.shared.moves.append(last_move)
@@ -569,20 +406,11 @@ def _integrate_perception_positive(state: InformationState) -> InformationState:
 
 
 def _integrate_understanding_positive(state: InformationState) -> InformationState:
-    """Integrate positive understanding feedback (icm:und*pos).
-
-    Marks the target utterance as understood. This is the second level of grounding.
-
-    Based on Larsson (2002) Section 3.6, Rule 3.2.
-
-    Args:
-        state: Current information state
-
-    Returns:
-        Updated information state with understanding marked
-    """
+    """Integrate positive understanding feedback (icm:und*pos)."""
     new_state = state.clone()
-    last_move = new_state.shared.last_moves[-1]
+    last_move = _get_temp_move(new_state)
+    if not last_move:
+        return new_state
 
     # Add ICM move to move history
     new_state.shared.moves.append(last_move)
@@ -598,21 +426,11 @@ def _integrate_understanding_positive(state: InformationState) -> InformationSta
 
 
 def _integrate_acceptance_positive(state: InformationState) -> InformationState:
-    """Integrate positive acceptance feedback (icm:acc*pos).
-
-    Marks the target utterance as fully grounded and accepted. This is the
-    final level of grounding.
-
-    Based on Larsson (2002) Section 3.6, Rule 3.3.
-
-    Args:
-        state: Current information state
-
-    Returns:
-        Updated information state with acceptance marked
-    """
+    """Integrate positive acceptance feedback (icm:acc*pos)."""
     new_state = state.clone()
-    last_move = new_state.shared.last_moves[-1]
+    last_move = _get_temp_move(new_state)
+    if not last_move:
+        return new_state
 
     # Add ICM move to move history
     new_state.shared.moves.append(last_move)
@@ -639,21 +457,11 @@ def _integrate_acceptance_positive(state: InformationState) -> InformationState:
 
 
 def _integrate_perception_negative(state: InformationState) -> InformationState:
-    """Integrate negative perception feedback (icm:per*neg).
-
-    Indicates perception failure. The system should prepare to re-utter or
-    request clarification.
-
-    Based on Larsson (2002) Section 3.6, Rule 3.4.
-
-    Args:
-        state: Current information state
-
-    Returns:
-        Updated information state with perception failure marked
-    """
+    """Integrate negative perception feedback (icm:per*neg)."""
     new_state = state.clone()
-    last_move = new_state.shared.last_moves[-1]
+    last_move = _get_temp_move(new_state)
+    if not last_move:
+        return new_state
 
     # Add ICM move to move history
     new_state.shared.moves.append(last_move)
@@ -670,20 +478,11 @@ def _integrate_perception_negative(state: InformationState) -> InformationState:
 
 
 def _integrate_understanding_negative(state: InformationState) -> InformationState:
-    """Integrate negative understanding feedback (icm:und*neg).
-
-    Indicates understanding failure. The system should prepare clarification.
-
-    Based on Larsson (2002) Section 3.6, Rule 3.5.
-
-    Args:
-        state: Current information state
-
-    Returns:
-        Updated information state with understanding failure marked
-    """
+    """Integrate negative understanding feedback (icm:und*neg)."""
     new_state = state.clone()
-    last_move = new_state.shared.last_moves[-1]
+    last_move = _get_temp_move(new_state)
+    if not last_move:
+        return new_state
 
     # Add ICM move to move history
     new_state.shared.moves.append(last_move)
@@ -700,19 +499,11 @@ def _integrate_understanding_negative(state: InformationState) -> InformationSta
 
 
 def _track_icm_move(state: InformationState) -> InformationState:
-    """Track any ICM move in move history.
-
-    This is a catch-all for ICM moves that aren't handled by specific rules.
-    Ensures all ICM feedback is recorded in the move history.
-
-    Args:
-        state: Current information state
-
-    Returns:
-        Updated information state with ICM move tracked
-    """
+    """Track any ICM move in move history."""
     new_state = state.clone()
-    last_move = new_state.shared.last_moves[-1]
+    last_move = _get_temp_move(new_state)
+    if not last_move:
+        return new_state
 
     # Add to move history if not already added by specific handler
     if not new_state.shared.moves or new_state.shared.moves[-1] != last_move:
@@ -722,21 +513,11 @@ def _track_icm_move(state: InformationState) -> InformationState:
 
 
 def _integrate_understanding_interrogative(state: InformationState) -> InformationState:
-    """Integrate interrogative understanding feedback (icm:und*int).
-
-    Raises an understanding question to QUD. The system is asking the user to confirm
-    their interpretation, e.g., "To Paris, is that correct?"
-
-    Based on Larsson (2002) Section 3.6, Rule 3.6.
-
-    Args:
-        state: Current information state
-
-    Returns:
-        Updated information state with understanding question on QUD
-    """
+    """Integrate interrogative understanding feedback (icm:und*int)."""
     new_state = state.clone()
-    last_move = new_state.shared.last_moves[-1]
+    last_move = _get_temp_move(new_state)
+    if not last_move:
+        return new_state
 
     # Add ICM move to move history
     new_state.shared.moves.append(last_move)
@@ -758,21 +539,11 @@ def _integrate_understanding_interrogative(state: InformationState) -> Informati
 
 
 def _integrate_positive_icm_answer(state: InformationState) -> InformationState:
-    """Integrate positive answer to understanding question.
-
-    User said "yes" to confirmation question. Pop the understanding question and
-    integrate the original content as if it was confirmed.
-
-    Based on Larsson (2002) Section 3.6, Rule 3.8.
-
-    Args:
-        state: Current information state
-
-    Returns:
-        Updated information state with understanding question resolved
-    """
+    """Integrate positive answer to understanding question."""
     new_state = state.clone()
-    last_move = new_state.shared.last_moves[-1]
+    last_move = _get_temp_move(new_state)
+    if not last_move:
+        return new_state
 
     # Add answer to move history
     new_state.shared.moves.append(last_move)
@@ -785,6 +556,18 @@ def _integrate_positive_icm_answer(state: InformationState) -> InformationState:
         # Format was: "und_<content>"
         if isinstance(und_question, WhQuestion) and und_question.predicate.startswith("und_"):
             confirmed_content: str = und_question.predicate[4:]  # Remove "und_" prefix
+
+            # Clean up common suffixes to recover original content
+            suffixes = [
+                ", is that correct?",
+                ", correct?",
+                ", right?",
+                ", is that what you're asking?",
+            ]
+            for suffix in suffixes:
+                if confirmed_content.endswith(suffix):
+                    confirmed_content = confirmed_content[: -len(suffix)]
+                    break
 
             # If the confirmed content looks like a question (issue), add it to QUD
             if "?" in confirmed_content or confirmed_content.startswith("?"):
@@ -803,21 +586,11 @@ def _integrate_positive_icm_answer(state: InformationState) -> InformationState:
 
 
 def _integrate_negative_icm_answer(state: InformationState) -> InformationState:
-    """Integrate negative answer to understanding question.
-
-    User said "no" to confirmation question. Pop the understanding question and
-    acknowledge that the interpretation was incorrect.
-
-    Based on Larsson (2002) Section 3.6, Rule 3.7.
-
-    Args:
-        state: Current information state
-
-    Returns:
-        Updated information state with understanding question resolved
-    """
+    """Integrate negative answer to understanding question."""
     new_state = state.clone()
-    last_move = new_state.shared.last_moves[-1]
+    last_move = _get_temp_move(new_state)
+    if not last_move:
+        return new_state
 
     # Add answer to move history
     new_state.shared.moves.append(last_move)
@@ -841,20 +614,11 @@ def _integrate_negative_icm_answer(state: InformationState) -> InformationState:
 
 
 def _integrate_other_icm(state: InformationState) -> InformationState:
-    """Integrate any other ICM move.
-
-    Generic catch-all for ICM moves not handled by specific rules.
-
-    Based on Larsson (2002) Section 3.6, Rule 3.10.
-
-    Args:
-        state: Current information state
-
-    Returns:
-        Updated information state with ICM tracked
-    """
+    """Integrate any other ICM move."""
     new_state = state.clone()
-    last_move = new_state.shared.last_moves[-1]
+    last_move = _get_temp_move(new_state)
+    if not last_move:
+        return new_state
 
     # Add to move history
     if not new_state.shared.moves or new_state.shared.moves[-1] != last_move:
@@ -864,21 +628,11 @@ def _integrate_other_icm(state: InformationState) -> InformationState:
 
 
 def _integrate_user_perception_negative(state: InformationState) -> InformationState:
-    """Integrate user perception negative feedback.
-
-    User indicated they didn't hear/perceive system's utterance (e.g., "what?").
-    Retract last system move and prepare to re-utter.
-
-    Based on Larsson (2002) Section 3.6, Rule 3.20.
-
-    Args:
-        state: Current information state
-
-    Returns:
-        Updated information state with perception failure handled
-    """
+    """Integrate user perception negative feedback."""
     new_state = state.clone()
-    last_move = new_state.shared.last_moves[-1]
+    last_move = _get_temp_move(new_state)
+    if not last_move:
+        return new_state
 
     # Add ICM to move history
     new_state.shared.moves.append(last_move)
@@ -899,21 +653,11 @@ def _integrate_user_perception_negative(state: InformationState) -> InformationS
 
 
 def _integrate_user_acceptance_negative(state: InformationState) -> InformationState:
-    """Integrate user acceptance negative feedback.
-
-    User is rejecting system's interpretation or assertion (e.g., "no, that's wrong").
-    Retract the rejected content from commitments.
-
-    Based on Larsson (2002) Section 3.6, Rule 3.21.
-
-    Args:
-        state: Current information state
-
-    Returns:
-        Updated information state with rejection handled
-    """
+    """Integrate user acceptance negative feedback."""
     new_state = state.clone()
-    last_move = new_state.shared.last_moves[-1]
+    last_move = _get_temp_move(new_state)
+    if not last_move:
+        return new_state
 
     # Add ICM to move history
     new_state.shared.moves.append(last_move)
@@ -949,7 +693,11 @@ def _record_latest_moves(state: InformationState) -> InformationState:
     """
     temp_move = state.private.beliefs.get("_temp_move")
 
-    if not isinstance(temp_move, DialogueMove) or not temp_move.is_icm():
+    if not isinstance(temp_move, DialogueMove):
+        return state.clone()
+
+    # Only handle ICM moves here; other move types are recorded by their own rules
+    if not temp_move.is_icm():
         return state.clone()
 
     new_state = state.clone()
@@ -959,20 +707,11 @@ def _record_latest_moves(state: InformationState) -> InformationState:
 
 
 def _integrate_system_ask(state: InformationState) -> InformationState:
-    """Integrate system's own ask-move.
-
-    Track system questions for grounding and dialogue flow.
-
-    Based on Larsson (2002) Section 3.6, Rule 3.18.
-
-    Args:
-        state: Current information state
-
-    Returns:
-        Updated information state with system ask tracked
-    """
+    """Integrate system's own ask-move."""
     new_state = state.clone()
-    last_move = new_state.shared.last_moves[-1]
+    last_move = _get_temp_move(new_state)
+    if not last_move:
+        return new_state
 
     # Add to move history if not already there
     if not new_state.shared.moves or new_state.shared.moves[-1] != last_move:
@@ -986,20 +725,11 @@ def _integrate_system_ask(state: InformationState) -> InformationState:
 
 
 def _integrate_system_answer(state: InformationState) -> InformationState:
-    """Integrate system's own answer-move.
-
-    Track system answers for grounding and dialogue flow.
-
-    Based on Larsson (2002) Section 3.6, Rule 3.19.
-
-    Args:
-        state: Current information state
-
-    Returns:
-        Updated information state with system answer tracked
-    """
+    """Integrate system's own answer-move."""
     new_state = state.clone()
-    last_move = new_state.shared.last_moves[-1]
+    last_move = _get_temp_move(new_state)
+    if not last_move:
+        return new_state
 
     # Add to move history if not already there
     if not new_state.shared.moves or new_state.shared.moves[-1] != last_move:
