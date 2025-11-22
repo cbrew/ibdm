@@ -257,7 +257,11 @@ def _is_understanding_interrogative_icm(state: InformationState) -> bool:
 
 
 def _is_positive_answer_to_understanding_question(state: InformationState) -> bool:
-    """Check if last move is answer(yes) to an understanding question."""
+    """Check if last move is answer(yes) to an understanding question.
+
+    NOTE: This requires Answer to have a polarity field (ibdm-233).
+    For now, scenarios must provide Answer with polarity metadata.
+    """
     if not state.shared.qud:
         return False
 
@@ -265,9 +269,10 @@ def _is_positive_answer_to_understanding_question(state: InformationState) -> bo
     if not move or move.move_type != "answer" or not isinstance(move.content, Answer):
         return False
 
-    # Check if answer is affirmative
-    answer_content = move.content.content.lower()
-    if answer_content not in ["yes", "yeah", "yep", "correct", "right", "true"]:
+    # Check if answer is affirmative via metadata (set by scenario or NLU)
+    # TODO(ibdm-233): Use Answer.polarity field once implemented
+    polarity = move.metadata.get("polarity")
+    if polarity != Polarity.POSITIVE:
         return False
 
     # Check if top of QUD is an understanding question
@@ -280,7 +285,11 @@ def _is_positive_answer_to_understanding_question(state: InformationState) -> bo
 
 
 def _is_negative_answer_to_understanding_question(state: InformationState) -> bool:
-    """Check if last move is answer(no) to an understanding question."""
+    """Check if last move is answer(no) to an understanding question.
+
+    NOTE: This requires Answer to have a polarity field (ibdm-233).
+    For now, scenarios must provide Answer with polarity metadata.
+    """
     if not state.shared.qud:
         return False
 
@@ -288,9 +297,10 @@ def _is_negative_answer_to_understanding_question(state: InformationState) -> bo
     if not move or move.move_type != "answer" or not isinstance(move.content, Answer):
         return False
 
-    # Check if answer is negative
-    answer_content = move.content.content.lower()
-    if answer_content not in ["no", "nope", "incorrect", "wrong", "false"]:
+    # Check if answer is negative via metadata (set by scenario or NLU)
+    # TODO(ibdm-233): Use Answer.polarity field once implemented
+    polarity = move.metadata.get("polarity")
+    if polarity != Polarity.NEGATIVE:
         return False
 
     # Check if top of QUD is an understanding question
@@ -309,7 +319,11 @@ def _is_unhandled_icm(state: InformationState) -> bool:
 
 
 def _is_user_perception_negative(state: InformationState) -> bool:
-    """Check if user is giving negative perception feedback."""
+    """Check if user is giving negative perception feedback.
+
+    NOTE: Only accepts properly structured ICM moves.
+    Scenarios must provide icm moves with feedback_level and polarity.
+    """
     move = _get_temp_move(state)
     if not move:
         return False
@@ -318,21 +332,19 @@ def _is_user_perception_negative(state: InformationState) -> bool:
     if move.speaker == state.agent_id:
         return False
 
-    # Check if it's perception negative ICM or similar utterance
-    if move.is_icm():
-        return move.feedback_level == ActionLevel.PERCEPTION and move.polarity == Polarity.NEGATIVE
+    # Only accept properly structured ICM moves (no keyword matching)
+    if not move.is_icm():
+        return False
 
-    # Check for perception-related phrases
-    if isinstance(move.content, str):
-        content = move.content.lower()
-        perception_phrases = ["what", "pardon", "sorry", "didn't hear", "come again"]
-        return any(phrase in content for phrase in perception_phrases)
-
-    return False
+    return move.feedback_level == ActionLevel.PERCEPTION and move.polarity == Polarity.NEGATIVE
 
 
 def _is_user_acceptance_negative(state: InformationState) -> bool:
-    """Check if user is rejecting/correcting system's interpretation."""
+    """Check if user is rejecting/correcting system's interpretation.
+
+    NOTE: Only accepts properly structured ICM moves.
+    Scenarios must provide icm moves with feedback_level and polarity.
+    """
     move = _get_temp_move(state)
     if not move:
         return False
@@ -341,17 +353,11 @@ def _is_user_acceptance_negative(state: InformationState) -> bool:
     if move.speaker == state.agent_id:
         return False
 
-    # Check if it's acceptance negative ICM
-    if move.is_icm():
-        return move.feedback_level == ActionLevel.ACCEPTANCE and move.polarity == Polarity.NEGATIVE
+    # Only accept properly structured ICM moves (no keyword matching)
+    if not move.is_icm():
+        return False
 
-    # Check for rejection phrases
-    if isinstance(move.content, str):
-        content = move.content.lower()
-        rejection_phrases = ["wrong", "incorrect", "that's not right", "no that's"]
-        return any(phrase in content for phrase in rejection_phrases)
-
-    return False
+    return move.feedback_level == ActionLevel.ACCEPTANCE and move.polarity == Polarity.NEGATIVE
 
 
 def _has_unprocessed_input(state: InformationState) -> bool:
@@ -442,17 +448,8 @@ def _integrate_acceptance_positive(state: InformationState) -> InformationState:
         target_move = new_state.shared.moves[last_move.target_move_index]
         target_move.metadata["grounding_status"] = "grounded"
 
-    # Mark content as accepted (could add to commitments if content is a proposition)
-    if isinstance(last_move.content, str) and last_move.content.lower() in [
-        "okay",
-        "ok",
-        "yes",
-        "sure",
-        "alright",
-    ]:
-        # Generic acceptance - full grounding achieved
-        pass
-
+    # NOTE: Content acceptance is determined by ICM move structure, not keywords
+    # Full grounding is achieved when icm:acc*pos is received
     return new_state
 
 
