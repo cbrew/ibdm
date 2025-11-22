@@ -269,6 +269,11 @@ class DomainModel:
 
         Internal method for type checking based on predicate specs and sorts.
 
+        Enhanced for Rule 4.3 (IssueClarification):
+        - For AltQuestion: validates answer matches one of the alternatives
+        - For specific predicates: applies heuristic semantic validation
+        - Otherwise: uses basic type checking
+
         Args:
             answer: Answer object
             question: Question object
@@ -276,11 +281,42 @@ class DomainModel:
         Returns:
             True if answer type is valid for question predicate
         """
-        # Get predicate spec
+        from ibdm.core.questions import AltQuestion
+
+        # First check: AltQuestion with alternatives
+        # Validate answer matches one of the expected alternatives
+        if isinstance(question, AltQuestion) and question.alternatives:
+            answer_text = str(answer.content).strip().lower()
+            alternatives_lower = [alt.lower() for alt in question.alternatives]
+
+            # Check if answer is one of the alternatives
+            if answer_text not in alternatives_lower:
+                # Not a valid alternative - needs clarification
+                return False
+
+        # Second check: Predicate-specific semantic validation
         if not hasattr(question, "predicate"):
-            return True
+            return True  # No predicate, accept
 
         predicate_name = getattr(question, "predicate")
+
+        # Heuristic validation for specific predicates
+        if predicate_name == "legal_entities":
+            # Validate looks like legal entity names
+            # Reject single words without legal markers
+            answer_text = str(answer.content).strip()
+
+            # Must contain at least one of: comma, "and", "Inc", "Corp", "LLC", "Ltd"
+            # OR be at least two words
+            legal_markers = [",", " and ", "inc", "corp", "llc", "ltd", "limited"]
+            has_marker = any(marker in answer_text.lower() for marker in legal_markers)
+            has_multiple_words = len(answer_text.split()) >= 2
+
+            if not (has_marker or has_multiple_words):
+                # Single word without legal markers - likely invalid (e.g., "blue")
+                return False
+
+        # Third check: Type checking via predicate specs
         pred_spec = self.predicates.get(predicate_name)
         if not pred_spec:
             return True  # No spec, accept
