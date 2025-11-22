@@ -1,120 +1,106 @@
 {
-  "scenario_id": "ibis3_clarification",
-  "title": "Clarification Questions",
-  "description": "Demonstrates clarification when answers are unclear (Rule 4.3)",
-  "business_narrative": "This scenario demonstrates how IBDM handles ambiguous or incomplete user responses. The system asks clarification questions to resolve uncertainty, ensuring accurate information capture. This shows robust error handling.",
-  "larsson_algorithms": [
-    "Rule 4.3 (IssueClarification)",
-    "Invalid answer handling"
-  ],
-  "expected_outcomes": {
-    "turns": 8,
-    "qud_depth_max": 1,
-    "commitments_final": 4,
-    "plan_completion": "100%",
-    "larsson_fidelity": "95%"
-  },
-  "confidence_mode": "optimistic",
-  "turns": [
-    {
-      "turn": 1,
-      "speaker": "user",
-      "utterance": "I need to draft an NDA",
-      "move_type": "request",
-      "business_explanation": "User initiates task",
-      "larsson_rule": "Task Accommodation (Section 2.5.1)",
-      "state_changes": {
-        "plan": "active"
-      }
+    "scenario_id": "ibis3_clarification",
+    "title": "Clarification Questions",
+    "description": "Demonstrates clarification when answers are unclear (Rule 4.3)",
+    "business_narrative": "This scenario demonstrates how IBDM handles ambiguous or incomplete user responses. The system asks clarification questions to resolve uncertainty, ensuring accurate information capture. This shows robust error handling.",
+    "larsson_algorithms": ["Rule 4.3 (IssueClarification)", "Invalid answer handling"],
+    "expected_outcomes": {
+        "turns": 8,
+        "qud_depth_max": 1,
+        "commitments_final": 4,
+        "plan_completion": "100%",
+        "larsson_fidelity": "95%",
     },
-    {
-      "turn": 2,
-      "speaker": "system",
-      "utterance": "What are the parties to the NDA?",
-      "move_type": "ask",
-      "business_explanation": "System asks for parties",
-      "larsson_rule": "Dialogue update rule",
-      "state_changes": {
-        "qud": "1 question"
-      }
+    "confidence_mode": "optimistic",
+    "turns": [
+        {
+            "turn": 1,
+            "speaker": "user",
+            "utterance": "I need to draft an NDA",
+            "move_type": "request",
+            "business_explanation": "User initiates task",
+            "larsson_rule": "Task Accommodation (Section 2.5.1)",
+            "state_changes": {"plan": "active"},
+        },
+        {
+            "turn": 2,
+            "speaker": "system",
+            "utterance": "What are the parties to the NDA?",
+            "move_type": "ask",
+            "business_explanation": "System asks for parties",
+            "larsson_rule": "Dialogue update rule",
+            "state_changes": {"qud": "1 question"},
+        },
+        {
+            "turn": 3,
+            "speaker": "user",
+            "utterance": "blue",
+            "move_type": "answer",
+            "business_explanation": "User provides invalid/unclear answer - validation fails",
+            "larsson_rule": "Rule 4.8 (integrate_answer) - detects invalid answer via domain.resolves()",
+            "state_changes": {
+                "qud": "1 question (unchanged - question not popped)",
+                "needs_clarification": "true",
+                "invalid_answer": "blue",
+            },
+        },
+        {
+            "turn": 4,
+            "speaker": "system",
+            "utterance": "I'm sorry, 'blue' doesn't seem relevant to the parties question. Please provide the names of the companies or individuals entering into this NDA.",
+            "move_type": "ask",
+            "business_explanation": "System acknowledges off-topic answer and guides user back to valid input",
+            "larsson_rule": "Rule 4.3 (IssueClarification) - pushes clarification above original question, generates recovery guidance",
+            "state_changes": {
+                "qud": "2 questions (clarification pushed onto stack)",
+                "qud_top": "clarification question [is_clarification=True]",
+            },
+        },
+        {
+            "turn": 5,
+            "speaker": "user",
+            "utterance": "Acme Corp and Smith Inc",
+            "move_type": "answer",
+            "business_explanation": "User provides valid answer - resolves both clarification and original question",
+            "larsson_rule": "Rule 4.8 (integrate_answer) - pops clarification + original question, adds commitment",
+            "state_changes": {
+                "commitments": "+1 (legal_entities(Acme Corp and Smith Inc))",
+                "qud": "0 questions (both clarification and original popped)",
+            },
+        },
+        {
+            "turn": 6,
+            "speaker": "system",
+            "utterance": "What is the effective date?",
+            "move_type": "ask",
+            "business_explanation": "System returns to normal question sequence",
+            "larsson_rule": "Dialogue update rule",
+            "state_changes": {"qud": "1 question"},
+        },
+        {
+            "turn": 7,
+            "speaker": "user",
+            "utterance": "January 1, 2025",
+            "move_type": "answer",
+            "business_explanation": "User provides date",
+            "larsson_rule": "Dialogue update rule",
+            "state_changes": {"commitments": "+1", "qud": "0"},
+        },
+        {
+            "turn": 8,
+            "speaker": "system",
+            "utterance": '\n\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557\n\u2551        CLARIFICATION HANDLING ANALYSIS REPORT                \u2551\n\u255a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255d\n\nNDA Drafting Progress - WITH CLARIFICATION RECOVERY\n\nInformation Collected:\n  Task:            Draft NDA\n  Parties:         Acme Corp and Smith Inc (after clarification)\n  Effective Date:  January 1, 2025\n  Status:          \u2713 Proceeding after successful clarification\n\nClarification Analysis (Rule 4.3 - IssueClarification):\n\nDialogue Flow with Clarification:\n  1. System asks: "What are the parties to the NDA?"\n     User answers: "blue"\n     Validation:   domain.resolves("blue", Q_parties) \u2192 FALSE\n     Result:       \u2717 Invalid answer detected\n\n  2. System generates clarification question (Rule 4.3)\n     Clarification: "I\'m sorry, \'blue\' doesn\'t seem relevant to the parties question. Please provide the names of the companies or individuals entering into this NDA."\n     QUD state:     [Q_parties, CQ_valid_parties] (nested)\n     Strategy:      Push clarification above original question\n     Result:        User prompted for valid response with clear guidance\n\n  3. User answers clarification: "Acme Corp and Smith Inc"\n     Validation:    domain.resolves("Acme Corp and Smith Inc", Q_parties) \u2192 TRUE\n     Resolution:    Pops CQ_valid_parties, resolves Q_parties\n     QUD state:     [] (both questions resolved)\n     Result:        \u2713 Valid parties established\n\n  4. System continues: "What is the effective date?"\n     Behavior:      Normal flow resumed after clarification\n     Result:        \u2713 Dialogue progressing smoothly\n\nClarification Handling Metrics:\n  Invalid Answers:         1 ("blue")\n  Clarifications Needed:   1 (Rule 4.3 applied once)\n  Recovery Success:        \u2713 100% (user provided valid response)\n  Dialogue Continuity:     \u2713 Maintained (no disruption)\n  Extra Turns:             2 (1 invalid + 1 clarification response)\n\nRule 4.3 Demonstration:\n  \u2713 Detected invalid answer through domain validation\n  \u2713 Generated appropriate clarification question\n  \u2713 Maintained question stack (QUD) correctly\n  \u2713 Nested clarification above original question\n  \u2713 Resolved both questions when valid answer provided\n  \u2713 Continued dialogue flow seamlessly\n\nSystem Behavior - Error Recovery:\n  \u26a0 User provided nonsensical answer: "blue"\n  \u2713 System did NOT accept invalid input\n  \u2713 System did NOT proceed with bad data\n  \u2713 System requested clarification politely\n  \u2713 System handled corrected input properly\n  \u2713 Dialogue recovered gracefully\n\nComparison: With vs. Without Clarification:\n  Without Rule 4.3:\n    \u2192 Accept "blue" as parties\n    \u2192 Generate invalid NDA\n    \u2192 User discovers error later\n    \u2192 Must restart dialogue\n\n  With Rule 4.3 (this dialogue):\n    \u2192 Detect "blue" is invalid\n    \u2192 Request clarification immediately\n    \u2192 Get valid input "Acme Corp and Smith Inc"\n    \u2192 Continue successfully \u2713\n\nUser Experience Benefits:\n  \u2713 Prevented proceeding with bad data\n  \u2713 Provided clear recovery path\n  \u2713 Maintained conversational flow\n  \u2713 No need to restart dialogue\n  \u2713 Minimal overhead (2 extra turns)\n\nRecommendation:\n  Rule 4.3 (IssueClarification) successfully prevented invalid\n  data from corrupting the dialogue state. The system detected\n  the validation failure, generated an appropriate clarification\n  question, and recovered when the user provided valid input.\n  Essential for robust dialogue management.',
+            "move_type": "ask",
+            "business_explanation": "System generates clarification analysis report",
+            "larsson_rule": "Rule 4.3 - Clarification question handling",
+            "state_changes": {"clarification_report": "generated"},
+            "is_payoff": true,
+        },
+    ],
+    "metrics": {
+        "dialogue_efficiency": "High - Systematic information gathering",
+        "information_completeness": "100% - All required fields gathered",
+        "user_experience": "Good - Clear, logical progression",
+        "system_transparency": "High - User always knows what's being asked and why",
     },
-    {
-      "turn": 3,
-      "speaker": "user",
-      "utterance": "blue",
-      "move_type": "answer",
-      "business_explanation": "User provides invalid/unclear answer - validation fails",
-      "larsson_rule": "Rule 4.8 (integrate_answer) - detects invalid answer via domain.resolves()",
-      "state_changes": {
-        "qud": "1 question (unchanged - question not popped)",
-        "needs_clarification": "true",
-        "invalid_answer": "blue"
-      }
-    },
-    {
-      "turn": 4,
-      "speaker": "system",
-      "utterance": "What is a valid parties?",
-      "move_type": "ask",
-      "business_explanation": "System accommodates clarification question to QUD",
-      "larsson_rule": "Rule 4.3 (accommodate_clarification_question) - pushes clarification above original question",
-      "state_changes": {
-        "qud": "2 questions (clarification pushed onto stack)",
-        "qud_top": "clarification question [is_clarification=True]"
-      }
-    },
-    {
-      "turn": 5,
-      "speaker": "user",
-      "utterance": "Acme Corp and Smith Inc",
-      "move_type": "answer",
-      "business_explanation": "User provides valid answer - resolves both clarification and original question",
-      "larsson_rule": "Rule 4.8 (integrate_answer) - pops clarification + original question, adds commitment",
-      "state_changes": {
-        "commitments": "+1 (legal_entities(Acme Corp and Smith Inc))",
-        "qud": "0 questions (both clarification and original popped)"
-      }
-    },
-    {
-      "turn": 6,
-      "speaker": "system",
-      "utterance": "What is the effective date?",
-      "move_type": "ask",
-      "business_explanation": "System returns to normal question sequence",
-      "larsson_rule": "Dialogue update rule",
-      "state_changes": {
-        "qud": "1 question"
-      }
-    },
-    {
-      "turn": 7,
-      "speaker": "user",
-      "utterance": "January 1, 2025",
-      "move_type": "answer",
-      "business_explanation": "User provides date",
-      "larsson_rule": "Dialogue update rule",
-      "state_changes": {
-        "commitments": "+1",
-        "qud": "0"
-      }
-    },
-    {
-      "turn": 8,
-      "speaker": "system",
-      "utterance": "\n\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557\n\u2551        CLARIFICATION HANDLING ANALYSIS REPORT                \u2551\n\u255a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255d\n\nNDA Drafting Progress - WITH CLARIFICATION RECOVERY\n\nInformation Collected:\n  Task:            Draft NDA\n  Parties:         Acme Corp and Smith Inc (after clarification)\n  Effective Date:  January 1, 2025\n  Status:          \u2713 Proceeding after successful clarification\n\nClarification Analysis (Rule 4.3 - IssueClarification):\n\nDialogue Flow with Clarification:\n  1. System asks: \"What are the parties to the NDA?\"\n     User answers: \"blue\"\n     Validation:   domain.resolves(\"blue\", Q_parties) \u2192 FALSE\n     Result:       \u2717 Invalid answer detected\n\n  2. System generates clarification question (Rule 4.3)\n     Clarification: \"What is a valid parties?\"\n     QUD state:     [Q_parties, CQ_valid_parties] (nested)\n     Strategy:      Push clarification above original question\n     Result:        User prompted for valid response\n\n  3. User answers clarification: \"Acme Corp and Smith Inc\"\n     Validation:    domain.resolves(\"Acme Corp and Smith Inc\", Q_parties) \u2192 TRUE\n     Resolution:    Pops CQ_valid_parties, resolves Q_parties\n     QUD state:     [] (both questions resolved)\n     Result:        \u2713 Valid parties established\n\n  4. System continues: \"What is the effective date?\"\n     Behavior:      Normal flow resumed after clarification\n     Result:        \u2713 Dialogue progressing smoothly\n\nClarification Handling Metrics:\n  Invalid Answers:         1 (\"blue\")\n  Clarifications Needed:   1 (Rule 4.3 applied once)\n  Recovery Success:        \u2713 100% (user provided valid response)\n  Dialogue Continuity:     \u2713 Maintained (no disruption)\n  Extra Turns:             2 (1 invalid + 1 clarification response)\n\nRule 4.3 Demonstration:\n  \u2713 Detected invalid answer through domain validation\n  \u2713 Generated appropriate clarification question\n  \u2713 Maintained question stack (QUD) correctly\n  \u2713 Nested clarification above original question\n  \u2713 Resolved both questions when valid answer provided\n  \u2713 Continued dialogue flow seamlessly\n\nSystem Behavior - Error Recovery:\n  \u26a0 User provided nonsensical answer: \"blue\"\n  \u2713 System did NOT accept invalid input\n  \u2713 System did NOT proceed with bad data\n  \u2713 System requested clarification politely\n  \u2713 System handled corrected input properly\n  \u2713 Dialogue recovered gracefully\n\nComparison: With vs. Without Clarification:\n  Without Rule 4.3:\n    \u2192 Accept \"blue\" as parties\n    \u2192 Generate invalid NDA\n    \u2192 User discovers error later\n    \u2192 Must restart dialogue\n\n  With Rule 4.3 (this dialogue):\n    \u2192 Detect \"blue\" is invalid\n    \u2192 Request clarification immediately\n    \u2192 Get valid input \"Acme Corp and Smith Inc\"\n    \u2192 Continue successfully \u2713\n\nUser Experience Benefits:\n  \u2713 Prevented proceeding with bad data\n  \u2713 Provided clear recovery path\n  \u2713 Maintained conversational flow\n  \u2713 No need to restart dialogue\n  \u2713 Minimal overhead (2 extra turns)\n\nRecommendation:\n  Rule 4.3 (IssueClarification) successfully prevented invalid\n  data from corrupting the dialogue state. The system detected\n  the validation failure, generated an appropriate clarification\n  question, and recovered when the user provided valid input.\n  Essential for robust dialogue management.",
-      "move_type": "ask",
-      "business_explanation": "System generates clarification analysis report",
-      "larsson_rule": "Rule 4.3 - Clarification question handling",
-      "state_changes": {
-        "clarification_report": "generated"
-      },
-      "is_payoff": true
-    }
-  ],
-  "metrics": {
-    "dialogue_efficiency": "High - Systematic information gathering",
-    "information_completeness": "100% - All required fields gathered",
-    "user_experience": "Good - Clear, logical progression",
-    "system_transparency": "High - User always knows what's being asked and why"
-  }
 }
