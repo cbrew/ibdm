@@ -108,10 +108,7 @@ class TestAltQuestionPredicate:
 
     def test_alt_question_with_predicate(self) -> None:
         """Test AltQuestion with predicate."""
-        question = AltQuestion(
-            alternatives=["mutual", "one-way"],
-            predicate="nda_type"
-        )
+        question = AltQuestion(alternatives=["mutual", "one-way"], predicate="nda_type")
 
         assert question.predicate == "nda_type"
         assert question.alternatives == ["mutual", "one-way"]
@@ -125,10 +122,7 @@ class TestAltQuestionPredicate:
 
     def test_alt_question_str_with_predicate(self) -> None:
         """Test string representation with predicate."""
-        question = AltQuestion(
-            alternatives=["mutual", "one-way"],
-            predicate="nda_type"
-        )
+        question = AltQuestion(alternatives=["mutual", "one-way"], predicate="nda_type")
 
         assert str(question) == "?nda_type{mutual, one-way}"
 
@@ -140,10 +134,7 @@ class TestAltQuestionPredicate:
 
     def test_alt_question_to_dict_with_predicate(self) -> None:
         """Test to_dict() with predicate."""
-        question = AltQuestion(
-            alternatives=["mutual", "one-way"],
-            predicate="nda_type"
-        )
+        question = AltQuestion(alternatives=["mutual", "one-way"], predicate="nda_type")
 
         data = question.to_dict()
         assert data["type"] == "alt"
@@ -167,7 +158,7 @@ class TestAltQuestionPredicate:
             "type": "alt",
             "alternatives": ["mutual", "one-way"],
             "predicate": "nda_type",
-            "required": True
+            "required": True,
         }
 
         question = Question.from_dict(data)
@@ -179,11 +170,7 @@ class TestAltQuestionPredicate:
         """Test from_dict() without predicate (backward compatibility)."""
         from ibdm.core.questions import Question
 
-        data = {
-            "type": "alt",
-            "alternatives": ["mutual", "one-way"],
-            "required": True
-        }
+        data = {"type": "alt", "alternatives": ["mutual", "one-way"], "required": True}
 
         question = Question.from_dict(data)
         assert isinstance(question, AltQuestion)
@@ -201,10 +188,7 @@ class TestIntegrateAnswerCleanCommitments:
         state.control.active_domain = domain
 
         # Push question to QUD
-        question = AltQuestion(
-            alternatives=["mutual", "one-way"],
-            predicate="nda_type"
-        )
+        question = AltQuestion(alternatives=["mutual", "one-way"], predicate="nda_type")
         state.shared.qud.append(question)
 
         # Create answer move
@@ -273,8 +257,7 @@ class TestIntegrateAnswerCleanCommitments:
 
         # Push jurisdiction question to QUD
         question = AltQuestion(
-            alternatives=["California", "Delaware", "New York"],
-            predicate="jurisdiction"
+            alternatives=["California", "Delaware", "New York"], predicate="jurisdiction"
         )
         state.shared.qud.append(question)
 

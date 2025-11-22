@@ -93,11 +93,16 @@ class NLUDomainMapper:
         # Filter entities by predicate type
         relevant_entities = []
 
-        # Find entity type(s) that map to this predicate
-        for entity_type, predicate in self.entity_to_predicate.items():
-            if predicate == question_predicate:
-                relevant_entities = [e for e in entities if e.entity_type == entity_type]
-                break
+        # Special handling for time_period (maps to TEMPORAL)
+        # This handles the case where both date and time_period map to TEMPORAL
+        if question_predicate == "time_period":
+            relevant_entities = [e for e in entities if e.entity_type == EntityType.TEMPORAL]
+        else:
+            # Find entity type(s) that map to this predicate
+            for entity_type, predicate in self.entity_to_predicate.items():
+                if predicate == question_predicate:
+                    relevant_entities = [e for e in entities if e.entity_type == entity_type]
+                    break
 
         if not relevant_entities:
             # No mapped entities found - could be direct answer text

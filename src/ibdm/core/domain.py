@@ -308,12 +308,12 @@ class DomainModel:
 
             # Must contain at least one of: comma, "and", "Inc", "Corp", "LLC", "Ltd"
             # OR be at least two words
-            legal_markers = [",", " and ", "inc", "corp", "llc", "ltd", "limited"]
+            legal_markers = [" and ", "inc", "corp", "llc", "ltd", "limited"]
             has_marker = any(marker in answer_text.lower() for marker in legal_markers)
             has_multiple_words = len(answer_text.split()) >= 2
 
-            if not (has_marker or has_multiple_words):
-                # Single word without legal markers - likely invalid (e.g., "blue")
+            if not has_marker:
+                # Must contain legal marker (e.g. Inc, Corp, and)
                 return False
 
         # Third check: Type checking via predicate specs
