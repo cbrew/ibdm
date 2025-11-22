@@ -3,7 +3,7 @@
   "title": "Pessimistic Grounding",
   "description": "Demonstrates perception check for low-confidence utterances",
   "scenario_type": "demonstration",
-  "implementation_status": "Pre-scripted demonstration of Larsson's grounding strategies. Not currently integrated with live dialogue engine. Shows conceptual grounding behavior per Larsson IBiS-2 Section 3.4.",
+  "implementation_status": "TODO: Implement live grounding per Policy #18. Currently pre-scripted. See beads task ibdm-228.",
   "business_narrative": "This scenario demonstrates pessimistic grounding strategy. The system uses re-utterance and extensive confirmation to ensure perfect accuracy. Prioritizes correctness over efficiency for high-stakes situations.",
   "larsson_algorithms": [
     "Grounding strategies",

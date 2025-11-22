@@ -3,7 +3,7 @@
   "title": "Cautious Grounding",
   "description": "Demonstrates confirmation for medium-confidence utterances",
   "scenario_type": "demonstration",
-  "implementation_status": "Pre-scripted demonstration of Larsson's grounding strategies. Not currently integrated with live dialogue engine. Shows conceptual grounding behavior per Larsson IBiS-2 Section 3.4.",
+  "implementation_status": "TODO: Implement live grounding per Policy #18. Currently pre-scripted. See beads task ibdm-226.",
   "business_narrative": "This scenario demonstrates cautious grounding strategy. The system requests explicit confirmations for critical information, ensuring accuracy at the cost of a few extra turns. Balances efficiency and safety.",
   "larsson_algorithms": [
     "Grounding strategies",
