@@ -43,10 +43,12 @@
       "speaker": "user",
       "utterance": "blue",
       "move_type": "answer",
-      "business_explanation": "User provides invalid/unclear answer",
-      "larsson_rule": "Dialogue update rule",
+      "business_explanation": "User provides invalid/unclear answer - validation fails",
+      "larsson_rule": "Rule 4.8 (integrate_answer) - detects invalid answer via domain.resolves()",
       "state_changes": {
-        "qud": "2 questions"
+        "qud": "1 question (unchanged - question not popped)",
+        "needs_clarification": "true",
+        "invalid_answer": "blue"
       }
     },
     {
@@ -54,10 +56,11 @@
       "speaker": "system",
       "utterance": "What is a valid parties?",
       "move_type": "ask",
-      "business_explanation": "System asks clarification question (Rule 4.3)",
-      "larsson_rule": "Rule 5.1 - Raise issue from private.issues to shared.qud",
+      "business_explanation": "System accommodates clarification question to QUD",
+      "larsson_rule": "Rule 4.3 (accommodate_clarification_question) - pushes clarification above original question",
       "state_changes": {
-        "qud": "2 questions"
+        "qud": "2 questions (clarification pushed onto stack)",
+        "qud_top": "clarification question [is_clarification=True]"
       }
     },
     {
@@ -65,11 +68,11 @@
       "speaker": "user",
       "utterance": "Acme Corp and Smith Inc",
       "move_type": "answer",
-      "business_explanation": "User provides valid answer to clarification",
-      "larsson_rule": "Rule 4.3 - Clarification question handling",
+      "business_explanation": "User provides valid answer - resolves both clarification and original question",
+      "larsson_rule": "Rule 4.8 (integrate_answer) - pops clarification + original question, adds commitment",
       "state_changes": {
-        "commitments": "+1",
-        "qud": "1 question"
+        "commitments": "+1 (legal_entities(Acme Corp and Smith Inc))",
+        "qud": "0 questions (both clarification and original popped)"
       }
     },
     {
