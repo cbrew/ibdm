@@ -314,6 +314,12 @@ def _generate_generic_question(question: WhQuestion | YNQuestion | AltQuestion) 
         Generated question text
     """
     if isinstance(question, WhQuestion):
+        # Check if this is a clarification question (Rule 4.3 - IssueClarification)
+        constraints = getattr(question, "constraints", {})
+        if constraints.get("is_clarification"):
+            # Generic clarification response - acknowledge invalid input and request valid response
+            return "I didn't understand that answer. Could you please provide a valid response?"
+
         # Generate wh-question text
         wh_word = question.constraints.get("wh_word", "what")
 
@@ -363,6 +369,49 @@ def _generate_nda_question(
     predicate_desc = None
     if domain and isinstance(question, WhQuestion) and question.predicate in domain.predicates:
         predicate_desc = domain.predicates[question.predicate].description
+
+    # Check if this is a clarification question (Rule 4.3 - IssueClarification)
+    if isinstance(question, WhQuestion):
+        constraints = getattr(question, "constraints", {})
+        if constraints.get("is_clarification"):
+            # This is a clarification question - generate recovery guidance
+            invalid_answer = state.private.beliefs.get("_invalid_answer", "that")
+
+            # Extract the original question predicate to provide helpful guidance
+            # The predicate is "clarification_for_<original_predicate>"
+            if question.predicate.startswith("clarification_for_"):
+                original_predicate = question.predicate.replace("clarification_for_", "")
+
+                # Map predicates to helpful clarification text
+                if original_predicate == "legal_entities":
+                    return (
+                        f"I'm sorry, '{invalid_answer}' doesn't seem relevant to the "
+                        "parties question. Please provide the names of the companies "
+                        "or individuals entering into this NDA."
+                    )
+                elif original_predicate == "date":
+                    return (
+                        f"I didn't understand '{invalid_answer}' as a date. "
+                        "Could you please provide the effective date in a format "
+                        "like 'January 1, 2025' or '2025-01-01'?"
+                    )
+                elif original_predicate == "time_period":
+                    return (
+                        f"'{invalid_answer}' doesn't appear to be a valid time period. "
+                        "Please specify a duration like '2 years' or '5 years'."
+                    )
+                else:
+                    # Generic clarification for unknown predicates
+                    predicate_readable = original_predicate.replace("_", " ")
+                    return (
+                        f"I didn't understand '{invalid_answer}' as an answer "
+                        f"for {predicate_readable}. Could you please provide a valid response?"
+                    )
+            else:
+                # Fallback if predicate doesn't match expected pattern
+                return (
+                    f"I didn't understand '{invalid_answer}'. Could you please clarify your answer?"
+                )
 
     # Generate question based on predicate
     if isinstance(question, WhQuestion):
