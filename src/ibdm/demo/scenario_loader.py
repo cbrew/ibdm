@@ -12,6 +12,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ibdm.core import Answer, DialogueMove, WhQuestion
+from ibdm.core.grounding import ActionLevel
+from ibdm.core.moves import Polarity
+
 
 @dataclass
 class ScenarioTurn:
@@ -26,6 +30,7 @@ class ScenarioTurn:
         larsson_rule: Which Larsson rule applies
         state_changes: Expected state changes
         is_payoff: Whether this turn produces high-value output
+        move: Optional structured DialogueMove object (overrides text-based recognition)
     """
 
     turn: int
@@ -36,6 +41,7 @@ class ScenarioTurn:
     larsson_rule: str
     state_changes: dict[str, Any]
     is_payoff: bool = False
+    move: DialogueMove | None = None
 
 
 @dataclass
@@ -118,6 +124,85 @@ class Scenario:
             if turn.turn == turn_number:
                 return turn
         return None
+
+
+def build_dialogue_move_from_json(
+    move_spec: dict[str, Any], speaker: str, agent_id: str = "system"
+) -> DialogueMove:
+    """Build a DialogueMove from JSON specification.
+
+    Args:
+        move_spec: JSON specification with move fields
+        speaker: Who is making the move ("user" or "system")
+        agent_id: Agent ID for the system (default: "system")
+
+    Returns:
+        Constructed DialogueMove object
+
+    Example move_spec formats:
+        # ICM move
+        {
+            "move_type": "icm",
+            "feedback_level": "perception",
+            "polarity": "negative"
+        }
+
+        # Answer with polarity
+        {
+            "move_type": "answer",
+            "content": "Yes",
+            "polarity": "positive"
+        }
+
+        # Regular answer
+        {
+            "move_type": "answer",
+            "content": "mutual"
+        }
+    """
+    move_type = move_spec.get("move_type", "unknown")
+
+    # Determine speaker ID
+    speaker_id = agent_id if speaker == "system" else "user"
+
+    # Build content based on move type
+    content: Any = None
+
+    if move_type == "answer":
+        # Build Answer object
+        answer_content = move_spec.get("content", "")
+        polarity = None
+        if "polarity" in move_spec:
+            polarity = Polarity(move_spec["polarity"])
+        content = Answer(content=answer_content, polarity=polarity)
+
+    elif move_type == "ask":
+        # Build WhQuestion or other question type
+        question_predicate = move_spec.get("predicate", "")
+        variable = move_spec.get("variable", "x")
+        content = WhQuestion(variable=variable, predicate=question_predicate)
+
+    else:
+        # Use raw content if provided
+        content = move_spec.get("content")
+
+    # Build base move
+    move = DialogueMove(
+        move_type=move_type,
+        content=content,
+        speaker=speaker_id,
+    )
+
+    # Add ICM-specific fields if this is an ICM move
+    if move_type == "icm":
+        if "feedback_level" in move_spec:
+            move.feedback_level = ActionLevel(move_spec["feedback_level"])
+        if "polarity" in move_spec:
+            move.polarity = Polarity(move_spec["polarity"])
+        if "target_move_index" in move_spec:
+            move.target_move_index = move_spec["target_move_index"]
+
+    return move
 
 
 class ScenarioLoader:
@@ -248,6 +333,19 @@ class ScenarioLoader:
                 "larsson_rule", turn_data.get("rule", "Dialogue update rule")
             )
 
+            # Build structured DialogueMove if "move" spec is provided
+            structured_move = None
+            if "move" in turn_data:
+                try:
+                    structured_move = build_dialogue_move_from_json(
+                        move_spec=turn_data["move"],
+                        speaker=turn_data["speaker"],
+                        agent_id="system",  # Could be parameterized if needed
+                    )
+                except Exception as e:
+                    # Log warning but continue - scenarios can still use text-based processing
+                    print(f"Warning: Failed to build move for turn {turn_data['turn']}: {e}")
+
             turn = ScenarioTurn(
                 turn=turn_data["turn"],
                 speaker=turn_data["speaker"],
@@ -257,6 +355,7 @@ class ScenarioLoader:
                 larsson_rule=larsson_rule,
                 state_changes=turn_data.get("state_changes", {}),
                 is_payoff=turn_data.get("is_payoff", False),
+                move=structured_move,
             )
             turns.append(turn)
 
