@@ -259,8 +259,8 @@ def _is_understanding_interrogative_icm(state: InformationState) -> bool:
 def _is_positive_answer_to_understanding_question(state: InformationState) -> bool:
     """Check if last move is answer(yes) to an understanding question.
 
-    NOTE: This requires Answer to have a polarity field (ibdm-233).
-    For now, scenarios must provide Answer with polarity metadata.
+    Uses Answer.polarity field to determine if answer is affirmative.
+    Scenarios and NLU must set polarity on Answer objects.
     """
     if not state.shared.qud:
         return False
@@ -269,10 +269,8 @@ def _is_positive_answer_to_understanding_question(state: InformationState) -> bo
     if not move or move.move_type != "answer" or not isinstance(move.content, Answer):
         return False
 
-    # Check if answer is affirmative via metadata (set by scenario or NLU)
-    # TODO(ibdm-233): Use Answer.polarity field once implemented
-    polarity = move.metadata.get("polarity")
-    if polarity != Polarity.POSITIVE:
+    # Check if answer is affirmative via Answer.polarity field
+    if move.content.polarity != Polarity.POSITIVE:
         return False
 
     # Check if top of QUD is an understanding question
@@ -287,8 +285,8 @@ def _is_positive_answer_to_understanding_question(state: InformationState) -> bo
 def _is_negative_answer_to_understanding_question(state: InformationState) -> bool:
     """Check if last move is answer(no) to an understanding question.
 
-    NOTE: This requires Answer to have a polarity field (ibdm-233).
-    For now, scenarios must provide Answer with polarity metadata.
+    Uses Answer.polarity field to determine if answer is negative.
+    Scenarios and NLU must set polarity on Answer objects.
     """
     if not state.shared.qud:
         return False
@@ -297,10 +295,8 @@ def _is_negative_answer_to_understanding_question(state: InformationState) -> bo
     if not move or move.move_type != "answer" or not isinstance(move.content, Answer):
         return False
 
-    # Check if answer is negative via metadata (set by scenario or NLU)
-    # TODO(ibdm-233): Use Answer.polarity field once implemented
-    polarity = move.metadata.get("polarity")
-    if polarity != Polarity.NEGATIVE:
+    # Check if answer is negative via Answer.polarity field
+    if move.content.polarity != Polarity.NEGATIVE:
         return False
 
     # Check if top of QUD is an understanding question
