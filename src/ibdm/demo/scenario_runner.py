@@ -574,6 +574,11 @@ class ScenarioRunner:
         utterance = turn.utterance
         state_changes = turn.state_changes
 
+        # Build metadata with confidence for grounding strategies
+        metadata: dict[str, Any] | None = None
+        if turn.confidence is not None:
+            metadata = {"confidence": turn.confidence}
+
         moves: list[DialogueMove] = []
 
         # Handle composite moves (e.g., "request + volunteer_info")
@@ -585,10 +590,29 @@ class ScenarioRunner:
         if primary_type == "answer":
             top_qud = self.state.shared.top_qud()
             content = Answer(content=utterance, question_ref=top_qud)
-            moves.append(DialogueMove(move_type="answer", content=content, speaker=speaker))
+            moves.append(
+                DialogueMove(
+                    move_type="answer",
+                    content=content,
+                    speaker=speaker,
+                    metadata=metadata if metadata else {},
+                )
+            )
 
         elif primary_type in ["request", "command"]:
-            moves.append(DialogueMove(move_type=primary_type, content=utterance, speaker=speaker))
+            if metadata:
+                moves.append(
+                    DialogueMove(
+                        move_type=primary_type,
+                        content=utterance,
+                        speaker=speaker,
+                        metadata=metadata,
+                    )
+                )
+            else:
+                moves.append(
+                    DialogueMove(move_type=primary_type, content=utterance, speaker=speaker)
+                )
 
         elif primary_type == "clarification_question":
             predicate = "clarify"
@@ -598,25 +622,60 @@ class ScenarioRunner:
             elif "options" in utterance.lower():
                 args["topic"] = "jurisdiction_options"
             content = WhQuestion(predicate=predicate, variable="x", constraints=args)
-            moves.append(DialogueMove(move_type="ask", content=content, speaker=speaker))
+            moves.append(
+                DialogueMove(
+                    move_type="ask",
+                    content=content,
+                    speaker=speaker,
+                    metadata=metadata if metadata else {},
+                )
+            )
 
         elif primary_type == "off_topic_question":
             predicate = "non_compete_clause"
             if "long" in utterance.lower():
                 predicate = "timeline"
             content = WhQuestion(predicate=predicate, variable="x")
-            moves.append(DialogueMove(move_type="ask", content=content, speaker=speaker))
+            moves.append(
+                DialogueMove(
+                    move_type="ask",
+                    content=content,
+                    speaker=speaker,
+                    metadata=metadata if metadata else {},
+                )
+            )
 
         elif primary_type == "confirm":
             top_qud = self.state.shared.top_qud()
             content = Answer(content="yes", question_ref=top_qud)
-            moves.append(DialogueMove(move_type="answer", content=content, speaker=speaker))
+            moves.append(
+                DialogueMove(
+                    move_type="answer",
+                    content=content,
+                    speaker=speaker,
+                    metadata=metadata if metadata else {},
+                )
+            )
 
         elif primary_type == "acknowledge":
-            moves.append(DialogueMove(move_type="ack", content=utterance, speaker=speaker))
+            moves.append(
+                DialogueMove(
+                    move_type="ack",
+                    content=utterance,
+                    speaker=speaker,
+                    metadata=metadata if metadata else {},
+                )
+            )
 
         else:
-            moves.append(DialogueMove(move_type=primary_type, content=utterance, speaker=speaker))
+            moves.append(
+                DialogueMove(
+                    move_type=primary_type,
+                    content=utterance,
+                    speaker=speaker,
+                    metadata=metadata if metadata else {},
+                )
+            )
 
         # 2. Handle Volunteered Info (Assert moves)
         if has_volunteer:
